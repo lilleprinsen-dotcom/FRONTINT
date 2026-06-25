@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class SyncRun extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'organization_id',
+        'sync_type',
+        'status',
+        'cursor',
+        'started_at',
+        'finished_at',
+        'items_seen',
+        'items_succeeded',
+        'items_failed',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'started_at' => 'datetime',
+            'finished_at' => 'datetime',
+        ];
+    }
+}
