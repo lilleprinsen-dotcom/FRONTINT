@@ -27,6 +27,30 @@ docker-compose.yml       Local PostgreSQL, Redis, and app placeholder
 
 This repository contains the first technical specification and scaffold only. It does not yet contain a fully installed Laravel application or production-ready plugin logic.
 
+## Front Systems API documentation
+
+Official Front Systems API specs should go in `docs/vendor/front-systems/openapi/`.
+
+The current stored spec is:
+
+```text
+docs/vendor/front-systems/openapi/frontsystems.openapi.json
+```
+
+If Front provides a direct OpenAPI/Swagger URL, download it with:
+
+```bash
+./scripts/download-front-openapi.sh "<OFFICIAL_SPEC_URL>"
+```
+
+Use this command to verify that a spec file is present:
+
+```bash
+./scripts/generate-front-client.sh
+```
+
+Do not commit secrets, API keys, tokens, cookies, private links, restricted vendor documentation without permission, or unredacted customer data.
+
 ## Next Steps
 
 1. Confirm Front Systems API, webhook, reservation, gift card, and omnichannel module capabilities.
@@ -34,4 +58,3 @@ This repository contains the first technical specification and scaffold only. It
 3. Implement authentication, organizations, encrypted connection storage, webhook skeletons, queues, and event logs.
 4. Build the first proof of concept tests listed in [docs/first-poc-checklist.md](docs/first-poc-checklist.md).
 5. Keep all work staging-first. Do not write to production systems until explicitly enabled and reviewed.
-
