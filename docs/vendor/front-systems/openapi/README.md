@@ -1,0 +1,50 @@
+# Front Systems OpenAPI Specs
+
+Store official Front Systems OpenAPI/Swagger files in this directory.
+
+## Current Spec
+
+The repository currently contains:
+
+```text
+frontsystems.openapi.json
+```
+
+Known metadata from the file:
+
+- OpenAPI version: `3.0.1`
+- API title: `REST API`
+- API version: `V2`
+- Original filename: `front-systems-webshop-api-V2.json`
+
+Do not treat any endpoint behavior as production-ready until it has been reviewed against the official Front Systems source and tested with staging credentials.
+
+Accepted filenames:
+
+```text
+frontsystems.openapi.json
+frontsystems.openapi.yaml
+```
+
+If Front provides a direct URL, download the spec with:
+
+```bash
+./scripts/download-front-openapi.sh "<OFFICIAL_SPEC_URL>"
+```
+
+The download script writes `downloaded-at.txt` with:
+
+- Source URL, with query strings redacted for safety
+- UTC download timestamp
+- Saved file path
+- Safety warning
+
+If you download the file manually, place it in this directory and update `downloaded-at.txt` or `../sources.md` with the source, access level, date, and version notes.
+
+To verify that a spec file is present, run:
+
+```bash
+./scripts/generate-front-client.sh
+```
+
+Generated API clients are not configured yet. A future task can choose a generator such as OpenAPI Generator, Swagger Codegen, or a Laravel/PHP HTTP client generator.

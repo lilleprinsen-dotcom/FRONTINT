@@ -1,0 +1,10 @@
+Source URL: not provided
+Source file: user-provided attachment `front-systems-webshop-api-V2.json`
+Recorded at UTC: 2026-06-25T21:48:13Z
+Saved file path: docs/vendor/front-systems/openapi/frontsystems.openapi.json
+OpenAPI version: 3.0.1
+API title: REST API
+API version: V2
+
+Warning: Do not commit private credentials, API keys, tokens, cookies, private links, restricted Front documentation, or unredacted customer data unless explicitly allowed.
+Note: Confirm Front Systems redistribution/usage permissions before sharing this spec outside this repository.
