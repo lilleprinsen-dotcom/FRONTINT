@@ -57,6 +57,11 @@
             <p class="muted">REST API V2 OpenAPI is stored in vendor docs.</p>
             <code>docs/vendor/front-systems/front-api-endpoint-summary.md</code>
         </section>
+        <section class="panel">
+            <h2>Product Mapping PoC</h2>
+            <p class="muted">Preview a local 10-product WooCommerce to Front sync plan from stored discovery snapshots.</p>
+            <a class="button secondary" href="{{ route('mapping.product-poc') }}">Open mapping PoC</a>
+        </section>
     </div>
 
     @forelse ($organizations as $organization)

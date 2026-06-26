@@ -108,8 +108,20 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Match priority is Woo detected GTIN/EAN to Front product size GTIN, then Woo SKU to Front `externalSKU`, then Woo SKU to Front `identity`.
 - Woo GTIN/EAN detection should mark confidence as `exact_known_field`, `common_field`, or `none`.
 - Known Lilleprinsen candidate fields are `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, and `_iZettle_barcode`.
-- Detected GTIN/EAN values are candidates only and must be confirmed before final mapping.
+- Detected GTIN/EAN values are candidates only and must be confirmed before final mapping. Multiple GTIN/EAN candidates must be shown as a warning instead of silently resolving the conflict.
 - Mapping preview rows must not be written to the final `product_mappings` table until a separate explicit sync/mapping feature is implemented.
+
+## 10-Product Mapping PoC
+
+- The `/mapping/product-poc` page must be authenticated.
+- The page and plan action must use stored `connection_discovery_snapshots` only and must not make external HTTP calls.
+- The plan action must reject more than 10 selected WooCommerce products.
+- Generated plans are stored in `product_sync_preview_plans`, not final mapping or sync history.
+- The preview plan must not write to `product_mappings`.
+- Block products with missing name, missing SKU, missing GTIN/EAN candidate, empty GTIN/EAN candidate, duplicate selected SKU/GTIN, variable product type, or no price candidate.
+- Warn, but do not block, for missing brand, missing category, missing sale price, out-of-stock status, `manage_stock=false`, no Front sample match, uncertain category mapping, or uncertain brand mapping.
+- Proposed Front fields are candidates only. Group/subgroup, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy must be marked `NEEDS_CONFIRMATION`.
+- This phase must not use Front `/api/products`, `POST /api/PricelistV2`, `POST /api/Stock/adjust`, `PUT /api/Sale`, `POST /api/OmniChannel`, or any WooCommerce write endpoint.
 
 ## Audit Trail
 

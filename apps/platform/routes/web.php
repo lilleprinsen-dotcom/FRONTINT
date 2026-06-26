@@ -6,6 +6,7 @@ use App\Http\Controllers\ConnectionDiscoveryController;
 use App\Http\Controllers\ConnectionTestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\ProductMappingPocController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -34,4 +35,9 @@ Route::middleware('auth')->group(function (): void {
         ->name('connections.discover.stores');
     Route::post('/connections/{connection}/discover/products', [ConnectionDiscoveryController::class, 'discoverProducts'])
         ->name('connections.discover.products');
+
+    Route::get('/mapping/product-poc', [ProductMappingPocController::class, 'show'])
+        ->name('mapping.product-poc');
+    Route::post('/mapping/product-poc/plan', [ProductMappingPocController::class, 'plan'])
+        ->name('mapping.product-poc.plan');
 });

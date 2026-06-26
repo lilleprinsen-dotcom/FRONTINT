@@ -29,6 +29,7 @@ class WooCommerceGtinCandidateDetector
         }
 
         $normalized = [];
+        $candidates = [];
 
         foreach ($metadata as $item) {
             if (! is_array($item)) {
@@ -50,7 +51,7 @@ class WooCommerceGtinCandidateDetector
 
         foreach (self::KNOWN_KEYS as $key) {
             if (($normalized[$key]['value'] ?? '') !== '') {
-                return [
+                $candidates[] = [
                     'key' => $normalized[$key]['key'],
                     'value' => $normalized[$key]['value'],
                     'confidence' => 'exact_known_field',
@@ -60,10 +61,32 @@ class WooCommerceGtinCandidateDetector
 
         foreach (self::COMMON_KEYS as $key) {
             if (($normalized[$key]['value'] ?? '') !== '') {
-                return [
+                $candidates[] = [
                     'key' => $normalized[$key]['key'],
                     'value' => $normalized[$key]['value'],
                     'confidence' => 'common_field',
+                ];
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($candidate['confidence'] === 'exact_known_field') {
+                return [
+                    'key' => $candidate['key'],
+                    'value' => $candidate['value'],
+                    'confidence' => 'exact_known_field',
+                    'candidates' => $candidates,
+                ];
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($candidate['confidence'] === 'common_field') {
+                return [
+                    'key' => $candidate['key'],
+                    'value' => $candidate['value'],
+                    'confidence' => 'common_field',
+                    'candidates' => $candidates,
                 ];
             }
         }
@@ -77,6 +100,7 @@ class WooCommerceGtinCandidateDetector
             'key' => null,
             'value' => null,
             'confidence' => 'none',
+            'candidates' => [],
         ];
     }
 }

@@ -153,3 +153,24 @@ OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false
 ```
 
 Confirm no write endpoints were called and no product sync, price sync, stock sync, order sync, refunds, gift cards, or omnichannel actions occurred.
+
+## P. Prepare the 10-Product Mapping PoC
+
+After live read-only discovery has succeeded, turn live HTTP tests back off if no more external checks are needed.
+
+Open:
+
+```text
+http://localhost:8000/mapping/product-poc
+```
+
+Select up to 10 WooCommerce products and generate the preview sync plan.
+
+Review:
+
+- Ready/blocked status.
+- Blocking issues for missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, variable products, or missing price.
+- Warnings for missing brand/category, missing sale price, stock status, uncertain mappings, or no Front match.
+- `NEEDS_CONFIRMATION` items before any future write test.
+
+This is not product sync. The plan uses stored snapshots only, stores preview data in `product_sync_preview_plans`, does not write `product_mappings`, and does not call WooCommerce or Front APIs.

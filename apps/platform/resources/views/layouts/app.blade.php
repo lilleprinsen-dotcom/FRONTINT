@@ -19,6 +19,7 @@
         th { background: #f0f3f7; font-size: 13px; }
         label { display: block; font-weight: 650; margin: 12px 0 6px; }
         input, select { box-sizing: border-box; width: 100%; max-width: 560px; padding: 9px 10px; border: 1px solid #b8c2cc; border-radius: 6px; background: #fff; }
+        input[type="checkbox"] { width: auto; max-width: none; }
         button, .button { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 12px; border: 1px solid #0b5cad; border-radius: 6px; background: #0b5cad; color: #fff; font-weight: 650; cursor: pointer; text-decoration: none; }
         button.secondary, .button.secondary { background: #fff; color: #0b5cad; }
         .panel { background: #fff; border: 1px solid #d9dee5; border-radius: 8px; padding: 18px; margin-bottom: 18px; }
@@ -41,6 +42,7 @@
         @auth
             <a href="{{ route('dashboard') }}">Dashboard</a>
             <a href="{{ route('organizations.index') }}">Organizations</a>
+            <a href="{{ route('mapping.product-poc') }}">Product Mapping PoC</a>
             <form class="inline-form" method="post" action="{{ route('logout') }}">
                 @csrf
                 <button class="secondary" type="submit">Log out</button>
