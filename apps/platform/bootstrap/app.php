@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withCommands([
         App\Console\Commands\CreateAdminUser::class,
+        App\Console\Commands\PreflightReadOnly::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         //

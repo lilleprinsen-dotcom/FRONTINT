@@ -13,7 +13,7 @@
     </div>
 
     @if ($productionWritesEnabled)
-        <div class="danger">Production writes are enabled. Use only with explicit approval.</div>
+        <div class="danger">Production writes are enabled. This should remain disabled until a production launch checklist has been completed.</div>
     @else
         <div class="warning">Production writes are disabled. This is the expected staging-safe mode.</div>
     @endif
@@ -21,8 +21,26 @@
     @unless ($connectionHttpTestsEnabled)
         <div class="warning">Live HTTP connection checks are disabled. Connection tests and discovery actions only verify stored settings.</div>
     @else
-        <div class="warning">Live connection tests and discovery actions are enabled and use read-only API endpoints only.</div>
+        <div class="warning">Live read-only HTTP tests are enabled. No writes are allowed, but real external systems may be contacted.</div>
     @endunless
+
+    <section class="panel">
+        <h2>Live Read-Only Test Mode</h2>
+        <p class="muted">
+            Enable live HTTP only in local/staging by manually setting <code>OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true</code>.
+            Keep <code>OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false</code>.
+        </p>
+        <ul>
+            <li>Connection tests use read-only endpoints only.</li>
+            <li>WooCommerce connection test uses <code>GET /wp-json/wc/v3/system_status</code>.</li>
+            <li>Front connection test uses <code>GET /api/Environment</code>.</li>
+            <li>Front stores discovery uses <code>GET /api/Stores</code>.</li>
+            <li>Product discovery fetches a maximum sample of 10 products.</li>
+            <li>Front product discovery uses <code>POST /api/Product</code> because the Front OpenAPI spec documents it as the read-only product list endpoint. It must not be confused with <code>/api/products</code> CRUD.</li>
+            <li>No sync is performed and no data is written.</li>
+        </ul>
+        <p><code>php artisan omnibridge:preflight-readonly</code></p>
+    </section>
 
     <div class="grid">
         <section class="panel">
@@ -83,9 +101,9 @@
                     <th>Status</th>
                     <th>Last checked</th>
                     <th>Last error</th>
+                    <th>Last discovery</th>
                     <th>Base URL</th>
                     <th>Credentials</th>
-                    <th>Discovery</th>
                     <th>Front stores</th>
                     <th>Actions</th>
                 </tr>
@@ -100,6 +118,9 @@
                             @if (in_array($connection->type, ['woocommerce', 'front', 'front_systems'], true))
                                 <div class="muted">Read-only API test</div>
                             @endif
+                            @if ($connection->last_test_status)
+                                <div class="muted">Test: {{ $connection->last_test_status }}</div>
+                            @endif
                             @if ($connection->last_http_status)
                                 <div class="muted">HTTP {{ $connection->last_http_status }}</div>
                             @endif
@@ -109,14 +130,6 @@
                         </td>
                         <td>{{ $connection->last_checked_at?->diffForHumans() ?: 'Not checked yet' }}</td>
                         <td>{{ $connection->last_error ?: 'None' }}</td>
-                        <td>{{ $connection->base_url ?: 'Not set' }}</td>
-                        <td>
-                            @forelse ($connection->credentials as $credential)
-                                <div>{{ $credential->credential_type }} <span class="secret-hint">configured</span></div>
-                            @empty
-                                <span class="muted">No credentials stored</span>
-                            @endforelse
-                        </td>
                         <td>
                             @php($latestDiscovery = $connection->latestDiscoverySnapshot)
                             @if ($latestDiscovery)
@@ -128,6 +141,14 @@
                             @else
                                 <span class="muted">No discovery yet</span>
                             @endif
+                        </td>
+                        <td>{{ $connection->base_url ?: 'Not set' }}</td>
+                        <td>
+                            @forelse ($connection->credentials as $credential)
+                                <div>{{ $credential->credential_type }} <span class="secret-hint">configured</span></div>
+                            @empty
+                                <span class="muted">No credentials stored</span>
+                            @endforelse
                         </td>
                         <td>
                             @php($metadata = is_array($connection->last_test_metadata) ? $connection->last_test_metadata : [])

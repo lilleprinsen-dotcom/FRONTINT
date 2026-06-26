@@ -64,4 +64,56 @@ class AuthAndDashboardTest extends TestCase
             ->assertSee('Dashboard')
             ->assertSee('Production writes are disabled');
     }
+
+    public function test_dashboard_warns_when_live_http_tests_are_enabled(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+
+        $user = User::query()->create([
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('secret-password'),
+        ]);
+
+        $organization = Organization::query()->create([
+            'name' => 'Lilleprinsen',
+            'slug' => 'lilleprinsen',
+            'environment' => 'staging',
+            'status' => 'active',
+        ]);
+
+        $organization->users()->attach($user->id, ['role' => 'owner']);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('Live read-only HTTP tests are enabled. No writes are allowed, but real external systems may be contacted.')
+            ->assertSee('OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true')
+            ->assertSee('No sync is performed and no data is written.');
+    }
+
+    public function test_dashboard_shows_severe_warning_when_production_writes_are_enabled(): void
+    {
+        config(['omnibridge.allow_production_writes' => true]);
+
+        $user = User::query()->create([
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('secret-password'),
+        ]);
+
+        $organization = Organization::query()->create([
+            'name' => 'Lilleprinsen',
+            'slug' => 'lilleprinsen',
+            'environment' => 'staging',
+            'status' => 'active',
+        ]);
+
+        $organization->users()->attach($user->id, ['role' => 'owner']);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('Production writes are enabled. This should remain disabled until a production launch checklist has been completed.');
+    }
 }

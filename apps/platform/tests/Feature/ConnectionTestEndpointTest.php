@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Connection;
+use App\Models\AuditLog;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\Credentials\CredentialVault;
@@ -100,6 +101,34 @@ class ConnectionTestEndpointTest extends TestCase
         $this->assertIsInt($connection->last_response_time_ms);
         $this->assertNull($connection->last_error);
         $this->assertNotNull($connection->last_checked_at);
+
+        $auditLog = AuditLog::query()->where('action', 'live_readonly_connection_test')->firstOrFail();
+        $this->assertSame($user->id, $auditLog->user_id);
+        $this->assertSame($connection->organization_id, $auditLog->organization_id);
+        $this->assertSame($connection->id, $auditLog->metadata_json['connection_id']);
+        $this->assertSame('GET /wp-json/wc/v3/system_status', $auditLog->metadata_json['endpoint_group']);
+        $this->assertSame('success', $auditLog->metadata_json['status']);
+        $this->assertTrue($auditLog->metadata_json['live_http_enabled']);
+        $this->assertTrue($auditLog->metadata_json['production_writes_disabled']);
+        $this->assertStringNotContainsString('ck_test', json_encode($auditLog->metadata_json));
+    }
+
+    public function test_missing_connection_credentials_prevent_http_calls(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+        Http::fake();
+
+        [$user, $connection] = $this->connectionWithCredentials('woocommerce', [], '');
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/test")
+            ->assertOk()
+            ->assertJson([
+                'status' => 'failed',
+                'last_error' => 'Missing required settings: Missing WooCommerce site URL, Missing WooCommerce consumer key, Missing WooCommerce consumer secret',
+            ]);
+
+        Http::assertNothingSent();
     }
 
     public function test_front_connection_test_uses_read_only_environment_endpoint(): void

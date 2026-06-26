@@ -258,6 +258,12 @@ Discovery snapshots keep only the latest 5 rows per connection and discovery typ
 
 Before using real staging/test credentials, follow [live-readonly-test-checklist.md](live-readonly-test-checklist.md).
 
+Run the preflight command before and after enabling live read-only HTTP:
+
+```bash
+php artisan omnibridge:preflight-readonly
+```
+
 ## Manual Safe Connection Test Flow
 
 A. Keep safe mode enabled:
