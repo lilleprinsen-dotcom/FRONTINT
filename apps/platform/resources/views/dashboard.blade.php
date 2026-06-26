@@ -19,9 +19,9 @@
     @endif
 
     @unless ($connectionHttpTestsEnabled)
-        <div class="warning">Live HTTP connection checks are disabled. Connection tests only verify stored settings.</div>
+        <div class="warning">Live HTTP connection checks are disabled. Connection tests and discovery actions only verify stored settings.</div>
     @else
-        <div class="warning">Live connection tests are enabled and use read-only API endpoints only.</div>
+        <div class="warning">Live connection tests and discovery actions are enabled and use read-only API endpoints only.</div>
     @endunless
 
     <div class="grid">
@@ -85,6 +85,7 @@
                     <th>Last error</th>
                     <th>Base URL</th>
                     <th>Credentials</th>
+                    <th>Discovery</th>
                     <th>Front stores</th>
                     <th>Actions</th>
                 </tr>
@@ -117,6 +118,18 @@
                             @endforelse
                         </td>
                         <td>
+                            @php($latestDiscovery = $connection->latestDiscoverySnapshot)
+                            @if ($latestDiscovery)
+                                <strong>{{ $latestDiscovery->status }}</strong>
+                                <div class="muted">{{ $latestDiscovery->discovery_type }} checked {{ $latestDiscovery->checked_at?->diffForHumans() }}</div>
+                                @if ($latestDiscovery->error_message)
+                                    <div class="muted">{{ $latestDiscovery->error_message }}</div>
+                                @endif
+                            @else
+                                <span class="muted">No discovery yet</span>
+                            @endif
+                        </td>
+                        <td>
                             @php($metadata = is_array($connection->last_test_metadata) ? $connection->last_test_metadata : [])
                             @php($frontStores = $metadata['front_stores'] ?? [])
                             @if (is_array($frontStores) && $frontStores !== [])
@@ -137,15 +150,28 @@
                         </td>
                         <td>
                             <a class="button secondary" href="{{ route('connections.edit', $connection) }}">Edit</a>
+                            <a class="button secondary" href="{{ route('connections.discovery', $connection) }}">Discovery</a>
                             <form class="inline-form" method="post" action="{{ route('connections.test', $connection) }}">
                                 @csrf
                                 <button type="submit">Test</button>
                             </form>
+                            @if (in_array($connection->type, ['front', 'front_systems'], true))
+                                <form class="inline-form" method="post" action="{{ route('connections.discover.stores', $connection) }}">
+                                    @csrf
+                                    <button class="secondary" type="submit">Discover stores</button>
+                                </form>
+                            @endif
+                            @if (in_array($connection->type, ['woocommerce', 'front', 'front_systems'], true))
+                                <form class="inline-form" method="post" action="{{ route('connections.discover.products', $connection) }}">
+                                    @csrf
+                                    <button class="secondary" type="submit">Discover products</button>
+                                </form>
+                            @endif
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9">No connections yet.</td>
+                        <td colspan="10">No connections yet.</td>
                     </tr>
                 @endforelse
                 </tbody>

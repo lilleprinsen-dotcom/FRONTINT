@@ -14,6 +14,7 @@ class DashboardController extends Controller
             ->organizations()
             ->with([
                 'connections.credentials',
+                'connections.latestDiscoverySnapshot',
                 'webhookEndpoints',
             ])
             ->orderBy('name')

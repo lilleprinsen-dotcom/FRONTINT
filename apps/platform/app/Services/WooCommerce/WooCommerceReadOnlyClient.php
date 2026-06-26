@@ -53,6 +53,16 @@ class WooCommerceReadOnlyClient
             ->get($this->url($connection, '/wp-json/wc/v3/system_status'));
     }
 
+    public function products(Connection $connection, int $limit = 10): Response
+    {
+        return $this->request($connection)
+            ->get($this->url($connection, '/wp-json/wc/v3/products'), [
+                'per_page' => min(max($limit, 1), 10),
+                'page' => 1,
+                'status' => 'publish',
+            ]);
+    }
+
     private function request(Connection $connection): PendingRequest
     {
         return Http::timeout(10)

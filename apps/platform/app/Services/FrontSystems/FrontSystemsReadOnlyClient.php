@@ -74,6 +74,21 @@ class FrontSystemsReadOnlyClient
             ->get($this->url($connection, '/api/Stores'));
     }
 
+    public function products(Connection $connection, int $limit = 10): Response
+    {
+        return $this->request($connection)
+            ->post($this->url($connection, '/api/Product'), [
+                'pageSize' => min(max($limit, 1), 10),
+                'pageSkip' => 0,
+                'isWebAvailable' => true,
+                'isDiscontinued' => false,
+                'excludeDeleted' => true,
+                'includeEmptyGTINs' => false,
+                'includeStockQuantity' => false,
+                'includeAlternativeIdentifiers' => true,
+            ]);
+    }
+
     private function request(Connection $connection): PendingRequest
     {
         return Http::timeout(10)
@@ -96,7 +111,7 @@ class FrontSystemsReadOnlyClient
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
-    private function safeStoreMetadata(mixed $payload): array
+    public function safeStoreMetadata(mixed $payload): array
     {
         $stores = is_array($payload) ? $payload : [];
 
@@ -106,11 +121,12 @@ class FrontSystemsReadOnlyClient
 
         return collect($stores)
             ->filter(fn ($store): bool => is_array($store))
-            ->take(20)
             ->map(fn (array $store): array => [
                 'store_id' => $store['StoreId'] ?? $store['storeId'] ?? $store['id'] ?? null,
+                'store_no' => $store['StoreNo'] ?? $store['storeNo'] ?? null,
                 'store_name' => $store['StoreName'] ?? $store['storeName'] ?? $store['name'] ?? null,
                 'stock_id' => $store['StockId'] ?? $store['stockId'] ?? null,
+                'external_stock_id' => $store['ExternalStockId'] ?? $store['externalStockId'] ?? null,
                 'currency' => $store['Currency'] ?? $store['currency'] ?? null,
                 'time_zone' => $store['TimeZoneInfo'] ?? $store['TimeZone'] ?? $store['timeZone'] ?? null,
             ])

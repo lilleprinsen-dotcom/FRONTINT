@@ -82,6 +82,26 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Safe Front store metadata is limited to store name, store ID, stock ID, currency, and time zone.
 - Connection test actions must not print or return secret values.
 
+## Read-Only Discovery
+
+- Discovery actions use the same safety gate as live connection tests: `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP`.
+- When the flag is `false`, discovery must return `skipped` and make no HTTP requests.
+- Discovery actions are dashboard-authenticated and tenant-scoped.
+- WooCommerce product discovery uses `GET /wp-json/wc/v3/products` with `per_page=10`, `page=1`, and `status=publish`.
+- Front store discovery uses `GET /api/Stores`.
+- Front product discovery uses `POST /api/Product` as a read-only search endpoint with `pageSize=10`, `pageSkip=0`, `isWebAvailable=true`, `isDiscontinued=false`, `excludeDeleted=true`, `includeEmptyGTINs=false`, `includeStockQuantity=false`, and `includeAlternativeIdentifiers=true`.
+- Store only sanitized discovery snapshots in `connection_discovery_snapshots`.
+- Do not store full product descriptions, customer data, order data, cost prices, raw response bodies, API keys, or Authorization headers.
+- Keep only the latest few snapshots per connection/discovery type.
+- Discovery does not write to WooCommerce or Front and does not trigger sync jobs.
+
+## Mapping Preview
+
+- Mapping preview compares sanitized discovery samples only.
+- Match priority is Woo detected GTIN/EAN to Front product size GTIN, then Woo SKU to Front `externalSKU`, then Woo SKU to Front `identity`.
+- Woo GTIN/EAN detection should mark confidence as `exact_known_field`, `common_field`, or `none`.
+- Mapping preview rows must not be written to the final `product_mappings` table until a separate explicit sync/mapping feature is implemented.
+
 ## Audit Trail
 
 Audit these actions:

@@ -13,6 +13,18 @@ Run all tests in staging or sandbox only.
 - If available, confirm Front store metadata from `GET /api/Stores` shows store name, store ID, stock ID, currency, and time zone.
 - Confirm no product, price, stock, order, refund, gift card, or omnichannel writes occur.
 
+## 0.1 Read-Only Product Discovery and Mapping Preview
+
+- Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` and confirm WooCommerce/Front discovery actions return skipped/safe mode.
+- Enable `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true` only with staging/test credentials.
+- Confirm WooCommerce product discovery calls only `GET /wp-json/wc/v3/products` with a 10-product limit.
+- Confirm Front store discovery calls only `GET /api/Stores`.
+- Confirm Front product discovery calls only `POST /api/Product` with a 10-product read-only search body.
+- Confirm no writes, sync jobs, stock updates, price updates, order creation, refunds, gift card operations, or omnichannel actions occur.
+- Review detected WooCommerce GTIN/EAN candidate fields.
+- Review mapping preview matches by GTIN first, then Woo SKU to Front `externalSKU`, then Woo SKU to Front `identity`.
+- Confirm preview rows are not saved as final `product_mappings`.
+
 ## 1. One Woo Product to Front
 
 - Pick one simple WooCommerce product.
