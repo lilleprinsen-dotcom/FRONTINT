@@ -92,6 +92,8 @@ http://localhost:8000/dashboard
 
 The dashboard is intentionally minimal, but it now includes login, organizations, connection setup, webhook URLs, and connection checks.
 
+Connection status is safe by default. Live API checks are disabled unless explicitly enabled.
+
 Log in with the admin user created in the previous step.
 
 ## 9. Create or Review Organization
@@ -111,12 +113,18 @@ From the dashboard:
 
 1. Click **Add connection**.
 2. Choose WooCommerce for the WooCommerce staging connection placeholder.
-3. Add the staging base URL.
+3. Add the staging base URL, for example `https://store.example.com`.
 4. Add staging credentials only.
 5. Save the connection.
 6. Repeat with Front Systems for the Front staging connection placeholder.
 
 Credentials are encrypted at rest and are not shown again after saving.
+
+For Front Systems REST API V2, the base URL should match the official API server for the tenant, usually:
+
+```text
+https://frontsystemsapis.frontsystems.no/restapi/V2
+```
 
 ## 11. Test Connections
 
@@ -129,6 +137,13 @@ OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true
 ```
 
 Keep this disabled until staging credentials and URLs are confirmed.
+
+When live HTTP checks are enabled, the current read-only probes are:
+
+- WooCommerce: `GET /wp-json/wc/v3/system_status`
+- Front Systems: `GET /api/Environment`
+
+These checks do not write data and do not perform product, stock, order, refund, gift card, or omnichannel sync.
 
 ## 12. Add WooCommerce Staging Credentials
 
@@ -218,6 +233,8 @@ The scaffold does not yet implement:
 - Gift card redemption
 - Omnichannel order creation
 - Real Front or WooCommerce API writes
+
+The existing WooCommerce and Front API clients are intentionally read-only and only used for connection status checks.
 
 Production writes remain disabled by default with:
 

@@ -27,6 +27,11 @@ docker-compose.yml       Local Laravel, PostgreSQL, and Redis setup
 
 This repository contains the technical specification and a Laravel-style platform scaffold. Phase 1 foundation now includes basic login, organizations, connection setup, encrypted credential storage, connection test actions, and a minimal dashboard.
 
+Phase 2 has started with read-only WooCommerce and Front Systems API clients for connection testing only:
+
+- WooCommerce: `GET /wp-json/wc/v3/system_status`
+- Front Systems: `GET /api/Environment`
+
 It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
 The scaffold now includes a root `.gitignore`, executable helper scripts, a committed Laravel `composer.lock`, and a minimal GitHub Actions workflow for platform tests.
@@ -68,7 +73,7 @@ Public webhook URLs use opaque path tokens, not organization slugs:
 
 Duplicate webhook events are accepted but must not dispatch duplicate processing jobs.
 
-## Phase 1 Dashboard
+## Dashboard
 
 After local setup, open:
 
@@ -77,6 +82,8 @@ http://localhost:8000/dashboard
 ```
 
 Use the dashboard to create organizations, add WooCommerce/Front connections, view webhook path-token URLs, and run staging-safe connection checks. Connection tests do not perform live HTTP checks unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
+
+When live HTTP checks are enabled, WooCommerce and Front tests use read-only API endpoints only. They do not sync products, prices, stock, orders, refunds, gift cards, or omnichannel orders.
 
 ## Verification commands
 

@@ -27,6 +27,7 @@
     <section class="panel">
         <h1>{{ $connection->exists ? 'Edit connection' : 'Add connection' }}</h1>
         <p class="muted">Credentials are encrypted at rest and never shown again after saving. Leave credential fields empty to keep existing values.</p>
+        <p class="muted">WooCommerce and Front connection tests are read-only. They do not sync products, stock, orders, refunds, or gift cards.</p>
 
         <form method="post" action="{{ $connection->exists ? route('connections.update', $connection) : route('connections.store') }}">
             @csrf
@@ -55,6 +56,7 @@
 
             <label for="base_url">Base URL</label>
             <input id="base_url" name="base_url" type="url" value="{{ old('base_url', $connection->base_url) }}" placeholder="https://example.com">
+            <p class="muted">WooCommerce example: https://store.example.com. Front Systems REST API V2 example: https://frontsystemsapis.frontsystems.no/restapi/V2.</p>
 
             <h2>Credentials</h2>
             <p class="muted">Only fill the fields for the selected connection type. Existing saved credentials are shown as redacted hints on the dashboard.</p>

@@ -72,6 +72,9 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Do not store secrets in code, docs, commits, logs, or screenshots.
 - Rotate credentials per tenant.
 - Phase 1 connection setup stores only redacted credential hints in the dashboard.
+- WooCommerce and Front Systems connection tests must remain read-only.
+- WooCommerce connection testing uses `GET /wp-json/wc/v3/system_status`.
+- Front Systems connection testing uses `GET /api/Environment`.
 - Connection test actions must not print or return secret values.
 
 ## Audit Trail
@@ -99,6 +102,7 @@ Audit these actions:
 - Any production enablement must be explicit, audited, and reversible.
 - Live HTTP connection checks are disabled unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
 - Connection checks must be read-only. They must not create, update, refund, sync, reserve, redeem, or delete data.
+- Even when live HTTP connection checks are enabled, no product sync, stock sync, order import, refund, gift card, or omnichannel write may be triggered by a connection test.
 
 ## Observability
 
