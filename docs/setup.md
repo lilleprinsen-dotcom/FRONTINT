@@ -113,8 +113,8 @@ From the dashboard:
 
 1. Click **Add connection**.
 2. Choose WooCommerce for the WooCommerce staging connection placeholder.
-3. Add the staging base URL, for example `https://store.example.com`.
-4. Add staging credentials only.
+3. Add the WooCommerce site URL, for example `https://store.example.com`.
+4. Add staging consumer key and consumer secret only.
 5. Save the connection.
 6. Repeat with Front Systems for the Front staging connection placeholder.
 
@@ -148,10 +148,46 @@ When live HTTP checks are enabled, the current read-only probes are:
 
 - WooCommerce: `GET /wp-json/wc/v3/system_status`
 - Front Systems: `GET /api/Environment`
+- Optional Front store metadata: `GET /api/Stores`
 
 These checks do not write data and do not perform product, stock, order, refund, gift card, or omnichannel sync.
 
 There is no separate `/api/connections/{connection}/test` route in the scaffold. Keep connection testing in the dashboard flow until a public API use case is intentionally designed.
+
+Connection test results are stored as minimal diagnostics only:
+
+- `success`, `failed`, or `skipped`
+- HTTP status code when an HTTP call is made
+- Response time
+- Safe error text
+- Checked timestamp
+- Safe Front store metadata when `/api/Stores` succeeds: store name, store ID, stock ID, currency, and time zone
+
+Full API response bodies are not stored.
+
+## Manual Safe Connection Test Flow
+
+A. Keep safe mode enabled:
+
+```text
+OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false
+```
+
+B. Create a WooCommerce connection with dummy values. Click **Test** and confirm the result is skipped/safe mode, not failed.
+
+C. Create a Front Systems connection with dummy values. Click **Test** and confirm the result is skipped/safe mode, not failed.
+
+D. Enable read-only live tests only when staging/test credentials are ready:
+
+```text
+OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true
+```
+
+E. Add real staging/test credentials only. Do not use production credentials until staging is verified.
+
+F. Run the connection test from the dashboard.
+
+G. Confirm only read-only endpoints are called and no product, stock, order, refund, gift card, or omnichannel sync is performed.
 
 ## 12. Health Checks
 

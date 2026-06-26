@@ -19,9 +19,14 @@ return [
 
     'connection_types' => [
         'woocommerce' => 'WooCommerce',
-        'front' => 'Front Systems',
+        'front_systems' => 'Front Systems',
+        'front' => 'Front Systems (legacy)',
         'webtoffee_adapter' => 'WebToffee adapter',
         'dintero' => 'Dintero',
         'stripe' => 'Stripe',
+    ],
+
+    'front_systems' => [
+        'default_base_url' => env('FRONT_SYSTEMS_BASE_URL', 'https://frontsystemsapis.frontsystems.no/restapi/V2'),
     ],
 ];

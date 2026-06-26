@@ -14,10 +14,13 @@ class ConnectionController extends Controller
 {
     public function create(Request $request): View
     {
+        $type = $request->query('type', 'woocommerce');
+
         return view('connections.form', [
             'connection' => new Connection([
                 'organization_id' => $request->integer('organization_id'),
-                'type' => $request->query('type', 'woocommerce'),
+                'type' => $type,
+                'base_url' => $this->defaultBaseUrl((string) $type),
                 'status' => 'pending',
             ]),
             'organizations' => $this->organizations($request),
@@ -34,7 +37,7 @@ class ConnectionController extends Controller
             'organization_id' => $validated['organization_id'],
             'type' => $validated['type'],
             'name' => $validated['name'],
-            'base_url' => $validated['base_url'] ?? null,
+            'base_url' => $this->resolvedBaseUrl($validated['type'], $validated['base_url'] ?? null, $request->input('credentials', [])),
             'status' => 'pending',
         ]);
 
@@ -68,7 +71,7 @@ class ConnectionController extends Controller
             'organization_id' => $validated['organization_id'],
             'type' => $validated['type'],
             'name' => $validated['name'],
-            'base_url' => $validated['base_url'] ?? null,
+            'base_url' => $this->resolvedBaseUrl($validated['type'], $validated['base_url'] ?? null, $request->input('credentials', [])),
         ]);
         $this->storeCredentials($connection, $request->input('credentials', []), $vault);
 
@@ -97,12 +100,38 @@ class ConnectionController extends Controller
     private function credentialTypesForConnection(string $connectionType): array
     {
         return match ($connectionType) {
-            'woocommerce' => ['consumer_key', 'consumer_secret'],
-            'front' => ['api_key'],
+            'woocommerce' => ['site_url', 'consumer_key', 'consumer_secret'],
+            'front', 'front_systems' => ['api_key'],
             'webtoffee_adapter' => ['shared_secret'],
             'dintero', 'stripe' => ['note'],
             default => [],
         };
+    }
+
+    private function resolvedBaseUrl(string $connectionType, ?string $baseUrl, array $credentials): ?string
+    {
+        $baseUrl = is_string($baseUrl) && trim($baseUrl) !== '' ? trim($baseUrl) : null;
+
+        if ($baseUrl) {
+            return $baseUrl;
+        }
+
+        if ($connectionType === 'woocommerce') {
+            $siteUrl = $credentials['site_url'] ?? null;
+
+            return is_string($siteUrl) && trim($siteUrl) !== '' ? trim($siteUrl) : null;
+        }
+
+        return $this->defaultBaseUrl($connectionType);
+    }
+
+    private function defaultBaseUrl(string $connectionType): ?string
+    {
+        if (in_array($connectionType, ['front', 'front_systems'], true)) {
+            return (string) config('omnibridge.front_systems.default_base_url');
+        }
+
+        return null;
     }
 
     private function organizations(Request $request)

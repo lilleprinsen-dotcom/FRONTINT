@@ -3,6 +3,15 @@
 @section('content')
     <h1>Dashboard</h1>
 
+    <div class="panel">
+        <h2>Environment</h2>
+        <p>
+            Mode: <strong>{{ $environment }}</strong><br>
+            Production writes: <strong>{{ $productionWritesEnabled ? 'enabled' : 'disabled' }}</strong><br>
+            Live HTTP connection tests: <strong>{{ $connectionHttpTestsEnabled ? 'enabled' : 'disabled' }}</strong>
+        </p>
+    </div>
+
     @if ($productionWritesEnabled)
         <div class="danger">Production writes are enabled. Use only with explicit approval.</div>
     @else
@@ -73,8 +82,10 @@
                     <th>Type</th>
                     <th>Status</th>
                     <th>Last checked</th>
+                    <th>Last error</th>
                     <th>Base URL</th>
                     <th>Credentials</th>
+                    <th>Front stores</th>
                     <th>Actions</th>
                 </tr>
                 </thead>
@@ -85,18 +96,44 @@
                         <td>{{ $connectionTypes[$connection->type] ?? $connection->type }}</td>
                         <td>
                             <strong>{{ $connection->status }}</strong>
-                            @if (in_array($connection->type, ['woocommerce', 'front'], true))
+                            @if (in_array($connection->type, ['woocommerce', 'front', 'front_systems'], true))
                                 <div class="muted">Read-only API test</div>
+                            @endif
+                            @if ($connection->last_http_status)
+                                <div class="muted">HTTP {{ $connection->last_http_status }}</div>
+                            @endif
+                            @if ($connection->last_response_time_ms !== null)
+                                <div class="muted">{{ $connection->last_response_time_ms }} ms</div>
                             @endif
                         </td>
                         <td>{{ $connection->last_checked_at?->diffForHumans() ?: 'Not checked yet' }}</td>
+                        <td>{{ $connection->last_error ?: 'None' }}</td>
                         <td>{{ $connection->base_url ?: 'Not set' }}</td>
                         <td>
                             @forelse ($connection->credentials as $credential)
-                                <div>{{ $credential->credential_type }} <span class="secret-hint">{{ $credential->redacted_hint }}</span></div>
+                                <div>{{ $credential->credential_type }} <span class="secret-hint">configured</span></div>
                             @empty
                                 <span class="muted">No credentials stored</span>
                             @endforelse
+                        </td>
+                        <td>
+                            @php($metadata = is_array($connection->last_test_metadata) ? $connection->last_test_metadata : [])
+                            @php($frontStores = $metadata['front_stores'] ?? [])
+                            @if (is_array($frontStores) && $frontStores !== [])
+                                @foreach ($frontStores as $store)
+                                    <div>
+                                        <strong>{{ $store['store_name'] ?? 'Unnamed store' }}</strong>
+                                        <div class="muted">
+                                            Store ID: {{ $store['store_id'] ?? 'n/a' }},
+                                            Stock ID: {{ $store['stock_id'] ?? 'n/a' }},
+                                            Currency: {{ $store['currency'] ?? 'n/a' }},
+                                            Time zone: {{ $store['time_zone'] ?? 'n/a' }}
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @else
+                                <span class="muted">Not available</span>
+                            @endif
                         </td>
                         <td>
                             <a class="button secondary" href="{{ route('connections.edit', $connection) }}">Edit</a>
@@ -108,7 +145,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7">No connections yet.</td>
+                        <td colspan="9">No connections yet.</td>
                     </tr>
                 @endforelse
                 </tbody>

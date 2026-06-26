@@ -28,6 +28,9 @@ Use this checklist before starting real integration implementation.
 - [x] Connection tests are staging-safe by default.
 - [x] WooCommerce read-only connection test client exists.
 - [x] Front Systems read-only connection test client exists.
+- [x] Front Systems connection type uses `front_systems`.
+- [x] Connection tests persist minimal diagnostics without response bodies.
+- [x] Front store metadata is limited to store name, store ID, stock ID, currency, and time zone.
 - [x] Dashboard shows safe connection status context.
 - [x] Connection form shows only the selected connection type fields.
 - [x] Duplicate `/api/connections/{connection}/test` route is not present.

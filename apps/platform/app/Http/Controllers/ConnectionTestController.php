@@ -18,11 +18,19 @@ class ConnectionTestController extends Controller
         );
 
         $result = $tester->test($connection);
+        $checkedAt = now();
 
         $connection->update([
             'status' => $result['status'],
-            'last_checked_at' => now(),
+            'last_checked_at' => $checkedAt,
+            'last_test_status' => $result['status'],
+            'last_http_status' => $result['http_status'] ?? null,
+            'last_response_time_ms' => $result['response_time_ms'] ?? null,
+            'last_error' => $result['last_error'] ?? null,
+            'last_test_metadata' => $result['metadata'] ?? null,
         ]);
+
+        $result['checked_at'] = $checkedAt->toISOString();
 
         if ($request->expectsJson()) {
             return response()->json($result);

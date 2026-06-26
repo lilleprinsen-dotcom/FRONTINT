@@ -2,6 +2,17 @@
 
 Run all tests in staging or sandbox only.
 
+## 0. Read-Only Connection Verification
+
+- Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false`.
+- Create WooCommerce and Front Systems connections with dummy values.
+- Confirm both connection tests return skipped/safe mode and no external HTTP requests are made.
+- Enable `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true` only with staging/test credentials.
+- Confirm WooCommerce responds through `GET /wp-json/wc/v3/system_status`.
+- Confirm Front responds through `GET /api/Environment`.
+- If available, confirm Front store metadata from `GET /api/Stores` shows store name, store ID, stock ID, currency, and time zone.
+- Confirm no product, price, stock, order, refund, gift card, or omnichannel writes occur.
+
 ## 1. One Woo Product to Front
 
 - Pick one simple WooCommerce product.

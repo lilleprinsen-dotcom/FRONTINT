@@ -18,12 +18,18 @@ class Connection extends Model
         'base_url',
         'status',
         'last_checked_at',
+        'last_test_status',
+        'last_http_status',
+        'last_response_time_ms',
+        'last_error',
+        'last_test_metadata',
     ];
 
     protected function casts(): array
     {
         return [
             'last_checked_at' => 'datetime',
+            'last_test_metadata' => 'array',
         ];
     }
 

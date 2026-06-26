@@ -12,29 +12,52 @@ class FrontSystemsReadOnlyClient
 {
     public function test(Connection $connection): array
     {
+        $startedAt = microtime(true);
+
         try {
             $response = $this->environment($connection);
+            $metadata = [];
+
+            if ($response->successful()) {
+                $storesResponse = $this->stores($connection);
+
+                if ($storesResponse->successful()) {
+                    $metadata['front_stores'] = $this->safeStoreMetadata($storesResponse->json());
+                    $metadata['stores_http_status'] = $storesResponse->status();
+                } else {
+                    $metadata['stores_http_status'] = $storesResponse->status();
+                    $metadata['stores_check_status'] = 'failed';
+                }
+            }
 
             return [
-                'status' => $response->successful() ? 'connected' : 'http_error',
+                'status' => $response->successful() ? 'success' : 'failed',
                 'message' => $response->successful()
                     ? 'Front Systems REST API responded to a read-only environment check.'
                     : 'Front Systems REST API responded with a non-success status.',
-                'service' => 'front',
+                'service' => 'front_systems',
                 'operation' => 'GET /api/Environment',
                 'http_status' => $response->status(),
                 'http_checked' => true,
                 'read_only' => true,
+                'response_time_ms' => $this->responseTimeMs($startedAt),
+                'checked_at' => now()->toISOString(),
+                'last_error' => $response->successful() ? null : 'HTTP ' . $response->status(),
+                'metadata' => $metadata,
             ];
         } catch (Throwable $exception) {
             return [
-                'status' => 'unreachable',
+                'status' => 'failed',
                 'message' => 'Front Systems REST API could not be reached by the read-only check.',
-                'service' => 'front',
+                'service' => 'front_systems',
                 'operation' => 'GET /api/Environment',
                 'error_class' => $exception::class,
                 'http_checked' => true,
                 'read_only' => true,
+                'response_time_ms' => $this->responseTimeMs($startedAt),
+                'checked_at' => now()->toISOString(),
+                'last_error' => $exception::class,
+                'metadata' => [],
             ];
         }
     }
@@ -71,5 +94,33 @@ class FrontSystemsReadOnlyClient
         $value = is_array($payload) ? ($payload['value'] ?? null) : null;
 
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    private function safeStoreMetadata(mixed $payload): array
+    {
+        $stores = is_array($payload) ? $payload : [];
+
+        if (array_key_exists('stores', $stores) && is_array($stores['stores'])) {
+            $stores = $stores['stores'];
+        }
+
+        return collect($stores)
+            ->filter(fn ($store): bool => is_array($store))
+            ->take(20)
+            ->map(fn (array $store): array => [
+                'store_id' => $store['StoreId'] ?? $store['storeId'] ?? $store['id'] ?? null,
+                'store_name' => $store['StoreName'] ?? $store['storeName'] ?? $store['name'] ?? null,
+                'stock_id' => $store['StockId'] ?? $store['stockId'] ?? null,
+                'currency' => $store['Currency'] ?? $store['currency'] ?? null,
+                'time_zone' => $store['TimeZoneInfo'] ?? $store['TimeZone'] ?? $store['timeZone'] ?? null,
+            ])
+            ->filter(fn (array $store): bool => array_filter($store) !== [])
+            ->values()
+            ->all();
+    }
+
+    private function responseTimeMs(float $startedAt): int
+    {
+        return (int) round((microtime(true) - $startedAt) * 1000);
     }
 }
