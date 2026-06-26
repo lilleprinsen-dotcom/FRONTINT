@@ -172,11 +172,16 @@ Fields:
 
 - `id`
 - `organization_id`
+- `woo_item_key`
 - `woo_product_id`
 - `woo_variation_id`
 - `front_product_id`
+- `front_product_ext_id`
+- `front_identity`
 - `sku`
-- `ean`
+- `gtin`
+- `external_sku`
+- `front_stock_id`
 - `sync_status`
 - `last_synced_at`
 - `created_at`
@@ -184,10 +189,18 @@ Fields:
 
 Indexes:
 
-- Unique `organization_id, woo_product_id, woo_variation_id`
-- Unique `organization_id, front_product_id`
+- Unique `organization_id, woo_item_key`
+- Index `organization_id, front_product_ext_id`
 - Index `organization_id, sku`
-- Index `organization_id, ean`
+- Index `organization_id, gtin`
+- Index `organization_id, external_sku`
+
+Notes:
+
+- `woo_item_key` should be stable and explicit, for example `product:123` or `variation:456`.
+- Do not rely on unique indexes that include nullable `woo_variation_id`.
+- Use `gtin` terminology instead of old `ean` naming.
+- `front_product_ext_id`, `front_identity`, `external_sku`, and `front_stock_id` map to Front API terminology and must be confirmed per endpoint before real sync writes.
 
 ## customer_mappings
 
@@ -387,4 +400,3 @@ Fields:
 Indexes:
 
 - Unique `organization_id, key`
-

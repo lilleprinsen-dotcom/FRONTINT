@@ -30,6 +30,7 @@ If Front provides a direct URL to the official spec, download it with:
 ## Folder Layout
 
 - `openapi/`: official OpenAPI/Swagger specs when available.
+- `front-api-endpoint-summary.md`: concise endpoint overview derived from the stored OpenAPI file.
 - `manual-notes/`: internal summaries of confirmed API behavior and open questions.
 - `examples/`: sanitized request and response payload examples.
 - `sources.md`: source index with access notes and last-checked dates.

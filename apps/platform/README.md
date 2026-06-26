@@ -24,19 +24,26 @@ The repository now includes:
 - Minimal health, dashboard, sync, order, and gift card routes.
 - PHPUnit tests for idempotency key behavior.
 
-Composer is not installed in this environment, so dependencies were not downloaded here.
-
-## Install Later
-
-When shell access and Composer are available, install Laravel here:
+The app now has a local Dockerfile. Run Composer before serving the app:
 
 ```bash
-composer create-project laravel/laravel .
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
+docker compose run --rm platform composer install
+```
+
+## Local Setup
+
+From the repository root:
+
+```bash
+docker compose up -d --build postgres redis
+docker compose run --rm platform composer install
+cp apps/platform/.env.example apps/platform/.env
+docker compose run --rm platform php artisan key:generate
+docker compose run --rm platform php artisan migrate
+docker compose run --rm platform php artisan omnibridge:create-admin
+docker compose up -d platform
 ```
 
 Keep custom integration code in small, testable service classes. Avoid putting business logic directly in controllers.
 
-If installing Laravel into this existing directory, preserve the custom `app/`, `routes/`, `database/migrations/`, `config/omnibridge.php`, and `tests/` files.
+This is still scaffold-first. Verify Docker build, Composer install, migrations, and tests before adding real integration features.

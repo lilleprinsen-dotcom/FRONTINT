@@ -22,9 +22,13 @@ Future Codex/AI agents must follow these rules.
 
 ## Front Systems
 
+- Treat `docs/vendor/front-systems/openapi/frontsystems.openapi.json` as the primary endpoint schema source.
+- Use `docs/vendor/front-systems/front-api-endpoint-summary.md` for quick orientation before reading the full OpenAPI file.
 - Do not assume Front supports a UI feature unless documented or explicitly confirmed.
 - Do not build custom Front UI assumptions.
 - Mark uncertain behavior as `TODO` or `NEEDS_FRONT_CONFIRMATION`.
+- Public webhook URLs must use `webhook_endpoints.path_token`, not organization slugs.
+- Product mapping terminology should use `gtin`, `external_sku`, and `front_product_ext_id`.
 
 ## Integration Feature Checklist
 
@@ -38,6 +42,8 @@ For every integration feature, define:
 - Failure behavior
 - Reconciliation behavior
 
+Duplicate inbound events must not dispatch duplicate queue jobs.
+
 ## Tests
 
 - Add tests for mapping logic.
@@ -50,4 +56,3 @@ For every integration feature, define:
 - Make setup understandable for non-developers.
 - Prefer clear dashboard status over hidden logs.
 - Explain failures in merchant-friendly language while preserving technical details for developers.
-

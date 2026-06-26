@@ -11,11 +11,16 @@ class ProductMapping extends Model
 
     protected $fillable = [
         'organization_id',
+        'woo_item_key',
         'woo_product_id',
         'woo_variation_id',
         'front_product_id',
+        'front_product_ext_id',
+        'front_identity',
         'sku',
-        'ean',
+        'gtin',
+        'external_sku',
+        'front_stock_id',
         'sync_status',
         'last_synced_at',
     ];

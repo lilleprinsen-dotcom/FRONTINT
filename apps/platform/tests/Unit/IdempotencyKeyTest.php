@@ -22,10 +22,47 @@ class IdempotencyKeyTest extends TestCase
         $this->assertSame($first, $second);
     }
 
+    public function test_payload_hash_is_stable_for_nested_key_order(): void
+    {
+        $first = IdempotencyKey::payloadHash([
+            'order' => [
+                'lines' => [
+                    ['sku' => 'ABC', 'qty' => 1],
+                ],
+                'customer' => [
+                    'phone' => '12345678',
+                    'email' => 'test@example.com',
+                ],
+            ],
+        ]);
+
+        $second = IdempotencyKey::payloadHash([
+            'order' => [
+                'customer' => [
+                    'email' => 'test@example.com',
+                    'phone' => '12345678',
+                ],
+                'lines' => [
+                    ['qty' => 1, 'sku' => 'ABC'],
+                ],
+            ],
+        ]);
+
+        $this->assertSame($first, $second);
+    }
+
     public function test_payload_hash_changes_when_payload_changes(): void
     {
         $first = IdempotencyKey::payloadHash(['order_id' => 1001]);
         $second = IdempotencyKey::payloadHash(['order_id' => 1002]);
+
+        $this->assertNotSame($first, $second);
+    }
+
+    public function test_payload_hash_changes_when_nested_payload_changes(): void
+    {
+        $first = IdempotencyKey::payloadHash(['order' => ['lines' => [['sku' => 'ABC', 'qty' => 1]]]]);
+        $second = IdempotencyKey::payloadHash(['order' => ['lines' => [['sku' => 'ABC', 'qty' => 2]]]]);
 
         $this->assertNotSame($first, $second);
     }

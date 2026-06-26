@@ -8,5 +8,4 @@ This file contains internal integration notes only. Prefer links and summaries o
 
 ## Notes
 
-- `NEEDS_FRONT_CONFIRMATION`: Product create/update endpoints, variant handling, SKU/EAN requirements, image support, and active/inactive behavior.
-
+- `NEEDS_FRONT_CONFIRMATION`: Product create/update endpoints, variant handling, SKU/GTIN requirements, image support, and active/inactive behavior.

@@ -5,15 +5,16 @@ Run all tests in staging or sandbox only.
 ## 1. One Woo Product to Front
 
 - Pick one simple WooCommerce product.
-- Confirm SKU, EAN/GTIN, category, price, and stock.
+- Confirm SKU, GTIN, category, price, stock, and the intended `woo_item_key`.
 - Mark eligible for Front POS.
 - Sync to Front.
-- Confirm name, SKU/EAN, price, status, and stock in Front.
+- Confirm name, SKU/GTIN, price, status, stock, and any Front `productExtId` or `externalSKU` mapping in Front.
 
 ## 2. One Front Sale to Woo Order
 
 - Sell one staging/test product in Front.
 - Receive Front sale webhook or fetch sale through API.
+- Confirm the public webhook URL uses an opaque path token, not an organization slug.
 - Create WooCommerce order with source `front_pos`.
 - Store Front transaction ID.
 - Confirm stock is not double-deducted.
@@ -41,4 +42,3 @@ Run all tests in staging or sandbox only.
 - Redeem/debit a small amount.
 - Reverse or credit the amount.
 - Confirm transaction log and concurrency protection approach.
-

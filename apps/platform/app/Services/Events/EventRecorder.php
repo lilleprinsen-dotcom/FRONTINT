@@ -20,6 +20,7 @@ class EventRecorder
         string $eventType,
         ?string $sourceEventId,
         array $payload,
+        array $metadata = [],
     ): Event {
         $sourceEventId ??= IdempotencyKey::payloadHash($payload);
         $idempotencyKey = IdempotencyKey::build($organization->slug, $sourceSystem, $eventType, $sourceEventId);
@@ -34,6 +35,7 @@ class EventRecorder
                 'event_type' => $eventType,
                 'source_event_id' => $sourceEventId,
                 'payload_json' => $this->redactor->redact($payload),
+                'metadata_json' => $this->redactor->redact($metadata),
                 'status' => 'received',
                 'received_at' => now(),
             ],

@@ -11,14 +11,22 @@ class SecretRedactorTest extends TestCase
     {
         $redacted = (new SecretRedactor())->redact([
             'consumer_secret' => 'abc',
+            'x-api-key' => 'front-key',
+            'Authorization' => 'Bearer abc',
             'nested' => [
+                'api_key' => 'nested-key',
                 'token' => 'secret-token',
                 'safe' => 'visible',
             ],
+            'normal_field' => 'visible',
         ]);
 
         $this->assertSame('[redacted]', $redacted['consumer_secret']);
+        $this->assertSame('[redacted]', $redacted['x-api-key']);
+        $this->assertSame('[redacted]', $redacted['Authorization']);
+        $this->assertSame('[redacted]', $redacted['nested']['api_key']);
         $this->assertSame('[redacted]', $redacted['nested']['token']);
         $this->assertSame('visible', $redacted['nested']['safe']);
+        $this->assertSame('visible', $redacted['normal_field']);
     }
 }
