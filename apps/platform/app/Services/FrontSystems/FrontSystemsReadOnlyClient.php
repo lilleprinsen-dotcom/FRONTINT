@@ -76,6 +76,8 @@ class FrontSystemsReadOnlyClient
 
     public function products(Connection $connection, int $limit = 10): Response
     {
+        // Front's OpenAPI spec uses POST /api/Product for read-only product listing/search.
+        // Discovery must keep pageSize <= 10 and must not use /api/products, which is product CRUD.
         return $this->request($connection)
             ->post($this->url($connection, '/api/Product'), [
                 'pageSize' => min(max($limit, 1), 10),

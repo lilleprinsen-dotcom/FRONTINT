@@ -41,7 +41,9 @@ Phase 3 adds read-only discovery and mapping preview:
 - Front stores: `GET /api/Stores`
 - Front product sample: `POST /api/Product` with a read-only search body limited to 10 products
 
-Discovery stores only sanitized snapshots in `connection_discovery_snapshots`. It detects likely WooCommerce GTIN/EAN fields such as `Zettle_barcode`, `_iZettle_barcode`, `ean`, `gtin`, and `barcode`, then previews possible Woo ↔ Front matches by GTIN first, SKU to Front `externalSKU` second, and SKU to Front `identity` third. This is not product sync and does not write final product mappings.
+Front's OpenAPI spec documents `POST /api/Product` as the read-only product listing/search endpoint used for discovery. During discovery it must stay capped at `pageSize <= 10` and must not be confused with `/api/products`, which is the product CRUD endpoint.
+
+Discovery stores only sanitized snapshots in `connection_discovery_snapshots` and keeps only the latest 5 snapshots per connection and discovery type. This table is not long-term product storage. It detects likely WooCommerce GTIN/EAN candidate fields such as `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, `_iZettle_barcode`, `ean`, `gtin`, and `barcode`, then previews possible Woo ↔ Front matches by GTIN first, SKU to Front `externalSKU` second, and SKU to Front `identity` third. Candidate GTIN/EAN values must be confirmed before final mapping. This is not product sync and does not write final product mappings.
 
 It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
@@ -147,6 +149,8 @@ php artisan serve
 ```
 
 Open `http://localhost:8000/dashboard`. Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless you are testing read-only staging credentials.
+
+Before using real staging/test credentials, follow [docs/live-readonly-test-checklist.md](docs/live-readonly-test-checklist.md).
 
 ## Verification commands
 

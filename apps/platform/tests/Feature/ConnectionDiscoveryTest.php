@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Services\Credentials\CredentialVault;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -131,11 +132,37 @@ class ConnectionDiscoveryTest extends TestCase
         Http::assertNotSent(fn ($request): bool => in_array($request->method(), ['PUT', 'PATCH', 'DELETE'], true));
         Http::assertNotSent(fn ($request): bool => $request->method() === 'POST'
             && $request->url() !== 'https://front.example.test/restapi/V2/api/Product');
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/api/products'));
 
         $snapshot = ConnectionDiscoverySnapshot::query()->firstOrFail();
         $this->assertSame('7040000000012', $snapshot->sample_json['products'][0]['productSizes'][0]['gtin']);
         $this->assertStringNotContainsString('do-not-store', json_encode($snapshot->sample_json));
         $this->assertStringNotContainsString('front-secret-key', json_encode($snapshot->toArray()));
+        $this->assertSame(10, $snapshot->summary_json['limit']);
+        $this->assertStringContainsString('Read-only product listing endpoint', $snapshot->summary_json['front_openapi_note']);
+    }
+
+    public function test_front_product_discovery_limit_cannot_be_overridden_by_request_parameters(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/Product' => Http::response([]),
+        ]);
+
+        [$user, $connection] = $this->connectionWithCredentials('front_systems', [
+            'api_key' => 'front-secret-key',
+        ], 'https://front.example.test/restapi/V2');
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/discover/products?limit=500&pageSize=500")
+            ->assertOk()
+            ->assertJson(['status' => 'success']);
+
+        Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://front.example.test/restapi/V2/api/Product'
+            && $request['pageSize'] === 10);
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/api/products'));
     }
 
     public function test_woocommerce_products_discovery_uses_read_only_product_endpoint_and_detects_gtin(): void
@@ -196,6 +223,108 @@ class ConnectionDiscoveryTest extends TestCase
         $this->assertSame('exact_known_field', $product['gtin_candidate']['confidence']);
         $this->assertStringNotContainsString('do-not-store', json_encode($snapshot->sample_json));
         $this->assertStringNotContainsString('cs_secret', json_encode($snapshot->toArray()));
+    }
+
+    public function test_woocommerce_product_discovery_limit_cannot_be_overridden_by_request_parameters(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+
+        Http::fake([
+            'https://woo.example.test/wp-json/wc/v3/products*' => Http::response([]),
+        ]);
+
+        [$user, $connection] = $this->connectionWithCredentials('woocommerce', [
+            'consumer_key' => 'ck_secret',
+            'consumer_secret' => 'cs_secret',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/discover/products?limit=500&per_page=500")
+            ->assertOk()
+            ->assertJson(['status' => 'success']);
+
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && str_starts_with($request->url(), 'https://woo.example.test/wp-json/wc/v3/products')
+            && str_contains($request->url(), 'per_page=10'));
+    }
+
+    public function test_discovery_prunes_older_snapshots_to_latest_five_per_connection_and_type(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+
+        Http::fake([
+            'https://woo.example.test/wp-json/wc/v3/products*' => Http::response([]),
+        ]);
+
+        [$user, $connection] = $this->connectionWithCredentials('woocommerce', [
+            'consumer_key' => 'ck_secret',
+            'consumer_secret' => 'cs_secret',
+        ]);
+
+        for ($i = 0; $i < 5; $i++) {
+            ConnectionDiscoverySnapshot::query()->create([
+                'organization_id' => $connection->organization_id,
+                'connection_id' => $connection->id,
+                'source_system' => 'woocommerce',
+                'discovery_type' => 'products',
+                'status' => 'success',
+                'summary_json' => ['sequence' => $i],
+                'sample_json' => ['products' => []],
+                'checked_at' => now()->subMinutes(10 - $i),
+                'created_at' => now()->subMinutes(10 - $i),
+                'updated_at' => now()->subMinutes(10 - $i),
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/discover/products")
+            ->assertOk()
+            ->assertJson(['status' => 'success']);
+
+        $snapshots = ConnectionDiscoverySnapshot::query()
+            ->where('connection_id', $connection->id)
+            ->where('discovery_type', 'products')
+            ->orderBy('created_at')
+            ->get();
+
+        $this->assertCount(5, $snapshots);
+        $this->assertFalse($snapshots->pluck('summary_json')->contains(fn ($summary): bool => ($summary['sequence'] ?? null) === 0));
+    }
+
+    public function test_missing_woocommerce_settings_use_user_friendly_messages(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+        Http::fake();
+
+        [$user, $connection] = $this->connectionWithCredentials('woocommerce', [], '');
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/discover/products")
+            ->assertOk()
+            ->assertJson([
+                'status' => 'failed',
+                'error_message' => 'Missing required settings: Missing WooCommerce site URL, Missing WooCommerce consumer key, Missing WooCommerce consumer secret',
+            ]);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_missing_front_settings_use_user_friendly_messages(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+        Http::fake();
+
+        [$user, $connection] = $this->connectionWithCredentials('front_systems', [], '');
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/discover/stores")
+            ->assertOk()
+            ->assertJson([
+                'status' => 'failed',
+                'error_message' => 'Missing required settings: Missing Front base URL, Missing Front API key',
+            ]);
+
+        Http::assertNothingSent();
     }
 
     public function test_dashboard_shows_discovery_buttons_and_status(): void
@@ -291,6 +420,8 @@ class ConnectionDiscoveryTest extends TestCase
             ->assertSee('Front Boot')
             ->assertSee('gtin')
             ->assertSee('high');
+
+        $this->assertSame(0, DB::table('product_mappings')->count());
     }
 
     private function connectionWithCredentials(string $type, array $credentials, string $baseUrl = 'https://woo.example.test'): array

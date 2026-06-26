@@ -20,8 +20,10 @@ Run all tests in staging or sandbox only.
 - Confirm WooCommerce product discovery calls only `GET /wp-json/wc/v3/products` with a 10-product limit.
 - Confirm Front store discovery calls only `GET /api/Stores`.
 - Confirm Front product discovery calls only `POST /api/Product` with a 10-product read-only search body.
+- Confirm `POST /api/Product` is treated as the Front OpenAPI read-only product listing endpoint and is not confused with `/api/products` CRUD.
 - Confirm no writes, sync jobs, stock updates, price updates, order creation, refunds, gift card operations, or omnichannel actions occur.
 - Review detected WooCommerce GTIN/EAN candidate fields.
+- Confirm candidate fields such as `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, and `_iZettle_barcode` before final mapping.
 - Review mapping preview matches by GTIN first, then Woo SKU to Front `externalSKU`, then Woo SKU to Front `identity`.
 - Confirm preview rows are not saved as final `product_mappings`.
 
