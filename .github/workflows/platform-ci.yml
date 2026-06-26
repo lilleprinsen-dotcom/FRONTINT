@@ -1,0 +1,50 @@
+name: Platform CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  platform:
+    name: Laravel platform
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/platform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, pdo_pgsql
+          coverage: none
+
+      - name: Validate Composer config
+        run: composer validate --strict
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHP syntax check
+        run: find app bootstrap config database routes tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Run tests
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          OMNIBRIDGE_ENVIRONMENT: staging
+          OMNIBRIDGE_ALLOW_PRODUCTION_WRITES: false
+          OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP: false
+        run: php artisan test

@@ -10,6 +10,13 @@ The platform is still scaffold-first. It has Laravel-style structure, migrations
 - Docker Desktop or another Docker Compose-compatible runtime
 - No real production credentials
 
+Optional local tools:
+
+- PHP 8.3+
+- Composer
+
+Docker is the preferred path for non-developers. Local PHP/Composer are useful for faster checks.
+
 ## 1. Clone the Repo
 
 ```bash
@@ -34,6 +41,12 @@ docker compose run --rm platform composer install
 ```
 
 If this fails, the project is still inspectable as documentation/scaffold, but the Laravel app cannot run yet.
+
+The Laravel dependency lockfile is committed at:
+
+```text
+apps/platform/composer.lock
+```
 
 ## 4. Copy Environment File
 
@@ -158,9 +171,22 @@ The dashboard should later show failed events and queue status without requiring
 docker compose run --rm platform php artisan test
 ```
 
+If PHP and Composer are installed locally, you can also run:
+
+```bash
+cd apps/platform
+php artisan test
+```
+
 ## 17. Verification commands
 
-Run these commands after cloning the repository:
+Run the quick scaffold check first:
+
+```bash
+./scripts/verify-platform-scaffold.sh
+```
+
+Then run these Docker commands after cloning the repository:
 
 ```bash
 docker compose build
@@ -171,6 +197,14 @@ docker compose run --rm platform php artisan migrate
 docker compose run --rm platform php artisan test
 ./scripts/generate-front-client.sh
 ```
+
+The scripts in `scripts/` are executable in git. If a local checkout loses executable bits, run:
+
+```bash
+chmod +x scripts/*.sh
+```
+
+The repository also includes `.github/workflows/platform-ci.yml`, which runs Composer validation and Laravel tests on pull requests and pushes to `main` without real WooCommerce or Front credentials.
 
 ## 18. What Is Still Placeholder
 
@@ -184,6 +218,12 @@ The scaffold does not yet implement:
 - Gift card redemption
 - Omnichannel order creation
 - Real Front or WooCommerce API writes
+
+Production writes remain disabled by default with:
+
+```text
+OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false
+```
 
 ## 19. Run First Product Sync Test Later
 

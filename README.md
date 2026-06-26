@@ -29,6 +29,8 @@ This repository contains the technical specification and a Laravel-style platfor
 
 It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
+The scaffold now includes a root `.gitignore`, executable helper scripts, a committed Laravel `composer.lock`, and a minimal GitHub Actions workflow for platform tests.
+
 ## Front Systems API documentation
 
 Official Front Systems API specs should go in `docs/vendor/front-systems/openapi/`.
@@ -78,6 +80,23 @@ Use the dashboard to create organizations, add WooCommerce/Front connections, vi
 
 ## Verification commands
 
+Quick scaffold check:
+
+```bash
+./scripts/verify-platform-scaffold.sh
+```
+
+Laravel checks from `apps/platform` after Composer dependencies are installed:
+
+```bash
+php artisan --version
+php artisan route:list
+php artisan config:clear
+php artisan test
+```
+
+Docker verification from the repository root:
+
 ```bash
 docker compose build
 docker compose run --rm platform composer install
@@ -89,6 +108,8 @@ docker compose run --rm platform php artisan test
 ```
 
 The platform is safe by default: production writes and live HTTP connection checks are disabled unless explicitly enabled.
+
+No real WooCommerce or Front Systems API writes exist yet.
 
 ## Next Steps
 
