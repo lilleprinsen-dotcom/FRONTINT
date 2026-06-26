@@ -75,6 +75,11 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - WooCommerce and Front Systems connection tests must remain read-only.
 - WooCommerce connection testing uses `GET /wp-json/wc/v3/system_status`.
 - Front Systems connection testing uses `GET /api/Environment`.
+- Front Systems may optionally call `GET /api/Stores` after a successful environment check.
+- Connection test states are `success`, `failed`, and `skipped`.
+- Store only minimal diagnostics: HTTP status, response time, safe error text, checked timestamp, and safe Front store metadata.
+- Do not store full connection test response bodies.
+- Safe Front store metadata is limited to store name, store ID, stock ID, currency, and time zone.
 - Connection test actions must not print or return secret values.
 
 ## Audit Trail
@@ -103,6 +108,7 @@ Audit these actions:
 - Live HTTP connection checks are disabled unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
 - Connection checks must be read-only. They must not create, update, refund, sync, reserve, redeem, or delete data.
 - Even when live HTTP connection checks are enabled, no product sync, stock sync, order import, refund, gift card, or omnichannel write may be triggered by a connection test.
+- Do not use production credentials until staging credentials and read-only tests are verified.
 
 ## Health Checks
 

@@ -12,11 +12,13 @@ class WooCommerceReadOnlyClient
 {
     public function test(Connection $connection): array
     {
+        $startedAt = microtime(true);
+
         try {
             $response = $this->systemStatus($connection);
 
             return [
-                'status' => $response->successful() ? 'connected' : 'http_error',
+                'status' => $response->successful() ? 'success' : 'failed',
                 'message' => $response->successful()
                     ? 'WooCommerce REST API responded to a read-only status check.'
                     : 'WooCommerce REST API responded with a non-success status.',
@@ -25,16 +27,22 @@ class WooCommerceReadOnlyClient
                 'http_status' => $response->status(),
                 'http_checked' => true,
                 'read_only' => true,
+                'response_time_ms' => $this->responseTimeMs($startedAt),
+                'checked_at' => now()->toISOString(),
+                'last_error' => $response->successful() ? null : 'HTTP ' . $response->status(),
             ];
         } catch (Throwable $exception) {
             return [
-                'status' => 'unreachable',
+                'status' => 'failed',
                 'message' => 'WooCommerce REST API could not be reached by the read-only check.',
                 'service' => 'woocommerce',
                 'operation' => 'GET /wp-json/wc/v3/system_status',
                 'error_class' => $exception::class,
                 'http_checked' => true,
                 'read_only' => true,
+                'response_time_ms' => $this->responseTimeMs($startedAt),
+                'checked_at' => now()->toISOString(),
+                'last_error' => $exception::class,
             ];
         }
     }
@@ -57,7 +65,7 @@ class WooCommerceReadOnlyClient
 
     private function url(Connection $connection, string $path): string
     {
-        return rtrim((string) $connection->base_url, '/') . $path;
+        return rtrim($this->siteUrl($connection), '/') . $path;
     }
 
     private function credentialValue(Connection $connection, string $type): ?string
@@ -66,5 +74,15 @@ class WooCommerceReadOnlyClient
         $value = is_array($payload) ? ($payload['value'] ?? null) : null;
 
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    private function siteUrl(Connection $connection): string
+    {
+        return $this->credentialValue($connection, 'site_url') ?: (string) $connection->base_url;
+    }
+
+    private function responseTimeMs(float $startedAt): int
+    {
+        return (int) round((microtime(true) - $startedAt) * 1000);
     }
 }

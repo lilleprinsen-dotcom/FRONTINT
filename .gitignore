@@ -20,6 +20,7 @@ apps/platform/storage/framework/views/*
 apps/platform/bootstrap/cache/*.php
 apps/platform/.phpunit.cache/
 apps/platform/.phpunit.result.cache
+apps/platform/omnibridge
 
 .phpunit.cache/
 .phpunit.result.cache

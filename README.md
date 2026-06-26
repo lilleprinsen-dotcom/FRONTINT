@@ -31,6 +31,9 @@ Phase 2 has started with read-only WooCommerce and Front Systems API clients for
 
 - WooCommerce: `GET /wp-json/wc/v3/system_status`
 - Front Systems: `GET /api/Environment`
+- Optional Front store discovery: `GET /api/Stores`
+
+Connection tests record only minimal diagnostics: `success`, `failed`, or `skipped`, HTTP status, response time, safe error text, checked time, and safe Front store metadata when available.
 
 It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
@@ -95,6 +98,8 @@ Use the dashboard to create organizations, add WooCommerce/Front connections, vi
 When live HTTP checks are enabled, WooCommerce and Front tests use read-only API endpoints only. They do not sync products, prices, stock, orders, refunds, gift cards, or omnichannel orders.
 
 The dashboard connection test button posts to `/connections/{connection}/test`.
+
+Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` for safe local setup with dummy credentials. Set it to `true` only for staging/test credentials.
 
 ## Verification commands
 

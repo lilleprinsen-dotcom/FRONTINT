@@ -3,11 +3,15 @@
 @php
     $credentialFields = [
         'woocommerce' => [
+            'site_url' => 'WooCommerce site URL',
             'consumer_key' => 'WooCommerce consumer key',
             'consumer_secret' => 'WooCommerce consumer secret',
         ],
+        'front_systems' => [
+            'api_key' => 'Front Systems API key',
+        ],
         'front' => [
-            'api_key' => 'Front API key',
+            'api_key' => 'Front Systems API key',
         ],
         'webtoffee_adapter' => [
             'shared_secret' => 'Adapter shared secret',
@@ -55,7 +59,15 @@
             <input id="name" name="name" value="{{ old('name', $connection->name) }}" required>
 
             <label for="base_url">Base URL</label>
-            <input id="base_url" name="base_url" type="url" value="{{ old('base_url', $connection->base_url) }}" placeholder="https://example.com">
+            <input
+                id="base_url"
+                name="base_url"
+                type="url"
+                value="{{ old('base_url', $connection->base_url) }}"
+                placeholder="https://example.com"
+                data-base-url-input
+                data-front-default-url="{{ config('omnibridge.front_systems.default_base_url') }}"
+            >
             <p class="muted">WooCommerce example: https://store.example.com. Front Systems REST API V2 example: https://frontsystemsapis.frontsystems.no/restapi/V2.</p>
 
             <h2>Credentials</h2>
@@ -82,11 +94,16 @@
         document.addEventListener('DOMContentLoaded', () => {
             const typeSelect = document.querySelector('[data-connection-type-select]');
             const panels = document.querySelectorAll('[data-credential-panel]');
+            const baseUrlInput = document.querySelector('[data-base-url-input]');
 
             const updateCredentialPanels = () => {
                 panels.forEach((panel) => {
                     panel.hidden = panel.dataset.credentialPanel !== typeSelect.value;
                 });
+
+                if (['front', 'front_systems'].includes(typeSelect.value) && baseUrlInput.value.trim() === '') {
+                    baseUrlInput.value = baseUrlInput.dataset.frontDefaultUrl;
+                }
             };
 
             typeSelect.addEventListener('change', updateCredentialPanels);

@@ -16,7 +16,7 @@ class ConnectionRequest extends FormRequest
     {
         return [
             'organization_id' => ['required', 'integer', Rule::exists('organizations', 'id')],
-            'type' => ['required', Rule::in(['woocommerce', 'front', 'dintero', 'stripe', 'webtoffee_adapter'])],
+            'type' => ['required', Rule::in(['woocommerce', 'front_systems', 'front', 'dintero', 'stripe', 'webtoffee_adapter'])],
             'name' => ['required', 'string', 'max:255'],
             'base_url' => ['nullable', 'url', 'max:2048'],
             'credentials' => ['nullable', 'array'],

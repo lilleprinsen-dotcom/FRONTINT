@@ -26,19 +26,23 @@ class ConnectionTester
 
         if ($missing !== []) {
             return [
-                'status' => 'incomplete',
+                'status' => 'failed',
                 'message' => 'Connection settings are incomplete.',
                 'missing' => $missing,
                 'http_checked' => false,
+                'checked_at' => now()->toISOString(),
+                'last_error' => 'Missing required settings: ' . implode(', ', $missing),
             ];
         }
 
         if (! $this->safety->connectionHttpTestsAllowed()) {
             return [
-                'status' => 'configured',
-                'message' => 'Credentials are stored. Live HTTP checks are disabled for staging safety.',
+                'status' => 'skipped',
+                'message' => 'Safe mode: credentials are stored, but live HTTP checks are disabled.',
                 'missing' => [],
                 'http_checked' => false,
+                'checked_at' => now()->toISOString(),
+                'read_only' => true,
             ];
         }
 
@@ -66,7 +70,7 @@ class ConnectionTester
     {
         return match ($connectionType) {
             'woocommerce' => ['consumer_key', 'consumer_secret'],
-            'front' => ['api_key'],
+            'front', 'front_systems' => ['api_key'],
             'webtoffee_adapter' => ['shared_secret'],
             'dintero', 'stripe' => [],
             default => [],
@@ -79,30 +83,42 @@ class ConnectionTester
             return $this->wooCommerce->test($connection);
         }
 
-        if ($connection->type === 'front') {
+        if (in_array($connection->type, ['front', 'front_systems'], true)) {
             return $this->frontSystems->test($connection);
         }
 
         try {
+            $startedAt = microtime(true);
             $response = Http::timeout(10)->get(rtrim((string) $connection->base_url, '/'));
 
             return [
-                'status' => $response->successful() ? 'reachable' : 'http_error',
+                'status' => $response->successful() ? 'success' : 'failed',
                 'message' => $response->successful()
                     ? 'Base URL responded to a read-only check.'
                     : 'Base URL responded with a non-success status.',
                 'http_status' => $response->status(),
                 'http_checked' => true,
                 'read_only' => true,
+                'response_time_ms' => $this->responseTimeMs($startedAt),
+                'checked_at' => now()->toISOString(),
+                'last_error' => $response->successful() ? null : 'HTTP ' . $response->status(),
             ];
         } catch (Throwable $exception) {
             return [
-                'status' => 'unreachable',
+                'status' => 'failed',
                 'message' => 'Base URL could not be reached by the read-only check.',
                 'error_class' => $exception::class,
                 'http_checked' => true,
                 'read_only' => true,
+                'response_time_ms' => isset($startedAt) ? $this->responseTimeMs($startedAt) : null,
+                'checked_at' => now()->toISOString(),
+                'last_error' => $exception::class,
             ];
         }
+    }
+
+    private function responseTimeMs(float $startedAt): int
+    {
+        return (int) round((microtime(true) - $startedAt) * 1000);
     }
 }

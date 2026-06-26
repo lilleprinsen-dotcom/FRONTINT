@@ -33,6 +33,7 @@ class DashboardController extends Controller
                 ->limit(10)
                 ->get(),
             'connectionTypes' => config('omnibridge.connection_types'),
+            'environment' => config('omnibridge.environment'),
             'productionWritesEnabled' => (bool) config('omnibridge.allow_production_writes'),
             'connectionHttpTestsEnabled' => (bool) config('omnibridge.allow_connection_test_http'),
         ]);
