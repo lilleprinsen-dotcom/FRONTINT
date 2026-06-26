@@ -90,6 +90,14 @@ cd apps/platform
 php artisan test
 ```
 
+## Health Checks
+
+- `GET /health/live`: liveness check without database access.
+- `GET /health/ready`: readiness check with database access.
+- `GET /health`: compatibility endpoint, currently same as readiness.
+
+Use `/health/ready` for hosted traffic readiness and `/health/live` for process liveness.
+
 ## Verification commands
 
 Quick scaffold verification:
@@ -108,6 +116,20 @@ docker compose run --rm platform php artisan key:generate
 docker compose run --rm platform php artisan migrate
 docker compose run --rm platform php artisan test
 ./scripts/generate-front-client.sh
+```
+
+Local non-Docker verification when PHP and Composer are installed:
+
+```bash
+cd apps/platform
+composer install
+php artisan --version
+php artisan route:list
+php artisan config:clear
+php artisan test
+cd ../..
+./scripts/generate-front-client.sh
+./scripts/verify-platform-scaffold.sh
 ```
 
 If Docker is not installed, Docker verification is blocked until Docker Desktop or another Docker Compose-compatible runtime is installed.
@@ -131,5 +153,5 @@ docker compose down
 
 - Use staging credentials only.
 - Keep `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false`.
-- Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless you intentionally want read-only base URL reachability checks.
+- Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless you intentionally want read-only WooCommerce and Front API connection checks.
 - Do not paste real credentials into docs, issues, commits, or chat.

@@ -4,13 +4,14 @@ use App\Http\Controllers\Api\GiftCardController;
 use App\Http\Controllers\Api\OrderResyncController;
 use App\Http\Controllers\Api\StockReconciliationController;
 use App\Http\Controllers\Api\ProductSyncController;
-use App\Http\Controllers\ConnectionTestController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\Webhooks\FrontWebhookController;
 use App\Http\Controllers\Webhooks\WooCommerceWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class);
+Route::get('/health/live', [HealthController::class, 'live']);
+Route::get('/health/ready', [HealthController::class, 'ready']);
 
 Route::post('/webhooks/woocommerce/{pathToken}', WooCommerceWebhookController::class);
 Route::post('/webhooks/front/{pathToken}', FrontWebhookController::class);
@@ -25,6 +26,4 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/gift-cards/redeem', [GiftCardController::class, 'redeem']);
     Route::post('/gift-cards/reverse', [GiftCardController::class, 'reverse']);
     Route::post('/gift-cards/credit', [GiftCardController::class, 'credit']);
-
-    Route::post('/api/connections/{connection}/test', ConnectionTestController::class);
 });

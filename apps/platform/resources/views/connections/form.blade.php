@@ -45,7 +45,7 @@
             </select>
 
             <label for="type">Connection type</label>
-            <select id="type" name="type" required>
+            <select id="type" name="type" required data-connection-type-select>
                 @foreach ($connectionTypes as $value => $label)
                     <option value="{{ $value }}" @selected($selectedType === $value)>{{ $label }}</option>
                 @endforeach
@@ -62,7 +62,7 @@
             <p class="muted">Only fill the fields for the selected connection type. Existing saved credentials are shown as redacted hints on the dashboard.</p>
 
             @foreach ($credentialFields as $type => $fields)
-                <div class="panel">
+                <div class="panel" data-credential-panel="{{ $type }}" @hidden($selectedType !== $type)>
                     <h3>{{ $connectionTypes[$type] ?? $type }}</h3>
                     @foreach ($fields as $field => $label)
                         <label for="credential_{{ $type }}_{{ $field }}">{{ $label }}</label>
@@ -77,4 +77,20 @@
             </p>
         </form>
     </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const typeSelect = document.querySelector('[data-connection-type-select]');
+            const panels = document.querySelectorAll('[data-credential-panel]');
+
+            const updateCredentialPanels = () => {
+                panels.forEach((panel) => {
+                    panel.hidden = panel.dataset.credentialPanel !== typeSelect.value;
+                });
+            };
+
+            typeSelect.addEventListener('change', updateCredentialPanels);
+            updateCredentialPanels();
+        });
+    </script>
 @endsection

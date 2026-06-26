@@ -104,6 +104,13 @@ Audit these actions:
 - Connection checks must be read-only. They must not create, update, refund, sync, reserve, redeem, or delete data.
 - Even when live HTTP connection checks are enabled, no product sync, stock sync, order import, refund, gift card, or omnichannel write may be triggered by a connection test.
 
+## Health Checks
+
+- `GET /health/live` returns application liveness without requiring database access.
+- `GET /health/ready` verifies application and database readiness.
+- `GET /health` is kept for compatibility and behaves like readiness.
+- Hosted platforms should generally use `/health/ready` for traffic readiness and `/health/live` for process liveness.
+
 ## Observability
 
 - Structured logs with tenant ID, event ID, job ID, and correlation ID.

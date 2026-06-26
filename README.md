@@ -73,6 +73,15 @@ Public webhook URLs use opaque path tokens, not organization slugs:
 
 Duplicate webhook events are accepted but must not dispatch duplicate processing jobs.
 
+## Health Endpoints
+
+Hosting platforms should use:
+
+- `GET /health/live` for liveness checks that should not require the database.
+- `GET /health/ready` for readiness checks that verify the app can reach the database.
+
+`GET /health` is kept for compatibility and behaves like the readiness check.
+
 ## Dashboard
 
 After local setup, open:
@@ -84,6 +93,8 @@ http://localhost:8000/dashboard
 Use the dashboard to create organizations, add WooCommerce/Front connections, view webhook path-token URLs, and run staging-safe connection checks. Connection tests do not perform live HTTP checks unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
 
 When live HTTP checks are enabled, WooCommerce and Front tests use read-only API endpoints only. They do not sync products, prices, stock, orders, refunds, gift cards, or omnichannel orders.
+
+The dashboard connection test button posts to `/connections/{connection}/test`.
 
 ## Verification commands
 
@@ -100,6 +111,8 @@ php artisan --version
 php artisan route:list
 php artisan config:clear
 php artisan test
+./scripts/generate-front-client.sh
+./scripts/verify-platform-scaffold.sh
 ```
 
 Docker verification from the repository root:

@@ -15,6 +15,7 @@ Use this checklist before starting real integration implementation.
 - [ ] Docker Laravel app key generation pending/works.
 - [ ] Docker database migrations pending/works.
 - [x] Smoke and feature tests exist for health, auth, dashboard, organizations, and webhooks.
+- [x] Health endpoints exist for `/health`, `/health/live`, and `/health/ready`.
 - [x] Unit/feature tests pass locally with `php artisan test`.
 - [ ] Unit/feature tests pending Docker verification.
 - [x] Webhook duplicate handling is present.
@@ -28,6 +29,8 @@ Use this checklist before starting real integration implementation.
 - [x] WooCommerce read-only connection test client exists.
 - [x] Front Systems read-only connection test client exists.
 - [x] Dashboard shows safe connection status context.
+- [x] Connection form shows only the selected connection type fields.
+- [x] Duplicate `/api/connections/{connection}/test` route is not present.
 - [x] No real credentials are committed.
 - [x] No real WooCommerce or Front Systems API writes are implemented yet.
 

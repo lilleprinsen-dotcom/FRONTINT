@@ -130,6 +130,12 @@ https://frontsystemsapis.frontsystems.no/restapi/V2
 
 Click **Test** beside a connection.
 
+The dashboard test action uses:
+
+```text
+POST /connections/{connection}/test
+```
+
 By default this only verifies required settings are stored. Live HTTP checks are disabled unless:
 
 ```text
@@ -145,7 +151,19 @@ When live HTTP checks are enabled, the current read-only probes are:
 
 These checks do not write data and do not perform product, stock, order, refund, gift card, or omnichannel sync.
 
-## 12. Add WooCommerce Staging Credentials
+There is no separate `/api/connections/{connection}/test` route in the scaffold. Keep connection testing in the dashboard flow until a public API use case is intentionally designed.
+
+## 12. Health Checks
+
+Use these URLs for local and hosted health checks:
+
+- `GET /health/live`: app liveness only, no database check.
+- `GET /health/ready`: app and database readiness.
+- `GET /health`: compatibility endpoint, currently same as readiness.
+
+For Render, DigitalOcean App Platform, or similar hosting, use `/health/ready` when the service should only receive traffic after the database is reachable. Use `/health/live` for process liveness checks.
+
+## 13. Add WooCommerce Staging Credentials
 
 In the future dashboard:
 
@@ -155,11 +173,11 @@ In the future dashboard:
 4. Add staging API credentials.
 5. Save and test the connection.
 
-## 13. Add Front Credentials Later
+## 14. Add Front Credentials Later
 
 Use Front sandbox/test credentials only until production readiness is explicitly approved.
 
-## 14. Add Webhook URLs
+## 15. Add Webhook URLs
 
 Public webhook URLs use opaque path tokens from `webhook_endpoints.path_token`, not organization slugs:
 
@@ -170,7 +188,7 @@ Use staging URLs first.
 
 The dashboard shows the generated webhook URLs under each organization.
 
-## 15. Where to See Logs
+## 16. Where to See Logs
 
 Local Laravel logs will be in:
 
@@ -180,7 +198,7 @@ apps/platform/storage/logs/
 
 The dashboard should later show failed events and queue status without requiring file access.
 
-## 16. Run Tests
+## 17. Run Tests
 
 ```bash
 docker compose run --rm platform php artisan test
@@ -193,7 +211,7 @@ cd apps/platform
 php artisan test
 ```
 
-## 17. Verification commands
+## 18. Verification commands
 
 Run the quick scaffold check first:
 
@@ -213,6 +231,16 @@ docker compose run --rm platform php artisan test
 ./scripts/generate-front-client.sh
 ```
 
+If local PHP and Composer are available, these non-Docker commands should also pass from `apps/platform`:
+
+```bash
+composer install
+php artisan --version
+php artisan route:list
+php artisan config:clear
+php artisan test
+```
+
 The scripts in `scripts/` are executable in git. If a local checkout loses executable bits, run:
 
 ```bash
@@ -221,7 +249,7 @@ chmod +x scripts/*.sh
 
 The repository also includes `.github/workflows/platform-ci.yml`, which runs Composer validation and Laravel tests on pull requests and pushes to `main` without real WooCommerce or Front credentials.
 
-## 18. What Is Still Placeholder
+## 19. What Is Still Placeholder
 
 The scaffold does not yet implement:
 
@@ -242,7 +270,7 @@ Production writes remain disabled by default with:
 OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false
 ```
 
-## 19. Run First Product Sync Test Later
+## 20. Run First Product Sync Test Later
 
 After Phase 1 and the first product sync are implemented:
 
@@ -251,7 +279,7 @@ After Phase 1 and the first product sync are implemented:
 3. Run a single-product sync.
 4. Confirm the product appears correctly in Front staging/test.
 
-## 20. Stop Everything
+## 21. Stop Everything
 
 ```bash
 docker compose down
