@@ -27,7 +27,7 @@ return new class extends Migration {
             $table->string('redacted_hint')->nullable();
             $table->timestamp('rotated_at')->nullable();
             $table->timestamps();
-            $table->index(['connection_id', 'credential_type']);
+            $table->unique(['connection_id', 'credential_type']);
         });
 
         Schema::create('webhook_endpoints', function (Blueprint $table): void {

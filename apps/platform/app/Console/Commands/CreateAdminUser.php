@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Webhooks\WebhookEndpointProvisioner;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -19,7 +20,7 @@ class CreateAdminUser extends Command
 
     protected $description = 'Create the first OmniBridge admin user and organization membership.';
 
-    public function handle(): int
+    public function handle(WebhookEndpointProvisioner $webhooks): int
     {
         $name = $this->option('name') ?: $this->ask('Admin name');
         $email = $this->option('email') ?: $this->ask('Admin email');
@@ -53,6 +54,8 @@ class CreateAdminUser extends Command
         $organization->users()->syncWithoutDetaching([
             $user->id => ['role' => 'owner'],
         ]);
+
+        $webhooks->ensureDefaults($organization);
 
         $this->info("Admin user {$email} is ready for {$organization->name}.");
 

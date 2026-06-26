@@ -3,6 +3,7 @@
 return [
     'environment' => env('OMNIBRIDGE_ENVIRONMENT', 'staging'),
     'allow_production_writes' => (bool) env('OMNIBRIDGE_ALLOW_PRODUCTION_WRITES', false),
+    'allow_connection_test_http' => (bool) env('OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP', false),
     'redact_log_secrets' => (bool) env('OMNIBRIDGE_REDACT_LOG_SECRETS', true),
 
     'webhooks' => [
@@ -14,5 +15,13 @@ return [
     'queues' => [
         'events' => env('OMNIBRIDGE_EVENTS_QUEUE', 'events'),
         'sync' => env('OMNIBRIDGE_SYNC_QUEUE', 'sync'),
+    ],
+
+    'connection_types' => [
+        'woocommerce' => 'WooCommerce',
+        'front' => 'Front Systems',
+        'webtoffee_adapter' => 'WebToffee adapter',
+        'dintero' => 'Dintero',
+        'stripe' => 'Stripe',
     ],
 ];

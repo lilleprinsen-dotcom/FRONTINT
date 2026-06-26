@@ -55,6 +55,8 @@ Create the first admin user:
 docker compose run --rm platform php artisan omnibridge:create-admin
 ```
 
+The command also provisions default WooCommerce and Front webhook endpoint path tokens for the first organization.
+
 ## Open Dashboard
 
 Start the platform app:
@@ -69,6 +71,8 @@ http://localhost:8000/dashboard
 
 The dashboard is intentionally minimal until authentication and setup wizard work is completed.
 
+Phase 1 includes basic login, organization editing, connection setup, encrypted credential storage, and safe connection test actions.
+
 ## Stop Services
 
 ```bash
@@ -79,4 +83,5 @@ docker compose down
 
 - Use staging credentials only.
 - Keep `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false`.
+- Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless you intentionally want read-only base URL reachability checks.
 - Do not paste real credentials into docs, issues, commits, or chat.

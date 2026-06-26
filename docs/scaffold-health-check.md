@@ -14,6 +14,10 @@ Use this checklist before starting real integration implementation.
 - [x] Secret redaction tests are present.
 - [x] Idempotency tests are present.
 - [x] Product mapping uses `gtin`, `external_sku`, and `front_product_ext_id`.
+- [x] Basic login and dashboard foundation present.
+- [x] Organization and connection setup foundation present.
+- [x] Connection credentials use encrypted model casts.
+- [x] Connection tests are staging-safe by default.
 - [x] No real credentials are committed.
 
 Notes:
