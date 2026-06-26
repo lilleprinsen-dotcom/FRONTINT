@@ -23,6 +23,22 @@ class WooCommerceGtinCandidateDetectorTest extends TestCase
         $this->assertSame('exact_known_field', $result['confidence']);
     }
 
+    public function test_multiple_candidates_are_returned_for_confirmation(): void
+    {
+        $detector = new WooCommerceGtinCandidateDetector();
+
+        $result = $detector->detect([
+            'meta_data' => [
+                ['key' => 'Zettle_barcode', 'value' => '7040000000012'],
+                ['key' => '_gtin', 'value' => '7040000000098'],
+            ],
+        ]);
+
+        $this->assertSame('Zettle_barcode', $result['key']);
+        $this->assertCount(2, $result['candidates']);
+        $this->assertSame('_gtin', $result['candidates'][1]['key']);
+    }
+
     public function test_common_fields_are_detected_when_known_fields_are_missing(): void
     {
         $detector = new WooCommerceGtinCandidateDetector();

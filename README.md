@@ -45,6 +45,15 @@ Front's OpenAPI spec documents `POST /api/Product` as the read-only product list
 
 Discovery stores only sanitized snapshots in `connection_discovery_snapshots` and keeps only the latest 5 snapshots per connection and discovery type. This table is not long-term product storage. It detects likely WooCommerce GTIN/EAN candidate fields such as `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, `_iZettle_barcode`, `ean`, `gtin`, and `barcode`, then previews possible Woo ↔ Front matches by GTIN first, SKU to Front `externalSKU` second, and SKU to Front `identity` third. Candidate GTIN/EAN values must be confirmed before final mapping. This is not product sync and does not write final product mappings.
 
+Phase 4 adds controlled 10-product mapping PoC preparation:
+
+- Open `/mapping/product-poc` after WooCommerce and Front product discovery have both succeeded.
+- Select up to 10 WooCommerce products from the stored discovery snapshot.
+- Generate a local preview-only sync plan in `product_sync_preview_plans`.
+- Review ready/blocked validation, warnings, proposed Woo to Front fields, and `NEEDS_CONFIRMATION` items.
+
+The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variable products are blocked until variation discovery/mapping is implemented. GTIN/EAN candidates must be confirmed before any future write test.
+
 It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
 The scaffold now includes a root `.gitignore`, executable helper scripts, a committed Laravel `composer.lock`, and a minimal GitHub Actions workflow for platform tests.
@@ -158,6 +167,8 @@ php artisan serve
 Open `http://localhost:8000/dashboard`. Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless you are testing read-only staging credentials.
 
 Before using real staging/test credentials, follow [docs/live-readonly-test-checklist.md](docs/live-readonly-test-checklist.md).
+
+After WooCommerce and Front product discovery are complete, open `http://localhost:8000/mapping/product-poc` to prepare the 10-product mapping PoC plan. The page is preview-only and uses stored snapshots, so live HTTP can be turned off again before using it.
 
 ## Verification commands
 

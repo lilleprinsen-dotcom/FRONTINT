@@ -27,6 +27,20 @@ Run all tests in staging or sandbox only.
 - Review mapping preview matches by GTIN first, then Woo SKU to Front `externalSKU`, then Woo SKU to Front `identity`.
 - Confirm preview rows are not saved as final `product_mappings`.
 
+## 0.2 10-Product Mapping PoC Preparation
+
+- Open `/mapping/product-poc` after WooCommerce and Front product discovery have both succeeded.
+- Confirm the page shows the safety banner: preview only, no products, prices, stock, or orders are written.
+- Select no more than 10 WooCommerce products.
+- Generate the preview sync plan.
+- Confirm blocked products show missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, variable product, or missing price issues.
+- Confirm warnings show missing brand/category, missing sale price, stock status concerns, uncertain category/brand mapping, and no Front sample match.
+- Confirm variable products are blocked until variation fetching/mapping is implemented.
+- Confirm GTIN/EAN candidates, including `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, and `_iZettle_barcode`, are treated as candidates requiring confirmation.
+- Confirm the generated plan is stored only in `product_sync_preview_plans`.
+- Confirm no rows are written to `product_mappings`.
+- Confirm no WooCommerce or Front API write endpoints are called.
+
 ## 1. One Woo Product to Front
 
 - Pick one simple WooCommerce product.

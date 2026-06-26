@@ -202,6 +202,36 @@ Notes:
 - Use `gtin` terminology instead of old `ean` naming.
 - `front_product_ext_id`, `front_identity`, `external_sku`, and `front_stock_id` map to Front API terminology and must be confirmed per endpoint before real sync writes.
 
+## product_sync_preview_plans
+
+Purpose: local preview-only 10-product mapping PoC plans generated from stored discovery snapshots.
+
+Fields:
+
+- `id`
+- `organization_id`
+- `created_by_user_id`
+- `woo_connection_id`
+- `front_connection_id`
+- `status` (`draft`, `ready`, `blocked`)
+- `selected_count`
+- `summary_json`
+- `plan_json`
+- `validation_json`
+- `created_at`
+- `updated_at`
+
+Indexes:
+
+- Index `organization_id, created_at`
+- Index `organization_id, status`
+
+Notes:
+
+- This table is not final sync history.
+- Do not use this table as the source of truth for product mappings.
+- Generated rows must remain preview-only until a separate explicit sync feature writes final `product_mappings`.
+
 ## customer_mappings
 
 Purpose: map WooCommerce customers to Front customers.

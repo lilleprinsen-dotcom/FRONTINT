@@ -256,6 +256,26 @@ This preview is not final mapping and does not save rows to `product_mappings`.
 
 Discovery snapshots keep only the latest 5 rows per connection and discovery type. The table is not long-term product storage.
 
+## 10-Product Mapping PoC
+
+After both product discovery samples exist, open:
+
+```text
+http://localhost:8000/mapping/product-poc
+```
+
+Use this page to select up to 10 WooCommerce products from the stored discovery snapshot and generate a local preview sync plan.
+
+The plan shows:
+
+- Proposed WooCommerce to Front product fields.
+- Ready or blocked status per selected product.
+- Blocking validation issues such as missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, variable products, or missing price.
+- Non-blocking warnings such as missing brand/category, missing sale price, out-of-stock status, `manage_stock=false`, or no current Front sample match.
+- `NEEDS_CONFIRMATION` items for category/group mapping, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy.
+
+The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variable products/variations are not supported yet. Confirm GTIN/EAN mapping before any future write test.
+
 Before using real staging/test credentials, follow [live-readonly-test-checklist.md](live-readonly-test-checklist.md).
 
 Run the preflight command before and after enabling live read-only HTTP:
