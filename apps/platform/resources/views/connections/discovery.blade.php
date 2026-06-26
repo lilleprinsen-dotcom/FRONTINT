@@ -14,6 +14,14 @@
             {{ $connection->base_url ?: 'No base URL' }}
         </p>
         <p class="muted">Discovery is read-only and limited to small samples. It does not sync products, stock, prices, orders, refunds, gift cards, or omnichannel data.</p>
+        <p class="muted">Only the latest 5 snapshots per connection and discovery type are kept. Discovery snapshots are not long-term product storage.</p>
+
+        @if (in_array($connection->type, ['front', 'front_systems'], true))
+            <div class="warning">
+                Front product discovery uses <code>POST /api/Product</code> as the read-only product listing/search endpoint documented in the Front OpenAPI spec.
+                It is capped at 10 products and must not be confused with <code>/api/products</code>, which is the product CRUD endpoint.
+            </div>
+        @endif
 
         @unless ($connectionHttpTestsEnabled)
             <div class="warning">Safe mode is on. Discovery actions will be skipped until <code>OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true</code>.</div>
@@ -110,6 +118,10 @@
         <h2>Product Sample</h2>
 
         @if ($connection->type === 'woocommerce')
+            <p class="muted">
+                Detected GTIN/EAN values are candidates only and must be confirmed before final mapping.
+                Lilleprinsen-relevant fields include <code>Zettle_barcode</code>, <code>iZettle_barcode</code>, <code>_Zettle_barcode</code>, and <code>_iZettle_barcode</code>.
+            </p>
             <table>
                 <thead>
                 <tr>
@@ -147,6 +159,10 @@
                 </tbody>
             </table>
         @else
+            <p class="muted">
+                Front product samples come from <code>POST /api/Product</code>, the read-only listing/search endpoint in the Front OpenAPI spec.
+                Discovery keeps <code>pageSize</code> at 10 or lower and never calls <code>/api/products</code> CRUD.
+            </p>
             <table>
                 <thead>
                 <tr>

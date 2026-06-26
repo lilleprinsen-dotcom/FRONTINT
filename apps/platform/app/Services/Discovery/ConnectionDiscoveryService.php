@@ -12,6 +12,9 @@ use Throwable;
 
 class ConnectionDiscoveryService
 {
+    private const PRODUCT_DISCOVERY_LIMIT = 10;
+    private const SNAPSHOTS_TO_KEEP = 5;
+
     public function __construct(
         private readonly StagingSafety $safety,
         private readonly WooCommerceReadOnlyClient $wooCommerce,
@@ -35,9 +38,11 @@ class ConnectionDiscoveryService
         }
 
         if ($missing = $this->missingRequirements($connection)) {
+            $message = $this->missingRequirementMessage($connection, $missing);
+
             return $this->storeSnapshot($connection, 'stores', 'failed', [
-                'missing' => $missing,
-            ], [], 'Missing required settings: ' . implode(', ', $missing));
+                'missing' => $this->friendlyMissingRequirements($connection, $missing),
+            ], [], $message);
         }
 
         try {
@@ -79,9 +84,11 @@ class ConnectionDiscoveryService
         }
 
         if ($missing = $this->missingRequirements($connection)) {
+            $message = $this->missingRequirementMessage($connection, $missing);
+
             return $this->storeSnapshot($connection, 'products', 'failed', [
-                'missing' => $missing,
-            ], [], 'Missing required settings: ' . implode(', ', $missing));
+                'missing' => $this->friendlyMissingRequirements($connection, $missing),
+            ], [], $message);
         }
 
         return $connection->type === 'woocommerce'
@@ -92,7 +99,7 @@ class ConnectionDiscoveryService
     private function discoverWooProducts(Connection $connection): ConnectionDiscoverySnapshot
     {
         try {
-            $response = $this->wooCommerce->products($connection);
+            $response = $this->wooCommerce->products($connection, self::PRODUCT_DISCOVERY_LIMIT);
 
             if (! $response->successful()) {
                 return $this->failedHttpSnapshot($connection, 'products', $response);
@@ -103,7 +110,7 @@ class ConnectionDiscoveryService
             return $this->storeSnapshot($connection, 'products', 'success', [
                 'count' => count($products),
                 'endpoint' => 'GET /wp-json/wc/v3/products',
-                'limit' => 10,
+                'limit' => self::PRODUCT_DISCOVERY_LIMIT,
                 'read_only' => true,
                 'variation_fetching' => 'TODO',
             ], [
@@ -120,7 +127,9 @@ class ConnectionDiscoveryService
     private function discoverFrontProducts(Connection $connection): ConnectionDiscoverySnapshot
     {
         try {
-            $response = $this->frontSystems->products($connection);
+            // Front's OpenAPI spec documents POST /api/Product as the read-only product listing/search endpoint.
+            // Keep this capped for discovery and never confuse it with /api/products, the product CRUD endpoint.
+            $response = $this->frontSystems->products($connection, self::PRODUCT_DISCOVERY_LIMIT);
 
             if (! $response->successful()) {
                 return $this->failedHttpSnapshot($connection, 'products', $response);
@@ -131,8 +140,9 @@ class ConnectionDiscoveryService
             return $this->storeSnapshot($connection, 'products', 'success', [
                 'count' => count($products),
                 'endpoint' => 'POST /api/Product',
-                'limit' => 10,
+                'limit' => self::PRODUCT_DISCOVERY_LIMIT,
                 'read_only' => true,
+                'front_openapi_note' => 'Read-only product listing endpoint according to the Front OpenAPI spec. Do not confuse with /api/products CRUD.',
             ], [
                 'products' => $products,
             ]);
@@ -140,6 +150,7 @@ class ConnectionDiscoveryService
             return $this->storeSnapshot($connection, 'products', 'failed', [
                 'endpoint' => 'POST /api/Product',
                 'read_only' => true,
+                'front_openapi_note' => 'Read-only product listing endpoint according to the Front OpenAPI spec. Do not confuse with /api/products CRUD.',
             ], [], $exception::class);
         }
     }
@@ -347,7 +358,7 @@ class ConnectionDiscoveryService
             ->where('connection_id', $connection->id)
             ->where('discovery_type', $type)
             ->latest()
-            ->limit(5)
+            ->limit(self::SNAPSHOTS_TO_KEEP)
             ->pluck('id');
 
         ConnectionDiscoverySnapshot::query()
@@ -355,5 +366,40 @@ class ConnectionDiscoveryService
             ->where('discovery_type', $type)
             ->whereNotIn('id', $idsToKeep)
             ->delete();
+    }
+
+    private function missingRequirementMessage(Connection $connection, array $missing): string
+    {
+        return 'Missing required settings: ' . implode(', ', $this->friendlyMissingRequirements($connection, $missing));
+    }
+
+    private function friendlyMissingRequirements(Connection $connection, array $missing): array
+    {
+        return collect($missing)
+            ->map(fn (string $requirement): string => $this->friendlyMissingRequirement($connection, $requirement))
+            ->values()
+            ->all();
+    }
+
+    private function friendlyMissingRequirement(Connection $connection, string $requirement): string
+    {
+        if ($connection->type === 'woocommerce') {
+            return match ($requirement) {
+                'base_url' => 'Missing WooCommerce site URL',
+                'credential:consumer_key' => 'Missing WooCommerce consumer key',
+                'credential:consumer_secret' => 'Missing WooCommerce consumer secret',
+                default => $requirement,
+            };
+        }
+
+        if (in_array($connection->type, ['front', 'front_systems'], true)) {
+            return match ($requirement) {
+                'base_url' => 'Missing Front base URL',
+                'credential:api_key' => 'Missing Front API key',
+                default => $requirement,
+            };
+        }
+
+        return $requirement;
     }
 }

@@ -227,6 +227,8 @@ Read-only discovery endpoints:
 - Front stores: `GET /api/Stores`
 - Front product sample: `POST /api/Product` with `pageSize=10` and read-only search filters
 
+Front's OpenAPI spec documents `POST /api/Product` as the read-only product listing/search endpoint used here. Keep `pageSize <= 10` during discovery. Do not confuse this endpoint with `/api/products`, which is the product CRUD endpoint.
+
 Stored discovery data is intentionally small and sanitized:
 
 - Latest store metadata: store ID, store no, store name, stock ID, external stock ID, currency, and time zone.
@@ -242,6 +244,8 @@ GTIN/EAN candidate detection checks Lilleprinsen-relevant WooCommerce meta keys 
 
 It also checks common keys such as `ean`, `_ean`, `gtin`, `_gtin`, `barcode`, and `_barcode`.
 
+Detected GTIN/EAN values are candidates only. Confirm them against product data and Front results before final mapping.
+
 The mapping preview compares the latest WooCommerce and Front product samples for the same organization:
 
 1. Woo detected GTIN/EAN equals Front product size GTIN.
@@ -249,6 +253,10 @@ The mapping preview compares the latest WooCommerce and Front product samples fo
 3. Woo SKU equals Front product size `identity`.
 
 This preview is not final mapping and does not save rows to `product_mappings`.
+
+Discovery snapshots keep only the latest 5 rows per connection and discovery type. The table is not long-term product storage.
+
+Before using real staging/test credentials, follow [live-readonly-test-checklist.md](live-readonly-test-checklist.md).
 
 ## Manual Safe Connection Test Flow
 

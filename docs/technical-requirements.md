@@ -89,10 +89,14 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Discovery actions are dashboard-authenticated and tenant-scoped.
 - WooCommerce product discovery uses `GET /wp-json/wc/v3/products` with `per_page=10`, `page=1`, and `status=publish`.
 - Front store discovery uses `GET /api/Stores`.
-- Front product discovery uses `POST /api/Product` as a read-only search endpoint with `pageSize=10`, `pageSkip=0`, `isWebAvailable=true`, `isDiscontinued=false`, `excludeDeleted=true`, `includeEmptyGTINs=false`, `includeStockQuantity=false`, and `includeAlternativeIdentifiers=true`.
+- Front product discovery uses `POST /api/Product` as a read-only search/listing endpoint according to the Front OpenAPI spec, with `pageSize=10`, `pageSkip=0`, `isWebAvailable=true`, `isDiscontinued=false`, `excludeDeleted=true`, `includeEmptyGTINs=false`, `includeStockQuantity=false`, and `includeAlternativeIdentifiers=true`.
+- Front product discovery must keep `pageSize <= 10` and must not accept UI/request overrides in this phase.
+- Do not confuse Front `POST /api/Product` discovery with `/api/products`, which is the product CRUD endpoint.
+- WooCommerce product discovery must keep `per_page <= 10` and must not accept UI/request overrides in this phase.
 - Store only sanitized discovery snapshots in `connection_discovery_snapshots`.
+- Keep only the latest 5 snapshots per connection and discovery type. Delete older snapshots.
+- `connection_discovery_snapshots` is not long-term product storage.
 - Do not store full product descriptions, customer data, order data, cost prices, raw response bodies, API keys, or Authorization headers.
-- Keep only the latest few snapshots per connection/discovery type.
 - Discovery does not write to WooCommerce or Front and does not trigger sync jobs.
 
 ## Mapping Preview
@@ -100,6 +104,8 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Mapping preview compares sanitized discovery samples only.
 - Match priority is Woo detected GTIN/EAN to Front product size GTIN, then Woo SKU to Front `externalSKU`, then Woo SKU to Front `identity`.
 - Woo GTIN/EAN detection should mark confidence as `exact_known_field`, `common_field`, or `none`.
+- Known Lilleprinsen candidate fields are `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, and `_iZettle_barcode`.
+- Detected GTIN/EAN values are candidates only and must be confirmed before final mapping.
 - Mapping preview rows must not be written to the final `product_mappings` table until a separate explicit sync/mapping feature is implemented.
 
 ## Audit Trail
