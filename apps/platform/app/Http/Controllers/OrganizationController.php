@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\OrganizationRequest;
 use App\Models\Organization;
+use App\Services\ProductSync\ProductSyncProfileProvisioner;
 use App\Services\Webhooks\WebhookEndpointProvisioner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,11 +32,16 @@ class OrganizationController extends Controller
         ]);
     }
 
-    public function store(OrganizationRequest $request, WebhookEndpointProvisioner $webhooks): RedirectResponse
+    public function store(
+        OrganizationRequest $request,
+        WebhookEndpointProvisioner $webhooks,
+        ProductSyncProfileProvisioner $syncProfiles,
+    ): RedirectResponse
     {
         $organization = Organization::query()->create($request->validated());
         $organization->users()->attach($request->user()->id, ['role' => 'owner']);
         $webhooks->ensureDefaults($organization);
+        $syncProfiles->ensureDefault($organization);
 
         return redirect()
             ->route('dashboard')

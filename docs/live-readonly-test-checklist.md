@@ -174,3 +174,21 @@ Review:
 - `NEEDS_CONFIRMATION` items before any future write test.
 
 This is not product sync. The plan uses stored snapshots only, stores preview data in `product_sync_preview_plans`, does not write `product_mappings`, and does not call WooCommerce or Front APIs.
+
+## Q. Create a Product Sync Preview Run
+
+Open:
+
+```text
+http://localhost:8000/product-sync
+```
+
+Click **Create preview run**.
+
+Expected result:
+
+- A local draft run is created.
+- Each selected product has Ready or Needs attention status.
+- No external APIs are called.
+- No Front or WooCommerce writes happen.
+- This prepares for a later limited write test only.

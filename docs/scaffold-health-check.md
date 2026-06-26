@@ -36,6 +36,9 @@ Use this checklist before starting real integration implementation.
 - [x] Discovery snapshots store sanitized samples only.
 - [x] WooCommerce GTIN/EAN candidate detection exists.
 - [x] Mapping preview exists and does not write final product mappings.
+- [x] Product sync profile defaults exist.
+- [x] Product sync preview runs create local run items only.
+- [x] Product sync owner pages are separate from Advanced technical pages.
 - [x] Dashboard shows safe connection status context.
 - [x] Connection form shows only the selected connection type fields.
 - [x] Duplicate `/api/connections/{connection}/test` route is not present.

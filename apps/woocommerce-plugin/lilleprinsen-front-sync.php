@@ -10,6 +10,15 @@
  *
  * This plugin is intentionally thin. Core integration logic belongs in the
  * Laravel platform. WooCommerce-specific adapter behavior can be added here.
+ *
+ * Product sync planning:
+ * - Later add lightweight product meta such as _omnibridge_sync_to_front,
+ *   _omnibridge_last_sync_status, _omnibridge_last_synced_at, and
+ *   _omnibridge_last_sync_error.
+ * - Later add a small product admin panel and bulk action for marking selected
+ *   products for Front sync.
+ * - Do not scan the full WooCommerce catalog here. Avoid heavy admin queries.
+ * - Do not implement actual Woo to Front sync in this plugin.
  */
 
 if (! defined('ABSPATH')) {
@@ -26,4 +35,3 @@ add_action('plugins_loaded', static function (): void {
 
     // TODO: Register settings, signed adapter endpoints, and WooCommerce hooks.
 });
-

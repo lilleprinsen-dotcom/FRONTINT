@@ -276,6 +276,33 @@ The plan shows:
 
 The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variable products/variations are not supported yet. Confirm GTIN/EAN mapping before any future write test.
 
+## Product Sync Foundation
+
+Open:
+
+```text
+http://localhost:8000/product-sync
+```
+
+This page prepares selected WooCommerce products for Front. It is designed for large catalogs, so it never loads all products and it never starts a full 70,000-product sync.
+
+Current behavior:
+
+- Uses the latest mapping PoC plan.
+- Creates local preview runs only.
+- Stores per-product status in `product_sync_run_items`.
+- Shows Ready, Needs attention, Failed, Preview only, and Last checked status in plain language.
+- Does not call WooCommerce or Front APIs.
+- Does not write products, prices, stock, orders, refunds, gift cards, or omnichannel data.
+
+Sync profile settings are available at:
+
+```text
+http://localhost:8000/product-sync/profile
+```
+
+Advanced technical settings are grouped away from normal store-owner pages. Production mode is unavailable unless `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=true`.
+
 Before using real staging/test credentials, follow [live-readonly-test-checklist.md](live-readonly-test-checklist.md).
 
 Run the preflight command before and after enabling live read-only HTTP:

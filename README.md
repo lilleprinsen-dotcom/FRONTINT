@@ -54,6 +54,16 @@ Phase 4 adds controlled 10-product mapping PoC preparation:
 
 The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variable products are blocked until variation discovery/mapping is implemented. GTIN/EAN candidates must be confirmed before any future write test.
 
+Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-product catalog:
+
+- Product sync profiles define safe defaults, limits, validation rules, and preview/limited/production modes.
+- Product sync preview runs convert the latest mapping PoC plan into local run and item status rows.
+- The Product Sync page shows owner-friendly status: Ready, Needs attention, Preview only, Safe mode, and Last checked.
+- Advanced technical settings are separated from normal store-owner pages.
+- No product writes exist yet.
+
+See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).
+
 It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
 The scaffold now includes a root `.gitignore`, executable helper scripts, a committed Laravel `composer.lock`, and a minimal GitHub Actions workflow for platform tests.
@@ -169,6 +179,8 @@ Open `http://localhost:8000/dashboard`. Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_H
 Before using real staging/test credentials, follow [docs/live-readonly-test-checklist.md](docs/live-readonly-test-checklist.md).
 
 After WooCommerce and Front product discovery are complete, open `http://localhost:8000/mapping/product-poc` to prepare the 10-product mapping PoC plan. The page is preview-only and uses stored snapshots, so live HTTP can be turned off again before using it.
+
+Then open `http://localhost:8000/product-sync` to create a local preview run from the latest mapping PoC plan. This creates local status rows only and performs no API writes.
 
 ## Verification commands
 

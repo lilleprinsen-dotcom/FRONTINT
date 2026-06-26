@@ -232,6 +232,116 @@ Notes:
 - Do not use this table as the source of truth for product mappings.
 - Generated rows must remain preview-only until a separate explicit sync feature writes final `product_mappings`.
 
+## product_sync_profiles
+
+Purpose: per-organization product sync safety and validation configuration.
+
+Fields:
+
+- `id`
+- `organization_id`
+- `name`
+- `is_active`
+- `mode`
+- `max_products_per_batch`
+- `max_products_per_run`
+- `woo_query_limit`
+- `front_write_limit`
+- `sync_only_opted_in_products`
+- `include_simple_products`
+- `include_variable_products`
+- `include_variations`
+- `require_sku`
+- `require_gtin`
+- `require_price`
+- `require_brand`
+- `require_category`
+- `default_front_group_strategy`
+- `default_front_subgroup_strategy`
+- `default_front_brand_strategy`
+- `price_strategy`
+- `stock_strategy`
+- `created_at`
+- `updated_at`
+
+Indexes:
+
+- Index `organization_id, is_active`
+- Index `organization_id, mode`
+
+Notes:
+
+- Default mode is `preview_only`.
+- Production mode must remain disabled unless production writes are explicitly enabled.
+
+## product_sync_runs
+
+Purpose: local planning and future operational status for selected-product sync runs.
+
+Fields:
+
+- `id`
+- `organization_id`
+- `product_sync_profile_id`
+- `created_by_user_id`
+- `status`
+- `mode`
+- `total_candidates`
+- `total_ready`
+- `total_blocked`
+- `total_synced`
+- `total_failed`
+- `total_skipped`
+- `started_at`
+- `finished_at`
+- `summary_json`
+- `created_at`
+- `updated_at`
+
+Indexes:
+
+- Index `organization_id, status, created_at`
+- Index `product_sync_profile_id, created_at`
+
+## product_sync_run_items
+
+Purpose: per-product validation and future sync status for selected products only.
+
+Fields:
+
+- `id`
+- `organization_id`
+- `product_sync_run_id`
+- `woo_product_id`
+- `woo_variation_id`
+- `woo_item_key`
+- `woo_name`
+- `woo_sku`
+- `detected_gtin`
+- `detected_gtin_key`
+- `front_match_status`
+- `proposed_front_product_ext_id`
+- `proposed_front_identity`
+- `proposed_front_external_sku`
+- `proposed_front_payload_json`
+- `validation_status`
+- `sync_status`
+- `validation_errors_json`
+- `validation_warnings_json`
+- `last_error`
+- `last_attempted_at`
+- `synced_at`
+- `created_at`
+- `updated_at`
+
+Indexes:
+
+- Index `organization_id, woo_item_key`
+- Index `product_sync_run_id, sync_status`
+- Index `product_sync_run_id, validation_status`
+- Index `organization_id, detected_gtin`
+- Index `organization_id, woo_sku`
+
 ## customer_mappings
 
 Purpose: map WooCommerce customers to Front customers.
