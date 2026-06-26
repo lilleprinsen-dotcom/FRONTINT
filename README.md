@@ -118,6 +118,13 @@ GET /connections/{connection}/discovery
 
 Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` for safe local setup with dummy credentials. Set it to `true` only for staging/test credentials.
 
+Before enabling live read-only HTTP calls, run:
+
+```bash
+cd apps/platform
+php artisan omnibridge:preflight-readonly
+```
+
 ## Mac local testing with SQLite
 
 If you have PHP 8.3 and Composer installed on your Mac, you can test the scaffold without Docker PostgreSQL:

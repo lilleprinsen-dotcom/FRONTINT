@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Connection;
 use App\Models\ConnectionDiscoverySnapshot;
+use App\Models\AuditLog;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\Credentials\CredentialVault;
@@ -83,6 +84,15 @@ class ConnectionDiscoveryTest extends TestCase
         $this->assertSame('EXT-2001', $snapshot->sample_json['stores'][0]['external_stock_id']);
         $this->assertStringNotContainsString('private@example.test', json_encode($snapshot->sample_json));
         $this->assertStringNotContainsString('front-secret-key', json_encode($snapshot->toArray()));
+
+        $auditLog = AuditLog::query()->where('action', 'live_readonly_discovery_stores')->firstOrFail();
+        $this->assertSame($user->id, $auditLog->user_id);
+        $this->assertSame($connection->id, $auditLog->metadata_json['connection_id']);
+        $this->assertSame('GET /api/Stores', $auditLog->metadata_json['endpoint_group']);
+        $this->assertSame('success', $auditLog->metadata_json['status']);
+        $this->assertTrue($auditLog->metadata_json['live_http_enabled']);
+        $this->assertTrue($auditLog->metadata_json['production_writes_disabled']);
+        $this->assertStringNotContainsString('front-secret-key', json_encode($auditLog->metadata_json));
     }
 
     public function test_front_products_discovery_uses_product_search_with_small_limit(): void

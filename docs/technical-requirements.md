@@ -87,6 +87,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Discovery actions use the same safety gate as live connection tests: `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP`.
 - When the flag is `false`, discovery must return `skipped` and make no HTTP requests.
 - Discovery actions are dashboard-authenticated and tenant-scoped.
+- Before the first live read-only test, run `php artisan omnibridge:preflight-readonly`.
 - WooCommerce product discovery uses `GET /wp-json/wc/v3/products` with `per_page=10`, `page=1`, and `status=publish`.
 - Front store discovery uses `GET /api/Stores`.
 - Front product discovery uses `POST /api/Product` as a read-only search/listing endpoint according to the Front OpenAPI spec, with `pageSize=10`, `pageSkip=0`, `isWebAvailable=true`, `isDiscontinued=false`, `excludeDeleted=true`, `includeEmptyGTINs=false`, `includeStockQuantity=false`, and `includeAlternativeIdentifiers=true`.
@@ -98,6 +99,8 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - `connection_discovery_snapshots` is not long-term product storage.
 - Do not store full product descriptions, customer data, order data, cost prices, raw response bodies, API keys, or Authorization headers.
 - Discovery does not write to WooCommerce or Front and does not trigger sync jobs.
+- Live read-only connection tests and discovery actions must create an audit log with user ID, organization ID, connection ID, action type, source system, endpoint group, status, checked timestamp, live HTTP flag, and production-write flag.
+- Audit logs must not include credentials, full secret URLs, or response bodies.
 
 ## Mapping Preview
 

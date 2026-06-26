@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Connection;
 use App\Models\ConnectionDiscoverySnapshot;
+use App\Services\Audit\ReadOnlyActionAuditor;
 use App\Services\Discovery\ConnectionDiscoveryService;
 use App\Services\Discovery\ProductMappingPreview;
 use Illuminate\Http\JsonResponse;
@@ -37,10 +38,12 @@ class ConnectionDiscoveryController extends Controller
         Request $request,
         Connection $connection,
         ConnectionDiscoveryService $discovery,
+        ReadOnlyActionAuditor $auditor,
     ): JsonResponse|RedirectResponse {
         $this->authorizeConnection($request, $connection);
 
         $snapshot = $discovery->discoverStores($connection);
+        $this->auditIfLive($request, $connection, $snapshot, $auditor);
 
         return $this->respond($request, $snapshot);
     }
@@ -49,10 +52,12 @@ class ConnectionDiscoveryController extends Controller
         Request $request,
         Connection $connection,
         ConnectionDiscoveryService $discovery,
+        ReadOnlyActionAuditor $auditor,
     ): JsonResponse|RedirectResponse {
         $this->authorizeConnection($request, $connection);
 
         $snapshot = $discovery->discoverProducts($connection);
+        $this->auditIfLive($request, $connection, $snapshot, $auditor);
 
         return $this->respond($request, $snapshot);
     }
@@ -81,6 +86,37 @@ class ConnectionDiscoveryController extends Controller
         return redirect()
             ->route('connections.discovery', $snapshot->connection_id)
             ->with('status', "Discovery {$snapshot->status}.");
+    }
+
+    private function auditIfLive(
+        Request $request,
+        Connection $connection,
+        ConnectionDiscoverySnapshot $snapshot,
+        ReadOnlyActionAuditor $auditor,
+    ): void {
+        if (! (bool) config('omnibridge.allow_connection_test_http')) {
+            return;
+        }
+
+        $auditor->record(
+            $request->user(),
+            $connection,
+            'live_readonly_discovery_' . $snapshot->discovery_type,
+            $this->discoveryEndpointGroup($connection, $snapshot->discovery_type),
+            $snapshot->status,
+            $snapshot->checked_at,
+        );
+    }
+
+    private function discoveryEndpointGroup(Connection $connection, string $type): string
+    {
+        if ($type === 'stores') {
+            return 'GET /api/Stores';
+        }
+
+        return $connection->type === 'woocommerce'
+            ? 'GET /wp-json/wc/v3/products'
+            : 'POST /api/Product';
     }
 
     private function latestSnapshot(Connection $connection, string $type): ?ConnectionDiscoverySnapshot

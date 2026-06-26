@@ -25,13 +25,15 @@ class ConnectionTester
         $missing = $this->missingRequirements($connection);
 
         if ($missing !== []) {
+            $message = 'Missing required settings: ' . implode(', ', $this->friendlyMissingRequirements($connection, $missing));
+
             return [
                 'status' => 'failed',
                 'message' => 'Connection settings are incomplete.',
-                'missing' => $missing,
+                'missing' => $this->friendlyMissingRequirements($connection, $missing),
                 'http_checked' => false,
                 'checked_at' => now()->toISOString(),
-                'last_error' => 'Missing required settings: ' . implode(', ', $missing),
+                'last_error' => $message,
             ];
         }
 
@@ -75,6 +77,36 @@ class ConnectionTester
             'dintero', 'stripe' => [],
             default => [],
         };
+    }
+
+    private function friendlyMissingRequirements(Connection $connection, array $missing): array
+    {
+        return collect($missing)
+            ->map(fn (string $requirement): string => $this->friendlyMissingRequirement($connection, $requirement))
+            ->values()
+            ->all();
+    }
+
+    private function friendlyMissingRequirement(Connection $connection, string $requirement): string
+    {
+        if ($connection->type === 'woocommerce') {
+            return match ($requirement) {
+                'base_url' => 'Missing WooCommerce site URL',
+                'credential:consumer_key' => 'Missing WooCommerce consumer key',
+                'credential:consumer_secret' => 'Missing WooCommerce consumer secret',
+                default => $requirement,
+            };
+        }
+
+        if (in_array($connection->type, ['front', 'front_systems'], true)) {
+            return match ($requirement) {
+                'base_url' => 'Missing Front base URL',
+                'credential:api_key' => 'Missing Front API key',
+                default => $requirement,
+            };
+        }
+
+        return $requirement;
     }
 
     private function performReadOnlyHttpCheck(Connection $connection): array
