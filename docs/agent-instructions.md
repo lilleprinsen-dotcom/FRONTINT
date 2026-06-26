@@ -58,3 +58,6 @@ Duplicate inbound events must not dispatch duplicate queue jobs.
 - Make setup understandable for non-developers.
 - Prefer clear dashboard status over hidden logs.
 - Explain failures in merchant-friendly language while preserving technical details for developers.
+- Treat product sync as selected, validated, queued work. Never add a blind full-catalog sync.
+- Keep normal store-owner pages plain-language. Put webhook URLs, raw logs, queue details, and API settings under Advanced.
+- Product sync preview runs are local planning records only until a separate explicit write-test task enables writes behind guards.

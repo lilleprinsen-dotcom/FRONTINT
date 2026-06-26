@@ -35,6 +35,16 @@ class Organization extends Model
         return $this->hasMany(ConnectionDiscoverySnapshot::class);
     }
 
+    public function productSyncProfiles(): HasMany
+    {
+        return $this->hasMany(ProductSyncProfile::class);
+    }
+
+    public function productSyncRuns(): HasMany
+    {
+        return $this->hasMany(ProductSyncRun::class);
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(Event::class);

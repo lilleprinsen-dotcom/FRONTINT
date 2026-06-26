@@ -41,6 +41,17 @@ Run all tests in staging or sandbox only.
 - Confirm no rows are written to `product_mappings`.
 - Confirm no WooCommerce or Front API write endpoints are called.
 
+## 0.3 Product Sync Preview Run
+
+- Open `/product-sync`.
+- Confirm the current mode is Preview only.
+- Confirm production writes are disabled.
+- Create a preview run from the latest mapping PoC plan.
+- Confirm run items are created locally with Ready or Needs attention status.
+- Confirm no external APIs are called.
+- Confirm no rows are written to final `product_mappings`.
+- Confirm Advanced contains technical settings and normal pages stay store-owner friendly.
+
 ## 1. One Woo Product to Front
 
 - Pick one simple WooCommerce product.

@@ -123,6 +123,17 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Proposed Front fields are candidates only. Group/subgroup, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy must be marked `NEEDS_CONFIRMATION`.
 - This phase must not use Front `/api/products`, `POST /api/PricelistV2`, `POST /api/Stock/adjust`, `PUT /api/Sale`, `POST /api/OmniChannel`, or any WooCommerce write endpoint.
 
+## Product Sync Foundation
+
+- Product sync must be selected/opt-in first. Do not blindly sync the full 70,000-product catalog.
+- Product sync profiles define mode, limits, inclusion rules, required fields, price strategy, and stock strategy.
+- Default mode is `preview_only`.
+- Production mode must not be selectable unless `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=true`.
+- Preview runs are local planning records only and must not call external APIs.
+- Sync run items store selected products only, not the whole catalog.
+- Future large-catalog scanning must be background-job based, paginated, and incremental.
+- Owner pages should use plain-language status. Technical details belong in Advanced.
+
 ## Audit Trail
 
 Audit these actions:

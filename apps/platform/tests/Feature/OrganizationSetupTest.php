@@ -29,6 +29,17 @@ class OrganizationSetupTest extends TestCase
             'slug' => 'lilleprinsen',
             'environment' => 'staging',
         ]);
+
+        $organization = Organization::query()->where('slug', 'lilleprinsen')->firstOrFail();
+
+        $this->assertDatabaseHas('product_sync_profiles', [
+            'organization_id' => $organization->id,
+            'name' => 'Default safe product sync profile',
+            'mode' => 'preview_only',
+            'sync_only_opted_in_products' => true,
+            'include_variable_products' => false,
+            'include_variations' => false,
+        ]);
     }
 
     public function test_default_webhook_endpoints_are_provisioned_for_an_organization(): void

@@ -25,21 +25,17 @@
     @endunless
 
     <section class="panel">
-        <h2>Live Read-Only Test Mode</h2>
+        <h2>Safe Product Setup</h2>
         <p class="muted">
-            Enable live HTTP only in local/staging by manually setting <code>OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true</code>.
-            Keep <code>OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false</code>.
+            Keep safe mode on for everyday setup. Turn on live checks only in local or staging when you are testing real connections.
         </p>
         <ul>
-            <li>Connection tests use read-only endpoints only.</li>
-            <li>WooCommerce connection test uses <code>GET /wp-json/wc/v3/system_status</code>.</li>
-            <li>Front connection test uses <code>GET /api/Environment</code>.</li>
-            <li>Front stores discovery uses <code>GET /api/Stores</code>.</li>
-            <li>Product discovery fetches a maximum sample of 10 products.</li>
-            <li>Front product discovery uses <code>POST /api/Product</code> because the Front OpenAPI spec documents it as the read-only product list endpoint. It must not be confused with <code>/api/products</code> CRUD.</li>
+            <li>WooCommerce stays the master.</li>
+            <li>Front stays the store work surface.</li>
+            <li>Large catalogs are prepared in small selected groups.</li>
+            <li>Products show Ready or Needs attention before any future sync.</li>
             <li>No sync is performed and no data is written.</li>
         </ul>
-        <p><code>php artisan omnibridge:preflight-readonly</code></p>
     </section>
 
     <div class="grid">
@@ -53,14 +49,14 @@
             <p>{{ $failedEventsCount }} failed</p>
         </section>
         <section class="panel">
-            <h2>Front API Schema</h2>
-            <p class="muted">REST API V2 OpenAPI is stored in vendor docs.</p>
-            <code>docs/vendor/front-systems/front-api-endpoint-summary.md</code>
-        </section>
-        <section class="panel">
             <h2>Product Mapping PoC</h2>
             <p class="muted">Preview a local 10-product WooCommerce to Front sync plan from stored discovery snapshots.</p>
             <a class="button secondary" href="{{ route('mapping.product-poc') }}">Open mapping PoC</a>
+        </section>
+        <section class="panel">
+            <h2>Product Sync</h2>
+            <p class="muted">Prepare selected WooCommerce products for Front with clear ready/needs attention status.</p>
+            <a class="button secondary" href="{{ route('product-sync.index') }}">Open product sync</a>
         </section>
     </div>
 
@@ -76,26 +72,6 @@
                 <a class="button secondary" href="{{ route('organizations.edit', $organization) }}">Edit organization</a>
                 <a class="button" href="{{ route('connections.create', ['organization_id' => $organization->id]) }}">Add connection</a>
             </p>
-
-            <h3>Webhook URLs</h3>
-            <table>
-                <thead>
-                <tr>
-                    <th>Source</th>
-                    <th>Status</th>
-                    <th>URL</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach ($organization->webhookEndpoints as $endpoint)
-                    <tr>
-                        <td>{{ $endpoint->source_system }}</td>
-                        <td>{{ $endpoint->status }}</td>
-                        <td><code>{{ url("/webhooks/{$endpoint->source_system}/{$endpoint->path_token}") }}</code></td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
 
             <h3>Connections</h3>
             <table>
@@ -210,32 +186,4 @@
             <a class="button" href="{{ route('organizations.create') }}">Create organization</a>
         </section>
     @endforelse
-
-    <section class="panel">
-        <h2>Recent Events</h2>
-        <table>
-            <thead>
-            <tr>
-                <th>Source</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Received</th>
-            </tr>
-            </thead>
-            <tbody>
-            @forelse ($recentEvents as $event)
-                <tr>
-                    <td>{{ $event->source_system }}</td>
-                    <td>{{ $event->event_type }}</td>
-                    <td>{{ $event->status }}</td>
-                    <td>{{ $event->received_at }}</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="4">No events yet.</td>
-                </tr>
-            @endforelse
-            </tbody>
-        </table>
-    </section>
 @endsection
