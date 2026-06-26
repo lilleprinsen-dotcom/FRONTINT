@@ -25,13 +25,14 @@ final class SecretRedactor
     public function redact(array $payload): array
     {
         foreach ($payload as $key => $value) {
-            if (is_array($value)) {
-                $payload[$key] = $this->redact($value);
+            if ($this->isSecretKey((string) $key)) {
+                $payload[$key] = $this->redactedValue($value);
                 continue;
             }
 
-            if ($this->isSecretKey((string) $key)) {
-                $payload[$key] = '[redacted]';
+            if (is_array($value)) {
+                $payload[$key] = $this->redact($value);
+                continue;
             }
         }
 
@@ -49,5 +50,14 @@ final class SecretRedactor
         }
 
         return false;
+    }
+
+    private function redactedValue(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return '[redacted]';
+        }
+
+        return array_map(fn (): string => '[redacted]', $value);
     }
 }

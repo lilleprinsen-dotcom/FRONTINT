@@ -8,6 +8,8 @@
 
 This project is staging-safe by default. Local app startup should work after dependencies are installed and the database is migrated.
 
+The repository includes a root `.gitignore`, executable scripts in `scripts/`, and a committed Laravel dependency lockfile at `apps/platform/composer.lock`.
+
 ## Build Images
 
 ```bash
@@ -70,7 +72,22 @@ Phase 1 includes basic login, organization editing, connection setup, encrypted 
 docker compose run --rm platform php artisan test
 ```
 
+With local PHP and Composer dependencies installed, you can run:
+
+```bash
+cd apps/platform
+php artisan test
+```
+
 ## Verification commands
+
+Quick scaffold verification:
+
+```bash
+./scripts/verify-platform-scaffold.sh
+```
+
+Docker verification:
 
 ```bash
 docker compose build
@@ -82,11 +99,16 @@ docker compose run --rm platform php artisan test
 ./scripts/generate-front-client.sh
 ```
 
+If Docker is not installed, Docker verification is blocked until Docker Desktop or another Docker Compose-compatible runtime is installed.
+
+GitHub Actions runs the platform CI workflow on pull requests and pushes to `main`.
+
 ## What Is Still Placeholder
 
 - Product, price, stock, order, refund, gift card, and omnichannel sync are not implemented yet.
 - Front and WooCommerce API clients are not implemented yet.
 - Connection tests are read-only and live HTTP checks are disabled by default.
+- No real API writes exist yet.
 
 ## Stop Services
 
