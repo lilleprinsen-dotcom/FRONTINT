@@ -203,6 +203,53 @@ Connection test results are stored as minimal diagnostics only:
 
 Full API response bodies are not stored.
 
+## 12. Read-Only Discovery and Mapping Preview
+
+Discovery is available from each connection's **Discovery** page in the dashboard.
+
+Keep safe mode enabled for dummy values:
+
+```text
+OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false
+```
+
+In safe mode, discovery actions return `skipped` and do not make HTTP calls.
+
+Enable live discovery only with staging/test credentials:
+
+```text
+OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true
+```
+
+Read-only discovery endpoints:
+
+- WooCommerce product sample: `GET /wp-json/wc/v3/products?per_page=10&page=1&status=publish`
+- Front stores: `GET /api/Stores`
+- Front product sample: `POST /api/Product` with `pageSize=10` and read-only search filters
+
+Stored discovery data is intentionally small and sanitized:
+
+- Latest store metadata: store ID, store no, store name, stock ID, external stock ID, currency, and time zone.
+- WooCommerce product sample metadata: ID, name, SKU, type, status, price, stock fields, categories, brand names if present, variation count, and likely GTIN/EAN candidate.
+- Front product sample metadata: product ID, name, number, variant, brand, group/subgroup, web/discontinued flags, and safe product size identifiers.
+
+GTIN/EAN candidate detection checks Lilleprinsen-relevant WooCommerce meta keys first:
+
+- `Zettle_barcode`
+- `iZettle_barcode`
+- `_Zettle_barcode`
+- `_iZettle_barcode`
+
+It also checks common keys such as `ean`, `_ean`, `gtin`, `_gtin`, `barcode`, and `_barcode`.
+
+The mapping preview compares the latest WooCommerce and Front product samples for the same organization:
+
+1. Woo detected GTIN/EAN equals Front product size GTIN.
+2. Woo SKU equals Front product size `externalSKU`.
+3. Woo SKU equals Front product size `identity`.
+
+This preview is not final mapping and does not save rows to `product_mappings`.
+
 ## Manual Safe Connection Test Flow
 
 A. Keep safe mode enabled:
@@ -227,7 +274,7 @@ F. Run the connection test from the dashboard.
 
 G. Confirm only read-only endpoints are called and no product, stock, order, refund, gift card, or omnichannel sync is performed.
 
-## 12. Health Checks
+## 13. Health Checks
 
 Use these URLs for local and hosted health checks:
 
@@ -237,7 +284,7 @@ Use these URLs for local and hosted health checks:
 
 For Render, DigitalOcean App Platform, or similar hosting, use `/health/ready` when the service should only receive traffic after the database is reachable. Use `/health/live` for process liveness checks.
 
-## 13. Add WooCommerce Staging Credentials
+## 14. Add WooCommerce Staging Credentials
 
 In the future dashboard:
 
@@ -247,11 +294,11 @@ In the future dashboard:
 4. Add staging API credentials.
 5. Save and test the connection.
 
-## 14. Add Front Credentials Later
+## 15. Add Front Credentials Later
 
 Use Front sandbox/test credentials only until production readiness is explicitly approved.
 
-## 15. Add Webhook URLs
+## 16. Add Webhook URLs
 
 Public webhook URLs use opaque path tokens from `webhook_endpoints.path_token`, not organization slugs:
 
@@ -262,7 +309,7 @@ Use staging URLs first.
 
 The dashboard shows the generated webhook URLs under each organization.
 
-## 16. Where to See Logs
+## 17. Where to See Logs
 
 Local Laravel logs will be in:
 
@@ -272,7 +319,7 @@ apps/platform/storage/logs/
 
 The dashboard should later show failed events and queue status without requiring file access.
 
-## 17. Run Tests
+## 18. Run Tests
 
 ```bash
 docker compose run --rm platform php artisan test
@@ -285,7 +332,7 @@ cd apps/platform
 php artisan test
 ```
 
-## 18. Verification commands
+## 19. Verification commands
 
 Run the quick scaffold check first:
 
@@ -323,7 +370,7 @@ chmod +x scripts/*.sh
 
 The repository also includes `.github/workflows/platform-ci.yml`, which runs Composer validation and Laravel tests on pull requests and pushes to `main` without real WooCommerce or Front credentials.
 
-## 19. What Is Still Placeholder
+## 20. What Is Still Placeholder
 
 The scaffold does not yet implement:
 
@@ -336,7 +383,7 @@ The scaffold does not yet implement:
 - Omnichannel order creation
 - Real Front or WooCommerce API writes
 
-The existing WooCommerce and Front API clients are intentionally read-only and only used for connection status checks.
+The existing WooCommerce and Front API clients are intentionally read-only and only used for connection status checks, discovery samples, and mapping preview.
 
 Production writes remain disabled by default with:
 
@@ -344,7 +391,7 @@ Production writes remain disabled by default with:
 OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false
 ```
 
-## 20. Run First Product Sync Test Later
+## 21. Run First Product Sync Test Later
 
 After Phase 1 and the first product sync are implemented:
 
@@ -353,7 +400,7 @@ After Phase 1 and the first product sync are implemented:
 3. Run a single-product sync.
 4. Confirm the product appears correctly in Front staging/test.
 
-## 21. Stop Everything
+## 22. Stop Everything
 
 ```bash
 docker compose down

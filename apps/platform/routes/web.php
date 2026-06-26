@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ConnectionController;
+use App\Http\Controllers\ConnectionDiscoveryController;
 use App\Http\Controllers\ConnectionTestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrganizationController;
@@ -26,4 +27,11 @@ Route::middleware('auth')->group(function (): void {
 
     Route::post('/connections/{connection}/test', ConnectionTestController::class)
         ->name('connections.test');
+
+    Route::get('/connections/{connection}/discovery', [ConnectionDiscoveryController::class, 'show'])
+        ->name('connections.discovery');
+    Route::post('/connections/{connection}/discover/stores', [ConnectionDiscoveryController::class, 'discoverStores'])
+        ->name('connections.discover.stores');
+    Route::post('/connections/{connection}/discover/products', [ConnectionDiscoveryController::class, 'discoverProducts'])
+        ->name('connections.discover.products');
 });

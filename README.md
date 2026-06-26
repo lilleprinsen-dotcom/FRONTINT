@@ -35,6 +35,14 @@ Phase 2 has started with read-only WooCommerce and Front Systems API clients for
 
 Connection tests record only minimal diagnostics: `success`, `failed`, or `skipped`, HTTP status, response time, safe error text, checked time, and safe Front store metadata when available.
 
+Phase 3 adds read-only discovery and mapping preview:
+
+- WooCommerce product sample: `GET /wp-json/wc/v3/products?per_page=10&page=1&status=publish`
+- Front stores: `GET /api/Stores`
+- Front product sample: `POST /api/Product` with a read-only search body limited to 10 products
+
+Discovery stores only sanitized snapshots in `connection_discovery_snapshots`. It detects likely WooCommerce GTIN/EAN fields such as `Zettle_barcode`, `_iZettle_barcode`, `ean`, `gtin`, and `barcode`, then previews possible Woo ↔ Front matches by GTIN first, SKU to Front `externalSKU` second, and SKU to Front `identity` third. This is not product sync and does not write final product mappings.
+
 It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
 The scaffold now includes a root `.gitignore`, executable helper scripts, a committed Laravel `composer.lock`, and a minimal GitHub Actions workflow for platform tests.
@@ -95,9 +103,16 @@ http://localhost:8000/dashboard
 
 Use the dashboard to create organizations, add WooCommerce/Front connections, view webhook path-token URLs, and run staging-safe connection checks. Connection tests do not perform live HTTP checks unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
 
-When live HTTP checks are enabled, WooCommerce and Front tests use read-only API endpoints only. They do not sync products, prices, stock, orders, refunds, gift cards, or omnichannel orders.
+When live HTTP checks are enabled, WooCommerce and Front tests and discovery actions use read-only API endpoints only. They do not sync products, prices, stock, orders, refunds, gift cards, or omnichannel orders.
 
 The dashboard connection test button posts to `/connections/{connection}/test`.
+Discovery actions use:
+
+```text
+POST /connections/{connection}/discover/stores
+POST /connections/{connection}/discover/products
+GET /connections/{connection}/discovery
+```
 
 Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` for safe local setup with dummy credentials. Set it to `true` only for staging/test credentials.
 
@@ -166,7 +181,7 @@ docker compose run --rm platform php artisan test
 
 The platform is safe by default: production writes and live HTTP connection checks are disabled unless explicitly enabled.
 
-No real WooCommerce or Front Systems API writes exist yet.
+No real WooCommerce or Front Systems API writes or sync jobs exist yet.
 
 ## Next Steps
 

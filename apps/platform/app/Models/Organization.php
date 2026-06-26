@@ -30,6 +30,11 @@ class Organization extends Model
         return $this->hasMany(Connection::class);
     }
 
+    public function discoverySnapshots(): HasMany
+    {
+        return $this->hasMany(ConnectionDiscoverySnapshot::class);
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(Event::class);

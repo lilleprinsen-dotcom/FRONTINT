@@ -31,6 +31,11 @@ Use this checklist before starting real integration implementation.
 - [x] Front Systems connection type uses `front_systems`.
 - [x] Connection tests persist minimal diagnostics without response bodies.
 - [x] Front store metadata is limited to store name, store ID, stock ID, currency, and time zone.
+- [x] Read-only discovery routes exist for Front stores, WooCommerce products, and Front products.
+- [x] Discovery is skipped in safe mode and makes no HTTP calls.
+- [x] Discovery snapshots store sanitized samples only.
+- [x] WooCommerce GTIN/EAN candidate detection exists.
+- [x] Mapping preview exists and does not write final product mappings.
 - [x] Dashboard shows safe connection status context.
 - [x] Connection form shows only the selected connection type fields.
 - [x] Duplicate `/api/connections/{connection}/test` route is not present.

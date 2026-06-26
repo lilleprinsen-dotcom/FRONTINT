@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Connection extends Model
 {
@@ -41,6 +42,16 @@ class Connection extends Model
     public function credentials(): HasMany
     {
         return $this->hasMany(ConnectionCredential::class);
+    }
+
+    public function discoverySnapshots(): HasMany
+    {
+        return $this->hasMany(ConnectionDiscoverySnapshot::class);
+    }
+
+    public function latestDiscoverySnapshot(): HasOne
+    {
+        return $this->hasOne(ConnectionDiscoverySnapshot::class)->latestOfMany();
     }
 
     public function credential(string $type): ?ConnectionCredential
