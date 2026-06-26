@@ -11,6 +11,8 @@
 
     @unless ($connectionHttpTestsEnabled)
         <div class="warning">Live HTTP connection checks are disabled. Connection tests only verify stored settings.</div>
+    @else
+        <div class="warning">Live connection tests are enabled and use read-only API endpoints only.</div>
     @endunless
 
     <div class="grid">
@@ -70,6 +72,7 @@
                     <th>Name</th>
                     <th>Type</th>
                     <th>Status</th>
+                    <th>Last checked</th>
                     <th>Base URL</th>
                     <th>Credentials</th>
                     <th>Actions</th>
@@ -80,7 +83,13 @@
                     <tr>
                         <td>{{ $connection->name }}</td>
                         <td>{{ $connectionTypes[$connection->type] ?? $connection->type }}</td>
-                        <td>{{ $connection->status }}</td>
+                        <td>
+                            <strong>{{ $connection->status }}</strong>
+                            @if (in_array($connection->type, ['woocommerce', 'front'], true))
+                                <div class="muted">Read-only API test</div>
+                            @endif
+                        </td>
+                        <td>{{ $connection->last_checked_at?->diffForHumans() ?: 'Not checked yet' }}</td>
                         <td>{{ $connection->base_url ?: 'Not set' }}</td>
                         <td>
                             @forelse ($connection->credentials as $credential)
@@ -99,7 +108,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6">No connections yet.</td>
+                        <td colspan="7">No connections yet.</td>
                     </tr>
                 @endforelse
                 </tbody>

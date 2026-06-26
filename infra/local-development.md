@@ -64,7 +64,18 @@ docker compose up
 http://localhost:8000/dashboard
 ```
 
-Phase 1 includes basic login, organization editing, connection setup, encrypted credential storage, and safe connection test actions.
+Phase 1 includes basic login, organization editing, connection setup, encrypted credential storage, and safe connection test actions. Phase 2 adds read-only WooCommerce and Front Systems connection test clients.
+
+Live HTTP checks remain disabled by default. Enable them only with staging credentials:
+
+```text
+OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true
+```
+
+Read-only connection probes:
+
+- WooCommerce: `GET /wp-json/wc/v3/system_status`
+- Front Systems: `GET /api/Environment`
 
 ## Run Tests
 
@@ -106,7 +117,7 @@ GitHub Actions runs the platform CI workflow on pull requests and pushes to `mai
 ## What Is Still Placeholder
 
 - Product, price, stock, order, refund, gift card, and omnichannel sync are not implemented yet.
-- Front and WooCommerce API clients are not implemented yet.
+- Front and WooCommerce API clients are read-only connection test clients only.
 - Connection tests are read-only and live HTTP checks are disabled by default.
 - No real API writes exist yet.
 

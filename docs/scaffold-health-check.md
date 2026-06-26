@@ -25,6 +25,9 @@ Use this checklist before starting real integration implementation.
 - [x] Organization and connection setup foundation present.
 - [x] Connection credentials use encrypted model casts.
 - [x] Connection tests are staging-safe by default.
+- [x] WooCommerce read-only connection test client exists.
+- [x] Front Systems read-only connection test client exists.
+- [x] Dashboard shows safe connection status context.
 - [x] No real credentials are committed.
 - [x] No real WooCommerce or Front Systems API writes are implemented yet.
 
