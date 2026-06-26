@@ -13,8 +13,14 @@
     </testsuites>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="/>
         <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="OMNIBRIDGE_ENVIRONMENT" value="staging"/>
+        <env name="OMNIBRIDGE_ALLOW_PRODUCTION_WRITES" value="false"/>
+        <env name="OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP" value="false"/>
     </php>
 </phpunit>

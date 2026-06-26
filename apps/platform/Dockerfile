@@ -6,11 +6,15 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
         unzip \
+        libonig-dev \
         libpq-dev \
+        libsqlite3-dev \
         libzip-dev \
     && docker-php-ext-install \
+        mbstring \
         pdo \
         pdo_pgsql \
+        pdo_sqlite \
         pgsql \
         zip \
     && rm -rf /var/lib/apt/lists/*

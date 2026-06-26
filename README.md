@@ -20,7 +20,7 @@ apps/
   woocommerce-plugin/    Thin WordPress/WooCommerce adapter plugin
 docs/                    Architecture, requirements, roadmap, and operating docs
 infra/                   Local development and hosting notes
-docker-compose.yml       Local PostgreSQL, Redis, and app placeholder
+docker-compose.yml       Local Laravel, PostgreSQL, and Redis setup
 ```
 
 ## Current Status
@@ -76,9 +76,23 @@ http://localhost:8000/dashboard
 
 Use the dashboard to create organizations, add WooCommerce/Front connections, view webhook path-token URLs, and run staging-safe connection checks. Connection tests do not perform live HTTP checks unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
 
+## Verification commands
+
+```bash
+docker compose build
+docker compose run --rm platform composer install
+docker compose run --rm platform cp .env.example .env
+docker compose run --rm platform php artisan key:generate
+docker compose run --rm platform php artisan migrate
+docker compose run --rm platform php artisan test
+./scripts/generate-front-client.sh
+```
+
+The platform is safe by default: production writes and live HTTP connection checks are disabled unless explicitly enabled.
+
 ## Next Steps
 
-1. Verify Docker build, Composer install, migrations, and unit tests.
+1. Run the verification commands above in a local Docker environment.
 2. Confirm Front Systems API module access, webhook signing/retry behavior, reservation, gift card, and omnichannel capabilities.
 3. Complete authentication and the minimal dashboard/setup wizard.
 4. Build the first proof of concept tests listed in [docs/first-poc-checklist.md](docs/first-poc-checklist.md).
