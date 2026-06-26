@@ -78,7 +78,7 @@ class WooCommerceReadOnlyClient
 
     private function siteUrl(Connection $connection): string
     {
-        return $this->credentialValue($connection, 'site_url') ?: (string) $connection->base_url;
+        return (string) $connection->base_url;
     }
 
     private function responseTimeMs(float $startedAt): int
