@@ -25,7 +25,7 @@ docker-compose.yml       Local PostgreSQL, Redis, and app placeholder
 
 ## Current Status
 
-This repository contains the first technical specification and scaffold only. It does not yet contain a fully installed Laravel application or production-ready plugin logic.
+This repository contains the technical specification and a Laravel-style platform scaffold. It is still scaffold-first: Docker build, Composer install, migrations, and tests must be verified before real integration development starts.
 
 ## Front Systems API documentation
 
@@ -36,6 +36,8 @@ The current stored spec is:
 ```text
 docs/vendor/front-systems/openapi/frontsystems.openapi.json
 ```
+
+Use `docs/vendor/front-systems/front-api-endpoint-summary.md` for a concise endpoint overview generated from the stored spec.
 
 If Front provides a direct OpenAPI/Swagger URL, download it with:
 
@@ -51,10 +53,21 @@ Use this command to verify that a spec file is present:
 
 Do not commit secrets, API keys, tokens, cookies, private links, restricted vendor documentation without permission, or unredacted customer data.
 
+## Webhook URLs
+
+Public webhook URLs use opaque path tokens, not organization slugs:
+
+```text
+/webhooks/woocommerce/{pathToken}
+/webhooks/front/{pathToken}
+```
+
+Duplicate webhook events are accepted but must not dispatch duplicate processing jobs.
+
 ## Next Steps
 
-1. Confirm Front Systems API, webhook, reservation, gift card, and omnichannel module capabilities.
-2. Install Laravel in `apps/platform`.
-3. Implement authentication, organizations, encrypted connection storage, webhook skeletons, queues, and event logs.
+1. Verify Docker build, Composer install, migrations, and unit tests.
+2. Confirm Front Systems API module access, webhook signing/retry behavior, reservation, gift card, and omnichannel capabilities.
+3. Complete authentication and the minimal dashboard/setup wizard.
 4. Build the first proof of concept tests listed in [docs/first-poc-checklist.md](docs/first-poc-checklist.md).
 5. Keep all work staging-first. Do not write to production systems until explicitly enabled and reviewed.

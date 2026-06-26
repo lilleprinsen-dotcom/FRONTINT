@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->string('source_event_id')->nullable();
             $table->string('idempotency_key');
             $table->json('payload_json')->nullable();
+            $table->json('metadata_json')->nullable();
             $table->string('status')->default('received');
             $table->timestamp('received_at')->nullable();
             $table->timestamp('processed_at')->nullable();

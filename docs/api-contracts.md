@@ -4,18 +4,20 @@ These endpoints are planned contracts. They are not implemented yet.
 
 ## Platform Endpoints
 
-### POST /webhooks/woocommerce/{tenant}
+### POST /webhooks/woocommerce/{pathToken}
 
 Receives WooCommerce webhooks.
 
 Requirements:
 
 - Verify WooCommerce signature when configured.
-- Store raw event in `events`.
+- Look up an active `webhook_endpoints.path_token` for source system `woocommerce`.
+- Store sanitized event payload and metadata in `events`.
 - Use idempotency key from Woo event ID, resource ID, and payload hash.
-- Queue processing.
+- Queue processing only when the event is newly created.
+- Return `duplicate_accepted` for duplicate events without dispatching a second job.
 
-### POST /webhooks/front/{tenant}
+### POST /webhooks/front/{pathToken}
 
 Receives Front Systems webhooks.
 
@@ -23,8 +25,11 @@ Requirements:
 
 - Verify Front signature if supported.
 - If signing is unavailable, use a secret URL token or token header.
-- Store raw event in `events`.
+- Look up an active `webhook_endpoints.path_token` for source system `front`.
+- Store sanitized event payload and metadata in `events`.
 - Mark uncertain payload semantics as `NEEDS_FRONT_CONFIRMATION`.
+- Queue processing only when the event is newly created.
+- Return `duplicate_accepted` for duplicate events without dispatching a second job.
 
 ### GET /health
 
@@ -94,4 +99,3 @@ Prefer refunding through WooCommerce gateway behavior where possible. Direct pro
 ### WebToffee Adapter
 
 The Laravel platform calls signed WooCommerce plugin endpoints for gift card balance, redeem, reverse, credit, and transaction log behavior if no official WebToffee REST API is suitable.
-

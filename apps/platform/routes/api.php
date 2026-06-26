@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class);
 
-Route::post('/webhooks/woocommerce/{tenant}', WooCommerceWebhookController::class);
-Route::post('/webhooks/front/{tenant}', FrontWebhookController::class);
+Route::post('/webhooks/woocommerce/{pathToken}', WooCommerceWebhookController::class);
+Route::post('/webhooks/front/{pathToken}', FrontWebhookController::class);
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/sync/products/run', [ProductSyncController::class, 'run']);

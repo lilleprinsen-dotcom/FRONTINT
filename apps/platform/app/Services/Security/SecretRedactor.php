@@ -5,13 +5,21 @@ namespace App\Services\Security;
 final class SecretRedactor
 {
     private const SECRET_KEYS = [
+        'api-key',
+        'api_key',
+        'apikey',
         'authorization',
+        'bearer',
+        'cookie',
         'consumer_key',
         'consumer_secret',
         'password',
         'secret',
+        'signature',
+        'set-cookie',
         'token',
         'webhook_secret',
+        'x-api-key',
     ];
 
     public function redact(array $payload): array

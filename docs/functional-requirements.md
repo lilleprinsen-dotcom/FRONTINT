@@ -4,9 +4,9 @@
 
 - Sync WooCommerce products to Front.
 - Support product variants.
-- Include SKU, EAN/GTIN, product names, brands, categories, images, regular price, sale price, sale price period where available, active/inactive status, and stock quantity.
+- Include SKU, GTIN, product names, brands, categories, images, regular price, sale price, sale price period where available, active/inactive status, and stock quantity.
 - Only sync products marked eligible for Front POS.
-- Validate missing SKU, EAN/GTIN, price, category, and variant data.
+- Validate missing SKU, GTIN, price, category, and variant data.
 - Support batch sync for about 70,000 products.
 - Support incremental sync through WooCommerce webhooks.
 - Run daily reconciliation.
@@ -173,4 +173,3 @@ The dashboard should be simple for non-developer merchant admins:
 - Clear per-merchant connection settings.
 - Product sync rules per merchant.
 - Webhook callback URLs per merchant.
-

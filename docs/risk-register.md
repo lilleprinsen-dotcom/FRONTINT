@@ -80,7 +80,6 @@ Mitigation: Configurable rate limits, backoff, batch windows, and sync checkpoin
 
 ## Product Data Quality
 
-Risk: Missing SKU, EAN, category, price, or variant metadata can block Front sync.
+Risk: Missing SKU, GTIN, category, price, or variant metadata can block Front sync.
 
 Mitigation: Validation report and merchant-friendly fix list.
-

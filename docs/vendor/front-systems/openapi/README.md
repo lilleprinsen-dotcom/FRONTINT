@@ -47,4 +47,6 @@ To verify that a spec file is present, run:
 ./scripts/generate-front-client.sh
 ```
 
+For a short human-readable endpoint overview, see `../front-api-endpoint-summary.md`.
+
 Generated API clients are not configured yet. A future task can choose a generator such as OpenAPI Generator, Swagger Codegen, or a Laravel/PHP HTTP client generator.

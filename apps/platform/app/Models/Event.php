@@ -18,6 +18,7 @@ class Event extends Model
         'source_event_id',
         'idempotency_key',
         'payload_json',
+        'metadata_json',
         'status',
         'received_at',
         'processed_at',
@@ -29,6 +30,7 @@ class Event extends Model
     {
         return [
             'payload_json' => 'array',
+            'metadata_json' => 'array',
             'received_at' => 'datetime',
             'processed_at' => 'datetime',
         ];

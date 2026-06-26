@@ -12,6 +12,10 @@ Recommended key format:
 
 Store the key on `events`, `stock_ledger`, `gift_card_transactions`, and mapping records where relevant.
 
+Inbound webhook events must be stored once and processed once. If the same idempotency key is received again, the platform should return `202 Accepted` with `duplicate_accepted` and must not dispatch another processing job.
+
+Payload hashes must sort nested arrays recursively before JSON encoding so logically identical payloads produce the same idempotency hash.
+
 ## Queue Design
 
 - Webhook controllers should validate and store events quickly.
@@ -42,9 +46,24 @@ Store the key on `events`, `stock_ledger`, `gift_card_transactions`, and mapping
 
 ## Webhook Verification
 
+- Public webhook URLs use opaque path tokens from `webhook_endpoints.path_token`, not organization slugs.
 - Verify WooCommerce webhooks when signatures/secrets are configured.
 - Verify Front webhooks if Front supports signing/secrets.
 - If Front cannot sign webhooks, use secret callback URLs or token headers and document the limitation.
+- Store sanitized webhook metadata for debugging, including relevant headers, source IP, received time, event type, and source event ID.
+- Redact authorization headers, API keys, cookies, signatures, tokens, and secrets before storing payloads or metadata.
+
+## Front API Schema Source
+
+- The primary Front endpoint schema source is `docs/vendor/front-systems/openapi/frontsystems.openapi.json`.
+- Use `docs/vendor/front-systems/front-api-endpoint-summary.md` for a human-readable overview.
+- Do not assume an endpoint is enabled for Lilleprinsen until the relevant Front module and staging access are confirmed.
+
+## Product Mapping Terms
+
+- Product mappings use `woo_item_key`, `gtin`, `external_sku`, `front_product_ext_id`, `front_identity`, and `front_stock_id`.
+- Prefer `gtin` over legacy `ean` naming.
+- Do not rely on unique indexes that contain nullable Woo variation IDs.
 
 ## Encrypted Credentials
 
@@ -97,4 +116,3 @@ Initial recommendation:
 - Keep event payloads only as long as operationally needed.
 - Redact or archive old payloads with PII.
 - Keep mapping records while tenant remains active.
-

@@ -10,18 +10,24 @@ return new class extends Migration {
         Schema::create('product_mappings', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
+            $table->string('woo_item_key');
             $table->unsignedBigInteger('woo_product_id');
             $table->unsignedBigInteger('woo_variation_id')->nullable();
             $table->string('front_product_id')->nullable();
+            $table->string('front_product_ext_id')->nullable();
+            $table->string('front_identity')->nullable();
             $table->string('sku')->nullable();
-            $table->string('ean')->nullable();
+            $table->string('gtin')->nullable();
+            $table->string('external_sku')->nullable();
+            $table->string('front_stock_id')->nullable();
             $table->string('sync_status')->default('pending');
             $table->timestamp('last_synced_at')->nullable();
             $table->timestamps();
-            $table->unique(['organization_id', 'woo_product_id', 'woo_variation_id']);
-            $table->unique(['organization_id', 'front_product_id']);
+            $table->unique(['organization_id', 'woo_item_key']);
+            $table->index(['organization_id', 'front_product_ext_id']);
             $table->index(['organization_id', 'sku']);
-            $table->index(['organization_id', 'ean']);
+            $table->index(['organization_id', 'gtin']);
+            $table->index(['organization_id', 'external_sku']);
         });
 
         Schema::create('customer_mappings', function (Blueprint $table): void {
