@@ -17,6 +17,8 @@ Future Codex/AI agents must follow these rules.
 - Do not store secrets in code.
 - Never log secrets or full tokens.
 - Redact sensitive payload data.
+- Keep `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false` unless production work is explicitly requested and approved.
+- Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless staging-safe read-only checks are intentionally being verified.
 - Keep WooCommerce plugin thin.
 - Keep business logic in the Laravel platform.
 

@@ -34,4 +34,9 @@ class Organization extends Model
     {
         return $this->hasMany(Event::class);
     }
+
+    public function webhookEndpoints(): HasMany
+    {
+        return $this->hasMany(WebhookEndpoint::class);
+    }
 }

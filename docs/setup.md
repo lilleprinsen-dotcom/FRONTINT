@@ -71,9 +71,46 @@ Open:
 http://localhost:8000/dashboard
 ```
 
-The dashboard is still minimal and may require authentication scaffolding to be completed before it is useful.
+The dashboard is intentionally minimal, but it now includes login, organizations, connection setup, webhook URLs, and connection checks.
 
-## 9. Add WooCommerce Staging Credentials
+Log in with the admin user created in the previous step.
+
+## 9. Create or Review Organization
+
+The first admin command creates the Lilleprinsen organization if it does not already exist.
+
+In the dashboard, confirm:
+
+- Organization name and slug
+- Environment is `staging`
+- Status is `active`
+- WooCommerce and Front webhook URLs use path tokens
+
+## 10. Add Connections
+
+From the dashboard:
+
+1. Click **Add connection**.
+2. Choose WooCommerce or Front Systems.
+3. Add the staging base URL.
+4. Add staging credentials only.
+5. Save the connection.
+
+Credentials are encrypted at rest and are not shown again after saving.
+
+## 11. Test Connections
+
+Click **Test** beside a connection.
+
+By default this only verifies required settings are stored. Live HTTP checks are disabled unless:
+
+```text
+OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true
+```
+
+Keep this disabled until staging credentials and URLs are confirmed.
+
+## 12. Add WooCommerce Staging Credentials
 
 In the future dashboard:
 
@@ -83,11 +120,11 @@ In the future dashboard:
 4. Add staging API credentials.
 5. Save and test the connection.
 
-## 10. Add Front Credentials Later
+## 13. Add Front Credentials Later
 
 Use Front sandbox/test credentials only until production readiness is explicitly approved.
 
-## 11. Add Webhook URLs
+## 14. Add Webhook URLs
 
 Public webhook URLs use opaque path tokens from `webhook_endpoints.path_token`, not organization slugs:
 
@@ -96,7 +133,7 @@ Public webhook URLs use opaque path tokens from `webhook_endpoints.path_token`, 
 
 Use staging URLs first.
 
-## 12. Where to See Logs
+## 15. Where to See Logs
 
 Local Laravel logs will be in:
 
@@ -106,7 +143,7 @@ apps/platform/storage/logs/
 
 The dashboard should later show failed events and queue status without requiring file access.
 
-## 13. Run First Product Sync Test
+## 16. Run First Product Sync Test
 
 After Phase 1 and the first product sync are implemented:
 
@@ -115,7 +152,7 @@ After Phase 1 and the first product sync are implemented:
 3. Run a single-product sync.
 4. Confirm the product appears correctly in Front staging/test.
 
-## 14. Stop Everything
+## 17. Stop Everything
 
 ```bash
 docker compose down

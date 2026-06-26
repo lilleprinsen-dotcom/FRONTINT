@@ -25,7 +25,9 @@ docker-compose.yml       Local PostgreSQL, Redis, and app placeholder
 
 ## Current Status
 
-This repository contains the technical specification and a Laravel-style platform scaffold. It is still scaffold-first: Docker build, Composer install, migrations, and tests must be verified before real integration development starts.
+This repository contains the technical specification and a Laravel-style platform scaffold. Phase 1 foundation now includes basic login, organizations, connection setup, encrypted credential storage, connection test actions, and a minimal dashboard.
+
+It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
 ## Front Systems API documentation
 
@@ -63,6 +65,16 @@ Public webhook URLs use opaque path tokens, not organization slugs:
 ```
 
 Duplicate webhook events are accepted but must not dispatch duplicate processing jobs.
+
+## Phase 1 Dashboard
+
+After local setup, open:
+
+```text
+http://localhost:8000/dashboard
+```
+
+Use the dashboard to create organizations, add WooCommerce/Front connections, view webhook path-token URLs, and run staging-safe connection checks. Connection tests do not perform live HTTP checks unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
 
 ## Next Steps
 

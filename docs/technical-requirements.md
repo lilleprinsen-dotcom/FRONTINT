@@ -71,6 +71,8 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Use Laravel encryption or a dedicated secret manager later.
 - Do not store secrets in code, docs, commits, logs, or screenshots.
 - Rotate credentials per tenant.
+- Phase 1 connection setup stores only redacted credential hints in the dashboard.
+- Connection test actions must not print or return secret values.
 
 ## Audit Trail
 
@@ -95,6 +97,8 @@ Audit these actions:
 - All development and first proof of concept work must use staging/test credentials.
 - Production writes are disabled unless `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=true`.
 - Any production enablement must be explicit, audited, and reversible.
+- Live HTTP connection checks are disabled unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
+- Connection checks must be read-only. They must not create, update, refund, sync, reserve, redeem, or delete data.
 
 ## Observability
 

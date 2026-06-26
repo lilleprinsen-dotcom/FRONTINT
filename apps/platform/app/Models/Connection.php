@@ -36,4 +36,9 @@ class Connection extends Model
     {
         return $this->hasMany(ConnectionCredential::class);
     }
+
+    public function credential(string $type): ?ConnectionCredential
+    {
+        return $this->credentials->firstWhere('credential_type', $type);
+    }
 }
