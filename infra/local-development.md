@@ -6,20 +6,13 @@
 - Git.
 - Composer and PHP locally are helpful, but Docker can run Composer inside the platform container.
 
-This project is still scaffold-first. Local app startup is expected to work after dependencies are installed, but Docker build, Composer install, migrations, and tests must be verified before real integration development.
+This project is staging-safe by default. Local app startup should work after dependencies are installed and the database is migrated.
 
-## Start Services
+## Build Images
 
 ```bash
-docker compose up -d --build postgres redis
+docker compose build
 ```
-
-Services:
-
-- PostgreSQL: localhost:5432
-- Redis: localhost:6379
-
-The platform app starts after dependencies and `.env` are ready.
 
 ## Install Dependencies
 
@@ -34,7 +27,7 @@ docker compose run --rm platform composer install
 Copy the environment file:
 
 ```bash
-cp apps/platform/.env.example apps/platform/.env
+docker compose run --rm platform cp .env.example .env
 ```
 
 Generate the app key:
@@ -62,16 +55,38 @@ The command also provisions default WooCommerce and Front webhook endpoint path 
 Start the platform app:
 
 ```bash
-docker compose up -d platform
+docker compose up
 ```
 
 ```text
 http://localhost:8000/dashboard
 ```
 
-The dashboard is intentionally minimal until authentication and setup wizard work is completed.
-
 Phase 1 includes basic login, organization editing, connection setup, encrypted credential storage, and safe connection test actions.
+
+## Run Tests
+
+```bash
+docker compose run --rm platform php artisan test
+```
+
+## Verification commands
+
+```bash
+docker compose build
+docker compose run --rm platform composer install
+docker compose run --rm platform cp .env.example .env
+docker compose run --rm platform php artisan key:generate
+docker compose run --rm platform php artisan migrate
+docker compose run --rm platform php artisan test
+./scripts/generate-front-client.sh
+```
+
+## What Is Still Placeholder
+
+- Product, price, stock, order, refund, gift card, and omnichannel sync are not implemented yet.
+- Front and WooCommerce API clients are not implemented yet.
+- Connection tests are read-only and live HTTP checks are disabled by default.
 
 ## Stop Services
 

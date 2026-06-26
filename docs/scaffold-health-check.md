@@ -9,7 +9,8 @@ Use this checklist before starting real integration implementation.
 - [ ] Composer install pending/works.
 - [ ] Laravel app key generation pending/works.
 - [ ] Database migrations pending/works.
-- [ ] Unit tests pending/works.
+- [x] Smoke and feature tests exist for health, auth, dashboard, organizations, and webhooks.
+- [ ] Unit/feature tests pending local Docker verification.
 - [x] Webhook duplicate handling is present.
 - [x] Secret redaction tests are present.
 - [x] Idempotency tests are present.

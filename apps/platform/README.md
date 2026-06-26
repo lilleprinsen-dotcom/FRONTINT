@@ -22,7 +22,7 @@ The repository now includes:
 - Event recorder and idempotency key helper.
 - Queue job skeleton for deferred event processing.
 - Minimal health, dashboard, sync, order, and gift card routes.
-- PHPUnit tests for idempotency key behavior.
+- PHPUnit tests for idempotency, redaction, health, login, dashboard, organization setup, and webhooks.
 
 The app now has a local Dockerfile. Run Composer before serving the app:
 
@@ -35,13 +35,14 @@ docker compose run --rm platform composer install
 From the repository root:
 
 ```bash
-docker compose up -d --build postgres redis
+docker compose build
 docker compose run --rm platform composer install
-cp apps/platform/.env.example apps/platform/.env
+docker compose run --rm platform cp .env.example .env
 docker compose run --rm platform php artisan key:generate
 docker compose run --rm platform php artisan migrate
 docker compose run --rm platform php artisan omnibridge:create-admin
-docker compose up -d platform
+docker compose run --rm platform php artisan test
+docker compose up
 ```
 
 Keep custom integration code in small, testable service classes. Avoid putting business logic directly in controllers.

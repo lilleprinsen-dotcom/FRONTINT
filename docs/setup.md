@@ -4,6 +4,12 @@ This guide is for non-developer-friendly local setup.
 
 The platform is still scaffold-first. It has Laravel-style structure, migrations, and tests, but full local installation must be verified with Docker, Composer, migrations, and unit tests before real integration work starts.
 
+## Prerequisites
+
+- Git
+- Docker Desktop or another Docker Compose-compatible runtime
+- No real production credentials
+
 ## 1. Clone the Repo
 
 ```bash
@@ -11,13 +17,13 @@ git clone https://github.com/lilleprinsen-dotcom/FRONTINT.git
 cd FRONTINT
 ```
 
-## 2. Start Docker
+## 2. Build Docker Images
 
 ```bash
-docker compose up -d --build postgres redis
+docker compose build
 ```
 
-This starts PostgreSQL and Redis. The platform app is started after Composer dependencies and `.env` are ready.
+This builds the local platform image. It does not start the app yet.
 
 ## 3. Install Dependencies
 
@@ -32,7 +38,7 @@ If this fails, the project is still inspectable as documentation/scaffold, but t
 ## 4. Copy Environment File
 
 ```bash
-cp apps/platform/.env.example apps/platform/.env
+docker compose run --rm platform cp .env.example .env
 ```
 
 Do not add real production credentials to local files.
@@ -62,7 +68,7 @@ docker compose run --rm platform php artisan omnibridge:create-admin
 Start the app server:
 
 ```bash
-docker compose up -d
+docker compose up
 ```
 
 Open:
@@ -91,10 +97,11 @@ In the dashboard, confirm:
 From the dashboard:
 
 1. Click **Add connection**.
-2. Choose WooCommerce or Front Systems.
+2. Choose WooCommerce for the WooCommerce staging connection placeholder.
 3. Add the staging base URL.
 4. Add staging credentials only.
 5. Save the connection.
+6. Repeat with Front Systems for the Front staging connection placeholder.
 
 Credentials are encrypted at rest and are not shown again after saving.
 
@@ -133,6 +140,8 @@ Public webhook URLs use opaque path tokens from `webhook_endpoints.path_token`, 
 
 Use staging URLs first.
 
+The dashboard shows the generated webhook URLs under each organization.
+
 ## 15. Where to See Logs
 
 Local Laravel logs will be in:
@@ -143,7 +152,40 @@ apps/platform/storage/logs/
 
 The dashboard should later show failed events and queue status without requiring file access.
 
-## 16. Run First Product Sync Test
+## 16. Run Tests
+
+```bash
+docker compose run --rm platform php artisan test
+```
+
+## 17. Verification commands
+
+Run these commands after cloning the repository:
+
+```bash
+docker compose build
+docker compose run --rm platform composer install
+docker compose run --rm platform cp .env.example .env
+docker compose run --rm platform php artisan key:generate
+docker compose run --rm platform php artisan migrate
+docker compose run --rm platform php artisan test
+./scripts/generate-front-client.sh
+```
+
+## 18. What Is Still Placeholder
+
+The scaffold does not yet implement:
+
+- Product sync
+- Price sync
+- Stock sync
+- Front sale import
+- WooCommerce refund logic
+- Gift card redemption
+- Omnichannel order creation
+- Real Front or WooCommerce API writes
+
+## 19. Run First Product Sync Test Later
 
 After Phase 1 and the first product sync are implemented:
 
@@ -152,7 +194,7 @@ After Phase 1 and the first product sync are implemented:
 3. Run a single-product sync.
 4. Confirm the product appears correctly in Front staging/test.
 
-## 17. Stop Everything
+## 20. Stop Everything
 
 ```bash
 docker compose down
