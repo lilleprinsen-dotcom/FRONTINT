@@ -21,7 +21,6 @@ class ConnectionTestEndpointTest extends TestCase
         Http::fake();
 
         [$user, $connection] = $this->connectionWithCredentials('woocommerce', [
-            'site_url' => 'https://woo.example.test',
             'consumer_key' => 'ck_test',
             'consumer_secret' => 'cs_test',
         ]);
@@ -73,7 +72,6 @@ class ConnectionTestEndpointTest extends TestCase
         ]);
 
         [$user, $connection] = $this->connectionWithCredentials('woocommerce', [
-            'site_url' => 'https://woo.example.test',
             'consumer_key' => 'ck_test',
             'consumer_secret' => 'cs_test',
         ]);
@@ -165,7 +163,6 @@ class ConnectionTestEndpointTest extends TestCase
         ]);
 
         [$user, $connection] = $this->connectionWithCredentials('woocommerce', [
-            'site_url' => 'https://woo.example.test',
             'consumer_key' => 'ck_test',
             'consumer_secret' => 'cs_test',
         ]);
@@ -225,7 +222,6 @@ class ConnectionTestEndpointTest extends TestCase
     public function test_connection_credentials_are_not_displayed(): void
     {
         [$user] = $this->connectionWithCredentials('woocommerce', [
-            'site_url' => 'https://woo.example.test',
             'consumer_key' => 'ck_secret_value',
             'consumer_secret' => 'cs_secret_value',
         ]);

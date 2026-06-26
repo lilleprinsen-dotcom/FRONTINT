@@ -101,6 +101,38 @@ The dashboard connection test button posts to `/connections/{connection}/test`.
 
 Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` for safe local setup with dummy credentials. Set it to `true` only for staging/test credentials.
 
+## Mac local testing with SQLite
+
+If you have PHP 8.3 and Composer installed on your Mac, you can test the scaffold without Docker PostgreSQL:
+
+```bash
+cd /Users/petterholm/Documents/Posten\ robo/FRONTINT
+chmod +x scripts/*.sh
+./scripts/verify-platform-scaffold.sh
+cd apps/platform
+composer install
+cp .env.example .env
+php artisan key:generate
+```
+
+Edit `apps/platform/.env` and set:
+
+```text
+DB_CONNECTION=sqlite
+```
+
+Then create the SQLite database and finish setup:
+
+```bash
+touch database/database.sqlite
+php artisan migrate
+php artisan omnibridge:create-admin
+php artisan test
+php artisan serve
+```
+
+Open `http://localhost:8000/dashboard`. Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless you are testing read-only staging credentials.
+
 ## Verification commands
 
 Quick scaffold check:

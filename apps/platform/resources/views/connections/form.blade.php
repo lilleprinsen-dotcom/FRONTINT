@@ -3,7 +3,6 @@
 @php
     $credentialFields = [
         'woocommerce' => [
-            'site_url' => 'WooCommerce site URL',
             'consumer_key' => 'WooCommerce consumer key',
             'consumer_secret' => 'WooCommerce consumer secret',
         ],
@@ -58,7 +57,7 @@
             <label for="name">Display name</label>
             <input id="name" name="name" value="{{ old('name', $connection->name) }}" required>
 
-            <label for="base_url">Base URL</label>
+            <label for="base_url" data-base-url-label>{{ $selectedType === 'woocommerce' ? 'WooCommerce site URL' : 'Base URL' }}</label>
             <input
                 id="base_url"
                 name="base_url"
@@ -68,7 +67,13 @@
                 data-base-url-input
                 data-front-default-url="{{ config('omnibridge.front_systems.default_base_url') }}"
             >
-            <p class="muted">WooCommerce example: https://store.example.com. Front Systems REST API V2 example: https://frontsystemsapis.frontsystems.no/restapi/V2.</p>
+            <p class="muted" data-base-url-help>
+                @if ($selectedType === 'woocommerce')
+                    Use the WooCommerce store URL here, for example https://store.example.com. The encrypted credentials below should only contain the consumer key and consumer secret.
+                @else
+                    Front Systems REST API V2 example: https://frontsystemsapis.frontsystems.no/restapi/V2.
+                @endif
+            </p>
 
             <h2>Credentials</h2>
             <p class="muted">Only fill the fields for the selected connection type. Existing saved credentials are shown as redacted hints on the dashboard.</p>
@@ -95,11 +100,21 @@
             const typeSelect = document.querySelector('[data-connection-type-select]');
             const panels = document.querySelectorAll('[data-credential-panel]');
             const baseUrlInput = document.querySelector('[data-base-url-input]');
+            const baseUrlLabel = document.querySelector('[data-base-url-label]');
+            const baseUrlHelp = document.querySelector('[data-base-url-help]');
 
             const updateCredentialPanels = () => {
                 panels.forEach((panel) => {
                     panel.hidden = panel.dataset.credentialPanel !== typeSelect.value;
                 });
+
+                if (typeSelect.value === 'woocommerce') {
+                    baseUrlLabel.textContent = 'WooCommerce site URL';
+                    baseUrlHelp.textContent = 'Use the WooCommerce store URL here, for example https://store.example.com. The encrypted credentials below should only contain the consumer key and consumer secret.';
+                } else {
+                    baseUrlLabel.textContent = 'Base URL';
+                    baseUrlHelp.textContent = 'Front Systems REST API V2 example: https://frontsystemsapis.frontsystems.no/restapi/V2.';
+                }
 
                 if (['front', 'front_systems'].includes(typeSelect.value) && baseUrlInput.value.trim() === '') {
                     baseUrlInput.value = baseUrlInput.dataset.frontDefaultUrl;

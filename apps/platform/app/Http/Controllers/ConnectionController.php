@@ -100,7 +100,7 @@ class ConnectionController extends Controller
     private function credentialTypesForConnection(string $connectionType): array
     {
         return match ($connectionType) {
-            'woocommerce' => ['site_url', 'consumer_key', 'consumer_secret'],
+            'woocommerce' => ['consumer_key', 'consumer_secret'],
             'front', 'front_systems' => ['api_key'],
             'webtoffee_adapter' => ['shared_secret'],
             'dintero', 'stripe' => ['note'],
@@ -114,12 +114,6 @@ class ConnectionController extends Controller
 
         if ($baseUrl) {
             return $baseUrl;
-        }
-
-        if ($connectionType === 'woocommerce') {
-            $siteUrl = $credentials['site_url'] ?? null;
-
-            return is_string($siteUrl) && trim($siteUrl) !== '' ? trim($siteUrl) : null;
         }
 
         return $this->defaultBaseUrl($connectionType);

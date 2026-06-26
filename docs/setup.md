@@ -17,6 +17,44 @@ Optional local tools:
 
 Docker is the preferred path for non-developers. Local PHP/Composer are useful for faster checks.
 
+## Mac local testing with SQLite
+
+If you have PHP 8.3 and Composer installed on your Mac, you can run the scaffold with a local SQLite database:
+
+```bash
+cd /Users/petterholm/Documents/Posten\ robo/FRONTINT
+chmod +x scripts/*.sh
+./scripts/verify-platform-scaffold.sh
+cd apps/platform
+composer install
+cp .env.example .env
+php artisan key:generate
+```
+
+Edit `apps/platform/.env` and set:
+
+```text
+DB_CONNECTION=sqlite
+```
+
+Then continue:
+
+```bash
+touch database/database.sqlite
+php artisan migrate
+php artisan omnibridge:create-admin
+php artisan test
+php artisan serve
+```
+
+Open:
+
+```text
+http://localhost:8000/dashboard
+```
+
+Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` for dummy credentials. Enable live checks only with staging/test WooCommerce or Front Systems credentials.
+
 ## 1. Clone the Repo
 
 ```bash
