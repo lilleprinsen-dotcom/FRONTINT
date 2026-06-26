@@ -116,6 +116,22 @@ class ConnectionTestEndpointTest extends TestCase
             ->assertSee('Not checked yet');
     }
 
+    public function test_connection_form_marks_credential_panels_by_connection_type(): void
+    {
+        [$user] = $this->connectionWithCredentials('front', [
+            'api_key' => 'front-key-test',
+        ], 'https://front.example.test/restapi/V2');
+
+        $this->actingAs($user)
+            ->get('/connections/create?type=front')
+            ->assertOk()
+            ->assertSee('data-credential-panel="front"', false)
+            ->assertSee('data-credential-panel="woocommerce"', false)
+            ->assertSee('data-credential-panel="webtoffee_adapter"', false)
+            ->assertSee('hidden', false)
+            ->assertSee('data-connection-type-select', false);
+    }
+
     private function connectionWithCredentials(string $type, array $credentials, string $baseUrl = 'https://woo.example.test'): array
     {
         $user = User::query()->create([
