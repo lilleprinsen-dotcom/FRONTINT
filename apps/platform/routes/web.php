@@ -55,6 +55,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('product-sync.profile');
     Route::post('/product-sync/profile', [ProductSyncController::class, 'updateProfile'])
         ->name('product-sync.profile.update');
+    Route::get('/product-sync/runs', [ProductSyncController::class, 'runs'])
+        ->name('product-sync.runs.index');
     Route::get('/product-sync/runs/{run}', [ProductSyncController::class, 'showRun'])
         ->name('product-sync.runs.show');
 });

@@ -52,12 +52,16 @@ Phase 4 adds controlled 10-product mapping PoC preparation:
 - Generate a local preview-only sync plan in `product_sync_preview_plans`.
 - Review ready/blocked validation, warnings, proposed Woo to Front fields, and `NEEDS_CONFIRMATION` items.
 
-The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variable products are blocked until variation discovery/mapping is implemented. GTIN/EAN candidates must be confirmed before any future write test.
+The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variation discovery and variation-level sync are planned for the full catalog architecture, but no variation writes exist yet. GTIN/EAN candidates must be confirmed before any future write test.
 
 Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-product catalog:
 
-- Product sync profiles define safe defaults, limits, validation rules, and preview/limited/production modes.
+- The production goal is all relevant WooCommerce products and variations, not only a manually selected subset.
+- Initial full sync must run in controlled batches with checkpoints and queues.
+- Incremental WooCommerce updates will later create deduplicated product sync events.
+- Product sync profiles define safe defaults, limits, validation rules, scope, identity strategy, GTIN strategy, and preview/limited/full/incremental/production modes.
 - Product sync preview runs convert the latest mapping PoC plan into local run and item status rows.
+- Sync runs and run items are paginated and searchable so the portal never loads a full catalog at once.
 - The Product Sync page shows owner-friendly status: Ready, Needs attention, Preview only, Safe mode, and Last checked.
 - Advanced technical settings are separated from normal store-owner pages.
 - No product writes exist yet.

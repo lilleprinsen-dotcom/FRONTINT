@@ -15,15 +15,22 @@ class ProductSyncRun extends Model
         'organization_id',
         'product_sync_profile_id',
         'created_by_user_id',
+        'run_type',
         'status',
         'mode',
+        'scope',
+        'cursor_json',
+        'checkpoint_json',
         'total_candidates',
         'total_ready',
         'total_blocked',
         'total_synced',
         'total_failed',
         'total_skipped',
+        'total_pending',
+        'total_variations',
         'started_at',
+        'paused_at',
         'finished_at',
         'summary_json',
     ];
@@ -32,7 +39,10 @@ class ProductSyncRun extends Model
     {
         return [
             'started_at' => 'datetime',
+            'paused_at' => 'datetime',
             'finished_at' => 'datetime',
+            'cursor_json' => 'array',
+            'checkpoint_json' => 'array',
             'summary_json' => 'array',
         ];
     }

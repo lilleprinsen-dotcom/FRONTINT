@@ -169,7 +169,7 @@ Select up to 10 WooCommerce products and generate the preview sync plan.
 Review:
 
 - Ready/blocked status.
-- Blocking issues for missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, variable products, or missing price.
+- Blocking issues for missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price.
 - Warnings for missing brand/category, missing sale price, stock status, uncertain mappings, or no Front match.
 - `NEEDS_CONFIRMATION` items before any future write test.
 
@@ -189,6 +189,8 @@ Expected result:
 
 - A local draft run is created.
 - Each selected product has Ready or Needs attention status.
+- Product and variation-level status fields are present for future full-catalog sync.
+- Run items are paginated and searchable; the portal does not load a full catalog at once.
 - No external APIs are called.
 - No Front or WooCommerce writes happen.
-- This prepares for a later limited write test only.
+- This prepares for later limited write tests and a future controlled full-catalog sync.

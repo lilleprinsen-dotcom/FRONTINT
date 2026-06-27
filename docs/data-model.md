@@ -245,22 +245,39 @@ Fields:
 - `mode`
 - `max_products_per_batch`
 - `max_products_per_run`
+- `woo_page_size`
+- `front_page_size`
+- `max_runtime_seconds`
+- `rate_limit_per_minute`
+- `sync_scope`
 - `woo_query_limit`
 - `front_write_limit`
 - `sync_only_opted_in_products`
 - `include_simple_products`
 - `include_variable_products`
 - `include_variations`
+- `include_draft_products`
+- `include_private_products`
+- `include_out_of_stock_products`
+- `exclude_discontinued_products`
 - `require_sku`
 - `require_gtin`
 - `require_price`
 - `require_brand`
 - `require_category`
+- `product_identity_strategy`
+- `gtin_field_strategy`
+- `configured_gtin_meta_key`
+- `category_mapping_strategy`
+- `brand_mapping_strategy`
 - `default_front_group_strategy`
 - `default_front_subgroup_strategy`
 - `default_front_brand_strategy`
 - `price_strategy`
 - `stock_strategy`
+- `incremental_sync_enabled`
+- `webhook_updates_enabled`
+- `reconciliation_enabled`
 - `created_at`
 - `updated_at`
 
@@ -268,15 +285,17 @@ Indexes:
 
 - Index `organization_id, is_active`
 - Index `organization_id, mode`
+- Index `organization_id, sync_scope`
 
 Notes:
 
 - Default mode is `preview_only`.
+- Default scope is `selected_only` for safety, but the production architecture must support all relevant products and variations through batched full sync.
 - Production mode must remain disabled unless production writes are explicitly enabled.
 
 ## product_sync_runs
 
-Purpose: local planning and future operational status for selected-product sync runs.
+Purpose: local planning and future operational status for preview, initial full sync, incremental, retry, reconciliation, and manual resync runs.
 
 Fields:
 
@@ -284,15 +303,22 @@ Fields:
 - `organization_id`
 - `product_sync_profile_id`
 - `created_by_user_id`
+- `run_type`
 - `status`
 - `mode`
+- `scope`
+- `cursor_json`
+- `checkpoint_json`
 - `total_candidates`
 - `total_ready`
 - `total_blocked`
 - `total_synced`
 - `total_failed`
 - `total_skipped`
+- `total_pending`
+- `total_variations`
 - `started_at`
+- `paused_at`
 - `finished_at`
 - `summary_json`
 - `created_at`
@@ -302,10 +328,11 @@ Indexes:
 
 - Index `organization_id, status, created_at`
 - Index `product_sync_profile_id, created_at`
+- Index `organization_id, run_type, created_at`
 
 ## product_sync_run_items
 
-Purpose: per-product validation and future sync status for selected products only.
+Purpose: per-product and per-variation validation and future sync status. This table supports large runs through pagination and filters; it is not a full catalog browser.
 
 Fields:
 
@@ -315,20 +342,28 @@ Fields:
 - `woo_product_id`
 - `woo_variation_id`
 - `woo_item_key`
+- `woo_parent_product_id`
 - `woo_name`
+- `woo_type`
 - `woo_sku`
 - `detected_gtin`
 - `detected_gtin_key`
 - `front_match_status`
+- `front_product_id`
+- `front_product_ext_id`
+- `front_identity`
+- `front_external_sku`
 - `proposed_front_product_ext_id`
 - `proposed_front_identity`
 - `proposed_front_external_sku`
 - `proposed_front_payload_json`
+- `payload_hash`
 - `validation_status`
 - `sync_status`
 - `validation_errors_json`
 - `validation_warnings_json`
 - `last_error`
+- `attempt_count`
 - `last_attempted_at`
 - `synced_at`
 - `created_at`
@@ -341,6 +376,38 @@ Indexes:
 - Index `product_sync_run_id, validation_status`
 - Index `organization_id, detected_gtin`
 - Index `organization_id, woo_sku`
+- Index `organization_id, front_product_ext_id`
+- Index `product_sync_run_id, woo_product_id`
+- Index `product_sync_run_id, woo_variation_id`
+
+## product_sync_events
+
+Purpose: record WooCommerce product and variation changes or manual resync requests that should later trigger incremental sync.
+
+Fields:
+
+- `id`
+- `organization_id`
+- `source_system`
+- `event_type`
+- `woo_product_id`
+- `woo_variation_id`
+- `woo_item_key`
+- `dedupe_key`
+- `status`
+- `priority`
+- `payload_summary_json`
+- `received_at`
+- `processed_at`
+- `created_at`
+- `updated_at`
+
+Indexes:
+
+- Unique `organization_id, dedupe_key`
+- Index `organization_id, status`
+- Index `organization_id, woo_item_key`
+- Index `received_at`
 
 ## customer_mappings
 

@@ -89,7 +89,7 @@ class AuthAndDashboardTest extends TestCase
             ->assertOk()
             ->assertSee('Live read-only HTTP tests are enabled. No writes are allowed, but real external systems may be contacted.')
             ->assertSee('Safe Product Setup')
-            ->assertSee('Products show Ready or Needs attention before any future sync.')
+            ->assertSee('Products and variations show Ready or Needs attention before any future sync.')
             ->assertSee('No sync is performed and no data is written.');
     }
 

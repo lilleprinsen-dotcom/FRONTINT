@@ -274,7 +274,7 @@ The plan shows:
 - Non-blocking warnings such as missing brand/category, missing sale price, out-of-stock status, `manage_stock=false`, or no current Front sample match.
 - `NEEDS_CONFIRMATION` items for category/group mapping, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy.
 
-The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variable products/variations are not supported yet. Confirm GTIN/EAN mapping before any future write test.
+The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variation-level sync is planned for the production catalog architecture, but no variation writes exist yet. Confirm GTIN/EAN mapping before any future write test.
 
 ## Product Sync Foundation
 
@@ -284,13 +284,16 @@ Open:
 http://localhost:8000/product-sync
 ```
 
-This page prepares selected WooCommerce products for Front. It is designed for large catalogs, so it never loads all products and it never starts a full 70,000-product sync.
+This page prepares WooCommerce products and variations for Front. The production goal is all relevant WooCommerce products and variations, but the system must process them later in controlled batches with checkpoints and queues.
 
 Current behavior:
 
 - Uses the latest mapping PoC plan.
 - Creates local preview runs only.
 - Stores per-product status in `product_sync_run_items`.
+- Stores product and variation-level run structure for future batched full catalog sync.
+- Tracks future incremental product update events in `product_sync_events`.
+- Provides paginated sync run views with filters/search so the portal never loads all products at once.
 - Shows Ready, Needs attention, Failed, Preview only, and Last checked status in plain language.
 - Does not call WooCommerce or Front APIs.
 - Does not write products, prices, stock, orders, refunds, gift cards, or omnichannel data.

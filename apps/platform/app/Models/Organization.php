@@ -45,6 +45,11 @@ class Organization extends Model
         return $this->hasMany(ProductSyncRun::class);
     }
 
+    public function productSyncEvents(): HasMany
+    {
+        return $this->hasMany(ProductSyncEvent::class);
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(Event::class);

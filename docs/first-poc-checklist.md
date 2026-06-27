@@ -33,9 +33,9 @@ Run all tests in staging or sandbox only.
 - Confirm the page shows the safety banner: preview only, no products, prices, stock, or orders are written.
 - Select no more than 10 WooCommerce products.
 - Generate the preview sync plan.
-- Confirm blocked products show missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, variable product, or missing price issues.
+- Confirm blocked products show missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price issues.
 - Confirm warnings show missing brand/category, missing sale price, stock status concerns, uncertain category/brand mapping, and no Front sample match.
-- Confirm variable products are blocked until variation fetching/mapping is implemented.
+- Confirm product and variation handling is preview-only. Variation writes are not implemented yet.
 - Confirm GTIN/EAN candidates, including `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, and `_iZettle_barcode`, are treated as candidates requiring confirmation.
 - Confirm the generated plan is stored only in `product_sync_preview_plans`.
 - Confirm no rows are written to `product_mappings`.
@@ -48,6 +48,9 @@ Run all tests in staging or sandbox only.
 - Confirm production writes are disabled.
 - Create a preview run from the latest mapping PoC plan.
 - Confirm run items are created locally with Ready or Needs attention status.
+- Confirm the run structure can track products and variations without loading a full catalog into the UI.
+- Confirm sync runs are viewed through paginated/filterable pages.
+- Confirm future full-catalog sync will be batched and checkpointed, not run as one uncontrolled 70,000-product job.
 - Confirm no external APIs are called.
 - Confirm no rows are written to final `product_mappings`.
 - Confirm Advanced contains technical settings and normal pages stay store-owner friendly.
