@@ -37,8 +37,8 @@ class OrganizationSetupTest extends TestCase
             'name' => 'Default safe product sync profile',
             'mode' => 'preview_only',
             'sync_only_opted_in_products' => true,
-            'include_variable_products' => false,
-            'include_variations' => false,
+            'include_variable_products' => true,
+            'include_variations' => true,
         ]);
     }
 

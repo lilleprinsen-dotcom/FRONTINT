@@ -32,8 +32,8 @@
         <ul>
             <li>WooCommerce stays the master.</li>
             <li>Front stays the store work surface.</li>
-            <li>Large catalogs are prepared in small selected groups.</li>
-            <li>Products show Ready or Needs attention before any future sync.</li>
+            <li>Large catalogs will be prepared in small batches.</li>
+            <li>Products and variations show Ready or Needs attention before any future sync.</li>
             <li>No sync is performed and no data is written.</li>
         </ul>
     </section>
@@ -55,7 +55,7 @@
         </section>
         <section class="panel">
             <h2>Product Sync</h2>
-            <p class="muted">Prepare selected WooCommerce products for Front with clear ready/needs attention status.</p>
+            <p class="muted">Prepare WooCommerce products and variations for Front with clear ready/needs attention status.</p>
             <a class="button secondary" href="{{ route('product-sync.index') }}">Open product sync</a>
         </section>
     </div>

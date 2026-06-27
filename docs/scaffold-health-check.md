@@ -37,7 +37,11 @@ Use this checklist before starting real integration implementation.
 - [x] WooCommerce GTIN/EAN candidate detection exists.
 - [x] Mapping preview exists and does not write final product mappings.
 - [x] Product sync profile defaults exist.
+- [x] Product sync profiles are full-catalog capable but default to preview-only selected scope.
 - [x] Product sync preview runs create local run items only.
+- [x] Product sync run items support product and variation-level status.
+- [x] Product sync events table exists for later incremental WooCommerce updates.
+- [x] Sync run pages are paginated/filterable and do not load a full catalog at once.
 - [x] Product sync owner pages are separate from Advanced technical pages.
 - [x] Dashboard shows safe connection status context.
 - [x] Connection form shows only the selected connection type fields.

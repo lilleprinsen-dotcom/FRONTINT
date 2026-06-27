@@ -162,6 +162,19 @@ Audit these actions:
 - Even when live HTTP connection checks are enabled, no product sync, stock sync, order import, refund, gift card, or omnichannel write may be triggered by a connection test.
 - Do not use production credentials until staging credentials and read-only tests are verified.
 
+## WooCommerce to Front Product Sync Foundation
+
+- The production goal is all relevant WooCommerce products and variations synced to Front Systems.
+- Initial full sync must be batched, queue-based, resumable, and checkpointed.
+- The UI must not load all products or variations at once.
+- Sync runs must store product/variation-level status in `product_sync_run_items`.
+- Incremental WooCommerce changes should later create deduplicated `product_sync_events`.
+- Failed items must be retryable without rerunning a whole catalog.
+- Reconciliation runs should later detect missing, outdated, or failed products.
+- Product sync profiles must stay `preview_only` by default.
+- Production mode and actual writes remain disabled until a separate launch checklist and write implementation exist.
+- This phase must not call Front product CRUD, price list, stock adjust, or WooCommerce write endpoints.
+
 ## Health Checks
 
 - `GET /health/live` returns application liveness without requiring database access.

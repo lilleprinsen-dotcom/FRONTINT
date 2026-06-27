@@ -6,6 +6,7 @@ use App\Models\ConnectionDiscoverySnapshot;
 use App\Models\Organization;
 use App\Models\ProductSyncPreviewPlan;
 use App\Models\ProductSyncProfile;
+use App\Models\ProductSyncEvent;
 use App\Models\ProductSyncRun;
 use App\Services\ProductSync\ProductSyncPreviewRunBuilder;
 use App\Services\ProductSync\ProductSyncProfileProvisioner;
@@ -31,6 +32,11 @@ class ProductSyncController extends Controller
             'lastDiscovery' => $organization ? $this->lastDiscovery($organization) : null,
             'productionWritesEnabled' => (bool) config('omnibridge.allow_production_writes'),
             'stats' => $this->runStats($latestRun, $latestPlan),
+            'pendingIncrementalEvents' => $organization ? ProductSyncEvent::query()
+                ->where('organization_id', $organization->id)
+                ->whereIn('status', ['pending', 'queued'])
+                ->count() : 0,
+            'connectionStatuses' => $organization ? $this->connectionStatuses($organization) : [],
         ]);
     }
 
@@ -58,26 +64,38 @@ class ProductSyncController extends Controller
 
         $validated = $request->validate([
             'mode' => ['required', Rule::in($productionWritesEnabled
-                ? ['preview_only', 'limited_write_test', 'production']
-                : ['preview_only', 'limited_write_test'])],
-            'max_products_per_run' => ['required', 'integer', 'min:1', 'max:1000'],
+                ? ['preview_only', 'limited_write_test', 'initial_full_sync', 'incremental_sync', 'production']
+                : ['preview_only', 'limited_write_test', 'initial_full_sync', 'incremental_sync'])],
+            'sync_scope' => ['required', Rule::in(['all_active_products', 'selected_only', 'changed_since_last_sync', 'failed_only', 'category_filter', 'brand_filter'])],
+            'max_products_per_run' => ['required', 'integer', 'min:1', 'max:50000'],
             'sync_only_opted_in_products' => ['nullable', 'boolean'],
             'include_simple_products' => ['nullable', 'boolean'],
             'include_variable_products' => ['nullable', 'boolean'],
             'include_variations' => ['nullable', 'boolean'],
+            'include_draft_products' => ['nullable', 'boolean'],
+            'include_private_products' => ['nullable', 'boolean'],
+            'include_out_of_stock_products' => ['nullable', 'boolean'],
+            'exclude_discontinued_products' => ['nullable', 'boolean'],
             'require_sku' => ['nullable', 'boolean'],
             'require_gtin' => ['nullable', 'boolean'],
             'require_price' => ['nullable', 'boolean'],
             'require_brand' => ['nullable', 'boolean'],
             'require_category' => ['nullable', 'boolean'],
             'max_products_per_batch' => ['required', 'integer', 'min:1', 'max:250'],
-            'woo_query_limit' => ['required', 'integer', 'min:10', 'max:250'],
-            'front_write_limit' => ['required', 'integer', 'min:1', 'max:100'],
-            'default_front_group_strategy' => ['nullable', 'string', 'max:120'],
-            'default_front_subgroup_strategy' => ['nullable', 'string', 'max:120'],
-            'default_front_brand_strategy' => ['nullable', 'string', 'max:120'],
-            'price_strategy' => ['required', Rule::in(['regular_price_only', 'regular_and_sale_preview', 'pricelist_v2_later'])],
-            'stock_strategy' => ['required', Rule::in(['do_not_sync_stock_yet', 'preview_only'])],
+            'woo_page_size' => ['required', 'integer', 'min:10', 'max:100'],
+            'front_page_size' => ['required', 'integer', 'min:10', 'max:100'],
+            'max_runtime_seconds' => ['nullable', 'integer', 'min:30', 'max:3600'],
+            'rate_limit_per_minute' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'product_identity_strategy' => ['required', Rule::in(['woo_id_as_front_extid', 'sku_as_front_extid', 'gtin_as_primary'])],
+            'gtin_field_strategy' => ['required', Rule::in(['auto_detect', 'configured_meta_key', 'zettle_barcode_fields'])],
+            'configured_gtin_meta_key' => ['nullable', 'string', 'max:120'],
+            'category_mapping_strategy' => ['nullable', 'string', 'max:120'],
+            'brand_mapping_strategy' => ['nullable', 'string', 'max:120'],
+            'price_strategy' => ['required', Rule::in(['regular_price_only', 'regular_price_now_sale_price_later', 'pricelist_v2_later'])],
+            'stock_strategy' => ['required', Rule::in(['do_not_sync_stock_yet', 'preview_only', 'stock_sync_later'])],
+            'incremental_sync_enabled' => ['nullable', 'boolean'],
+            'webhook_updates_enabled' => ['nullable', 'boolean'],
+            'reconciliation_enabled' => ['nullable', 'boolean'],
         ]);
 
         foreach ([
@@ -85,11 +103,18 @@ class ProductSyncController extends Controller
             'include_simple_products',
             'include_variable_products',
             'include_variations',
+            'include_draft_products',
+            'include_private_products',
+            'include_out_of_stock_products',
+            'exclude_discontinued_products',
             'require_sku',
             'require_gtin',
             'require_price',
             'require_brand',
             'require_category',
+            'incremental_sync_enabled',
+            'webhook_updates_enabled',
+            'reconciliation_enabled',
         ] as $checkbox) {
             $validated[$checkbox] = (bool) ($validated[$checkbox] ?? false);
         }
@@ -130,11 +155,46 @@ class ProductSyncController extends Controller
     {
         abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
 
-        $run->load(['items', 'profile', 'organization']);
+        $run->load(['profile', 'organization']);
+        $itemsQuery = $run->items()->orderBy('id');
+
+        if ($request->filled('sync_status')) {
+            $itemsQuery->where('sync_status', (string) $request->string('sync_status'));
+        }
+
+        if ($request->filled('validation_status')) {
+            $itemsQuery->where('validation_status', (string) $request->string('validation_status'));
+        }
+
+        if ($request->filled('q')) {
+            $query = trim((string) $request->string('q'));
+            $itemsQuery->where(function ($items) use ($query): void {
+                $items->where('woo_sku', 'like', "%{$query}%")
+                    ->orWhere('detected_gtin', 'like', "%{$query}%")
+                    ->orWhere('front_product_id', 'like', "%{$query}%")
+                    ->orWhere('front_product_ext_id', 'like', "%{$query}%")
+                    ->orWhere('woo_product_id', $query);
+            });
+        }
 
         return view('product-sync.run', [
             'run' => $run,
+            'items' => $itemsQuery->paginate(25)->withQueryString(),
             'productionWritesEnabled' => (bool) config('omnibridge.allow_production_writes'),
+        ]);
+    }
+
+    public function runs(Request $request): View
+    {
+        $organizationIds = $request->user()->organizations()->pluck('organizations.id');
+        $runs = ProductSyncRun::query()
+            ->whereIn('organization_id', $organizationIds)
+            ->with('organization')
+            ->latest()
+            ->paginate(20);
+
+        return view('product-sync.runs', [
+            'runs' => $runs,
         ]);
     }
 
@@ -172,14 +232,27 @@ class ProductSyncController extends Controller
             ->first();
     }
 
+    private function connectionStatuses(Organization $organization): array
+    {
+        $connections = $organization->connections()->get()->keyBy('type');
+
+        return [
+            'woocommerce' => $connections->get('woocommerce')?->status ?? 'Not connected',
+            'front' => $connections->get('front_systems')?->status ?? $connections->get('front')?->status ?? 'Not connected',
+        ];
+    }
+
     private function runStats(?ProductSyncRun $run, ?ProductSyncPreviewPlan $plan): array
     {
         return [
             'selected' => $plan?->selected_count ?? 0,
+            'candidates' => $run?->total_candidates ?? ($plan?->selected_count ?? 0),
             'ready' => $run?->total_ready ?? ($plan?->summary_json['ready_count'] ?? 0),
             'blocked' => $run?->total_blocked ?? ($plan?->summary_json['blocked_count'] ?? 0),
             'failed' => $run?->total_failed ?? 0,
-            'last_successful_sync' => $run?->items?->whereNotNull('synced_at')->max('synced_at'),
+            'pending' => $run?->total_pending ?? 0,
+            'variations' => $run?->total_variations ?? 0,
+            'last_successful_sync' => $run?->items()->whereNotNull('synced_at')->max('synced_at'),
         ];
     }
 }

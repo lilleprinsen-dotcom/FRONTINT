@@ -13,11 +13,15 @@
  *
  * Product sync planning:
  * - Later add lightweight product meta such as _omnibridge_sync_to_front,
+ *   _omnibridge_exclude_from_front,
  *   _omnibridge_last_sync_status, _omnibridge_last_synced_at, and
  *   _omnibridge_last_sync_error.
- * - Later add a small product admin panel and bulk action for marking selected
- *   products for Front sync.
+ * - Later add a small product admin panel and bulk actions for marking products
+ *   for Front sync, excluding products from Front, and requesting resync.
+ * - Later send lightweight product/variation created, updated, and deleted
+ *   events to the Laravel platform.
  * - Do not scan the full WooCommerce catalog here. Avoid heavy admin queries.
+ * - Do not slow down product edit pages.
  * - Do not implement actual Woo to Front sync in this plugin.
  */
 

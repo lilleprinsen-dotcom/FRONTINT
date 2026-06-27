@@ -54,9 +54,9 @@
             <a href="{{ route('dashboard') }}">Dashboard</a>
             <a href="{{ route('connections.index') }}">Connections</a>
             <a href="{{ route('product-sync.index') }}">Product Sync</a>
+            <a href="{{ route('product-sync.runs.index') }}">Sync Runs</a>
             <a href="{{ route('discovery.index') }}">Discovery</a>
-            <a href="{{ route('organizations.index') }}">Organizations</a>
-            <a href="{{ route('mapping.product-poc') }}">Product Mapping PoC</a>
+            <a href="{{ route('mapping.product-poc') }}">Mapping Preview</a>
             <a href="{{ route('advanced.index') }}">Advanced</a>
             <form class="inline-form" method="post" action="{{ route('logout') }}">
                 @csrf

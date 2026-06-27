@@ -22,6 +22,14 @@
             <h2>Sync Profiles</h2>
             <p><a class="button secondary" href="{{ route('product-sync.profile') }}">Open sync profile settings</a></p>
         </div>
+        <div class="panel">
+            <h2>Developer Tools</h2>
+            <p class="muted">Raw logs, event payload summaries, API schema notes, and queue internals belong here as they are added.</p>
+        </div>
+        <div class="panel">
+            <h2>Raw Logs</h2>
+            <p class="muted">Use application logs only for troubleshooting. Secrets and full response bodies must remain redacted.</p>
+        </div>
     </section>
 
     @foreach ($organizations as $organization)
