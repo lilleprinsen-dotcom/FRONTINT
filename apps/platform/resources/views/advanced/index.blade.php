@@ -9,6 +9,11 @@
 
     <section class="grid">
         <div class="panel">
+            <h2>Testing Lab</h2>
+            <p class="muted">Read-only discovery, mapping preview, and preview-run experiments live here instead of the normal owner workflow.</p>
+            <p><a class="button secondary" href="{{ route('lab.index') }}">Open Testing Lab</a></p>
+        </div>
+        <div class="panel">
             <h2>Safety Flags</h2>
             <p>Production writes: <strong>{{ $productionWritesEnabled ? 'enabled' : 'disabled' }}</strong></p>
             <p>Live HTTP tests: <strong>{{ $connectionHttpTestsEnabled ? 'enabled' : 'disabled' }}</strong></p>

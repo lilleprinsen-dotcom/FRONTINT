@@ -128,7 +128,15 @@ Open:
 http://localhost:8000/dashboard
 ```
 
-The dashboard is intentionally minimal, but it now includes login, organizations, connection setup, webhook URLs, and connection checks.
+The dashboard is intentionally minimal. It shows plain-language status, setup progress, safety state, and next steps.
+
+Use:
+
+- `/dashboard` for everyday status.
+- `/connections` for WooCommerce and Front connection setup and read-only connection tests.
+- `/product-sync` for sync readiness and status.
+- `/advanced` for technical settings.
+- `/lab` for testing-only discovery, mapping preview, and preview-run experiments.
 
 Connection status is safe by default. Live API checks are disabled unless explicitly enabled.
 
@@ -143,11 +151,12 @@ In the dashboard, confirm:
 - Organization name and slug
 - Environment is `staging`
 - Status is `active`
-- WooCommerce and Front webhook URLs use path tokens
+
+Webhook URLs are technical details and are shown in Advanced.
 
 ## 10. Add Connections
 
-From the dashboard:
+From the Connections page:
 
 1. Click **Add connection**.
 2. Choose WooCommerce for the WooCommerce staging connection placeholder.
@@ -168,7 +177,7 @@ https://frontsystemsapis.frontsystems.no/restapi/V2
 
 Click **Test** beside a connection.
 
-The dashboard test action uses:
+The connection test action uses:
 
 ```text
 POST /connections/{connection}/test
@@ -190,7 +199,7 @@ When live HTTP checks are enabled, the current read-only probes are:
 
 These checks do not write data and do not perform product, stock, order, refund, gift card, or omnichannel sync.
 
-There is no separate `/api/connections/{connection}/test` route in the scaffold. Keep connection testing in the dashboard flow until a public API use case is intentionally designed.
+There is no separate `/api/connections/{connection}/test` route in the scaffold. Keep connection testing in the authenticated portal flow until a public API use case is intentionally designed.
 
 Connection test results are stored as minimal diagnostics only:
 
@@ -205,7 +214,7 @@ Full API response bodies are not stored.
 
 ## 12. Read-Only Discovery and Mapping Preview
 
-Discovery is available from each connection's **Discovery** page in the dashboard.
+Discovery is available from the separate **Testing Lab** at `/lab`, or from each connection's discovery page. It is intentionally not part of the normal merchant dashboard.
 
 Keep safe mode enabled for dummy values:
 
@@ -288,8 +297,8 @@ This page prepares WooCommerce products and variations for Front. The production
 
 Current behavior:
 
-- Uses the latest mapping PoC plan.
-- Creates local preview runs only.
+- Uses the latest mapping preview plan when a lab user creates a preview run.
+- Creates local preview runs only from the Testing Lab.
 - Stores per-product status in `product_sync_run_items`.
 - Stores product and variation-level run structure for future batched full catalog sync.
 - Tracks future incremental product update events in `product_sync_events`.
@@ -304,7 +313,7 @@ Sync profile settings are available at:
 http://localhost:8000/product-sync/profile
 ```
 
-Advanced technical settings are grouped away from normal store-owner pages. Production mode is unavailable unless `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=true`.
+Advanced technical settings and lab/test workflows are grouped away from normal store-owner pages. Production mode is unavailable unless `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=true`.
 
 Before using real staging/test credentials, follow [live-readonly-test-checklist.md](live-readonly-test-checklist.md).
 
@@ -334,7 +343,7 @@ OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true
 
 E. Add real staging/test credentials only. Do not use production credentials until staging is verified.
 
-F. Run the connection test from the dashboard.
+F. Run the connection test from the Connections page.
 
 G. Confirm only read-only endpoints are called and no product, stock, order, refund, gift card, or omnichannel sync is performed.
 
@@ -371,7 +380,7 @@ Public webhook URLs use opaque path tokens from `webhook_endpoints.path_token`, 
 
 Use staging URLs first.
 
-The dashboard shows the generated webhook URLs under each organization.
+Advanced shows the generated webhook URLs under each organization.
 
 ## 17. Where to See Logs
 

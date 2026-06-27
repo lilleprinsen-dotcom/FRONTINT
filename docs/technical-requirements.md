@@ -28,7 +28,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 
 - Retry transient API failures with exponential backoff.
 - Do not retry validation errors without a data change.
-- Stop retries after a configured maximum and expose the failure in the dashboard.
+- Stop retries after a configured maximum and expose the failure in the portal with merchant-friendly language.
 - Keep manual retry available for failed events.
 
 ## Rate Limiting and Batch Processing
@@ -71,7 +71,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Use Laravel encryption or a dedicated secret manager later.
 - Do not store secrets in code, docs, commits, logs, or screenshots.
 - Rotate credentials per tenant.
-- Phase 1 connection setup stores only redacted credential hints in the dashboard.
+- Phase 1 connection setup stores only redacted credential hints in the authenticated portal.
 - WooCommerce and Front Systems connection tests must remain read-only.
 - WooCommerce connection testing uses `GET /wp-json/wc/v3/system_status`.
 - Front Systems connection testing uses `GET /api/Environment`.
@@ -86,7 +86,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 
 - Discovery actions use the same safety gate as live connection tests: `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP`.
 - When the flag is `false`, discovery must return `skipped` and make no HTTP requests.
-- Discovery actions are dashboard-authenticated and tenant-scoped.
+- Discovery actions are authenticated, tenant-scoped, and grouped under the Testing Lab rather than normal owner navigation.
 - Before the first live read-only test, run `php artisan omnibridge:preflight-readonly`.
 - WooCommerce product discovery uses `GET /wp-json/wc/v3/products` with `per_page=10`, `page=1`, and `status=publish`.
 - Front store discovery uses `GET /api/Stores`.
@@ -132,7 +132,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Preview runs are local planning records only and must not call external APIs.
 - Sync run items store selected products only, not the whole catalog.
 - Future large-catalog scanning must be background-job based, paginated, and incremental.
-- Owner pages should use plain-language status. Technical details belong in Advanced.
+- Owner pages should use plain-language status. Testing workflows belong in the Testing Lab. Technical details belong in Advanced.
 
 ## Audit Trail
 
@@ -185,7 +185,7 @@ Audit these actions:
 ## Observability
 
 - Structured logs with tenant ID, event ID, job ID, and correlation ID.
-- Dashboard views for failed events, stale syncs, and queue health.
+- Portal views for failed events, stale syncs, and queue health.
 - Later: external error reporting and uptime checks.
 
 ## Backup and Restore

@@ -337,7 +337,7 @@ class ConnectionDiscoveryTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_dashboard_shows_discovery_buttons_and_status(): void
+    public function test_lab_shows_discovery_buttons_and_status(): void
     {
         [$user, $connection] = $this->connectionWithCredentials('front_systems', [
             'api_key' => 'front-secret-key',
@@ -355,12 +355,18 @@ class ConnectionDiscoveryTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/dashboard')
+            ->get('/lab')
             ->assertOk()
+            ->assertSee('Testing Lab')
             ->assertSee('Discover stores')
             ->assertSee('Discover products')
-            ->assertSee('Discovery')
-            ->assertSee('products checked');
+            ->assertSee('products');
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertDontSee('Discover stores')
+            ->assertDontSee('Discover products');
     }
 
     public function test_discovery_page_shows_mapping_preview_from_latest_samples(): void

@@ -2,9 +2,10 @@
 
 @section('content')
     <section class="panel">
-        <h1>Discovery</h1>
+        <h1>Read-Only Discovery Lab</h1>
         <p>Discovery reads small samples from connected systems so you can understand products and stores before syncing.</p>
         <div class="notice">Discovery is read-only and capped. It does not sync products, prices, stock, or orders.</div>
+        <p class="muted">This is a setup and testing page. Normal users do not need to use it during daily operations.</p>
     </section>
 
     @foreach ($organizations as $organization)

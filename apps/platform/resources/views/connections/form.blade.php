@@ -90,7 +90,7 @@
 
             <p>
                 <button type="submit">Save connection</button>
-                <a class="button secondary" href="{{ route('dashboard') }}">Cancel</a>
+                <a class="button secondary" href="{{ route('connections.index') }}">Cancel</a>
             </p>
         </form>
     </section>

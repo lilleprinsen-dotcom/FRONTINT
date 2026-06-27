@@ -62,7 +62,14 @@ class AuthAndDashboardTest extends TestCase
             ->get('/dashboard')
             ->assertOk()
             ->assertSee('Dashboard')
-            ->assertSee('Production writes are disabled');
+            ->assertSee('Production writes are disabled')
+            ->assertSee('Connections')
+            ->assertSee('Product Sync')
+            ->assertSee('Advanced')
+            ->assertDontSee('Discovery</a>', false)
+            ->assertDontSee('Mapping Preview</a>', false)
+            ->assertDontSee('Sync Runs</a>', false)
+            ->assertDontSee('Testing Lab');
     }
 
     public function test_dashboard_warns_when_live_http_tests_are_enabled(): void
@@ -87,10 +94,10 @@ class AuthAndDashboardTest extends TestCase
         $this->actingAs($user)
             ->get('/dashboard')
             ->assertOk()
-            ->assertSee('Live read-only HTTP tests are enabled. No writes are allowed, but real external systems may be contacted.')
-            ->assertSee('Safe Product Setup')
-            ->assertSee('Products and variations show Ready or Needs attention before any future sync.')
-            ->assertSee('No sync is performed and no data is written.');
+            ->assertSee('Live read-only checks are enabled. Real external systems may be contacted from testing pages.')
+            ->assertDontSee('Testing Lab')
+            ->assertDontSee('Discover products')
+            ->assertDontSee('Mapping Preview Lab');
     }
 
     public function test_dashboard_shows_severe_warning_when_production_writes_are_enabled(): void

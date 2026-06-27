@@ -62,4 +62,5 @@ Duplicate inbound events must not dispatch duplicate queue jobs.
 - Selected products are for PoC and limited write tests only; production should eventually sync all relevant products and variations.
 - Never add an uncontrolled full-catalog sync or a UI that loads the whole catalog at once.
 - Keep normal store-owner pages plain-language. Put webhook URLs, raw logs, queue details, and API settings under Advanced.
-- Product sync preview runs are local planning records only until a separate explicit write-test task enables writes behind guards.
+- Keep testing and experimental workflows in the Testing Lab, not in the normal dashboard/navigation.
+- Product sync preview runs are local planning records only until a separate explicit write-test task enables writes behind guards; create them from the Testing Lab.

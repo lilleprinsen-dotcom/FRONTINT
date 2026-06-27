@@ -267,7 +267,10 @@ class ProductSyncFoundationTest extends TestCase
             ->assertDontSee('payload')
             ->assertDontSee('idempotency')
             ->assertDontSee('queue workers')
-            ->assertDontSee('API body');
+            ->assertDontSee('API body')
+            ->assertDontSee('Mapping Preview Lab')
+            ->assertDontSee('Discover products')
+            ->assertDontSee('Create preview run');
     }
 
     public function test_advanced_page_is_separate(): void
@@ -278,8 +281,23 @@ class ProductSyncFoundationTest extends TestCase
             ->get('/advanced')
             ->assertOk()
             ->assertSee('Technical settings')
+            ->assertSee('Testing Lab')
             ->assertSee('Webhooks')
             ->assertSee('API Settings');
+    }
+
+    public function test_testing_lab_contains_preview_run_action(): void
+    {
+        [$user, $organization] = $this->userWithOrganization();
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization);
+        $this->previewPlan($organization);
+
+        $this->actingAs($user)
+            ->get('/lab')
+            ->assertOk()
+            ->assertSee('Testing Lab')
+            ->assertSee('Create preview run')
+            ->assertSee('Open mapping preview');
     }
 
     public function test_woocommerce_plugin_remains_thin_without_heavy_queries(): void

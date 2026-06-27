@@ -212,7 +212,7 @@ class ConnectionTestEndpointTest extends TestCase
         $this->assertNull($connection->last_test_metadata);
     }
 
-    public function test_dashboard_shows_safe_connection_status_context(): void
+    public function test_connections_page_shows_safe_connection_status_context(): void
     {
         [$user, $connection] = $this->connectionWithCredentials('front_systems', [
             'api_key' => 'front-key-test',
@@ -238,14 +238,13 @@ class ConnectionTestEndpointTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/dashboard')
+            ->get('/connections')
             ->assertOk()
-            ->assertSee('Live HTTP connection checks are disabled')
-            ->assertSee('Read-only API test')
-            ->assertSee('HTTP 200')
-            ->assertSee('12 ms')
-            ->assertSee('Lilleprinsen Test Store')
-            ->assertSee('Stock ID: 2001');
+            ->assertSee('Safe mode is on. Test buttons update status without contacting external systems.')
+            ->assertSee('Last test: success')
+            ->assertSee('No error saved')
+            ->assertDontSee('Lilleprinsen Test Store')
+            ->assertDontSee('Stock ID: 2001');
     }
 
     public function test_connection_credentials_are_not_displayed(): void
@@ -256,10 +255,9 @@ class ConnectionTestEndpointTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/dashboard')
+            ->get('/connections')
             ->assertOk()
-            ->assertSee('consumer_key')
-            ->assertSee('configured')
+            ->assertSee('2 credential field(s) configured')
             ->assertDontSee('ck_secret_value')
             ->assertDontSee('cs_secret_value')
             ->assertDontSee('...alue');
@@ -271,7 +269,7 @@ class ConnectionTestEndpointTest extends TestCase
             ->assertDontSee('cs_secret_value');
     }
 
-    public function test_dashboard_shows_front_store_metadata_only_if_available(): void
+    public function test_dashboard_does_not_show_front_store_metadata(): void
     {
         [$user] = $this->connectionWithCredentials('front_systems', [
             'api_key' => 'front-key-test',
@@ -280,7 +278,7 @@ class ConnectionTestEndpointTest extends TestCase
         $this->actingAs($user)
             ->get('/dashboard')
             ->assertOk()
-            ->assertSee('Not available')
+            ->assertSee('Dashboard')
             ->assertDontSee('Store ID:');
     }
 

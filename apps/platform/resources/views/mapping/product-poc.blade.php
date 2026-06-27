@@ -6,7 +6,7 @@
 
 @section('content')
     <section class="panel">
-        <h1>10-Product Mapping PoC</h1>
+        <h1>Mapping Preview Lab</h1>
         <div class="warning">Preview only. No products, prices, stock or orders are written to WooCommerce or Front.</div>
 
         @if ($productionWritesEnabled)

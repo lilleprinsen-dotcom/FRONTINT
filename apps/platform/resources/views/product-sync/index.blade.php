@@ -119,16 +119,11 @@
 
         <section class="panel">
             <h2>Actions</h2>
-            <p class="muted">Create a preview run from the latest mapping PoC plan. This stores local status rows only and performs no API writes.</p>
-            <form class="inline-form" method="post" action="{{ route('product-sync.preview-run') }}">
-                @csrf
-                <button type="submit">Create preview run</button>
-            </form>
+            <p class="muted">This page shows product sync readiness. Testing workflows such as discovery, mapping previews, and preview-run creation are kept in the Testing Lab.</p>
             @if ($latestRun)
                 <a class="button secondary" href="{{ route('product-sync.runs.show', $latestRun) }}">View latest run</a>
             @endif
             <a class="button secondary" href="{{ route('product-sync.runs.index') }}">View sync runs</a>
-            <a class="button secondary" href="{{ route('mapping.product-poc') }}">Go to mapping preview</a>
             <a class="button secondary" href="{{ route('product-sync.profile') }}">Sync profile settings</a>
             <button class="secondary" type="button" disabled>Retry failed items - coming later</button>
             <button class="secondary" type="button" disabled>Start initial full sync - disabled until write implementation exists</button>
