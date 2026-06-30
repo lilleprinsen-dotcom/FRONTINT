@@ -64,6 +64,7 @@ class AuthAndDashboardTest extends TestCase
             ->assertSee('Dashboard')
             ->assertSee('Production writes are disabled')
             ->assertSee('Connections')
+            ->assertSee('Woo Readiness')
             ->assertSee('Product Sync')
             ->assertSee('Advanced')
             ->assertDontSee('Discovery</a>', false)

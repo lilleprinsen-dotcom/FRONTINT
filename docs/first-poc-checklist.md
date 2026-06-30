@@ -20,6 +20,8 @@ Run all tests in staging or sandbox only.
 - Confirm WooCommerce product discovery calls only `GET /wp-json/wc/v3/products` with a 10-product limit.
 - Confirm WooCommerce variation discovery calls only `GET /wp-json/wc/v3/products/{productId}/variations` for variable products in the capped product sample.
 - Confirm the Woo readiness report shows Ready, Needs attention, and Blocked rows for sampled products/variations.
+- Open `/woo-readiness` and confirm the owner-facing summary shows ready SKU+EAN items, SKU-only items, blocked items, duplicate SKUs/GTINs, variable parents, sellable variations, missing SKU counts, and missing price counts.
+- Confirm `/woo-readiness` does not require Front discovery and does not call external APIs.
 - Confirm Front store discovery calls only `GET /api/Stores`.
 - Confirm Front product discovery calls only `POST /api/Product` with a 10-product read-only search body.
 - Confirm `POST /api/Product` is treated as the Front OpenAPI read-only product listing endpoint and is not confused with `/api/products` CRUD.

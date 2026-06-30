@@ -123,6 +123,9 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - WooCommerce product discovery must keep `per_page <= 10` and must not accept UI/request overrides in this phase.
 - Woo readiness reports may use sanitized Woo product and variation samples to mark rows as Ready, Needs attention, or Blocked.
 - Woo readiness reports are advisory only and must not create sync runs or final mappings by themselves.
+- The owner-facing `/woo-readiness` page must use only the latest stored WooCommerce product discovery snapshot.
+- `/woo-readiness` must not call WooCommerce, Front, or any write endpoints.
+- `/woo-readiness` should show plain-language counts for ready SKU+GTIN items, SKU-only items, blocked items, duplicate SKUs/GTINs, variable parents, sellable variations, missing SKU cases, and missing price cases.
 - Store only sanitized discovery snapshots in `connection_discovery_snapshots`.
 - Keep only the latest 5 snapshots per connection and discovery type. Delete older snapshots.
 - `connection_discovery_snapshots` is not long-term product storage.

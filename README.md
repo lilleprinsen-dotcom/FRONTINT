@@ -46,6 +46,8 @@ Front's OpenAPI spec documents `POST /api/Product` as the read-only product list
 
 Discovery stores only sanitized snapshots in `connection_discovery_snapshots` and keeps only the latest 5 snapshots per connection and discovery type. This table is not long-term product storage. It detects likely WooCommerce GTIN/EAN candidate fields such as `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, `_iZettle_barcode`, `ean`, `gtin`, and `barcode`, then previews possible Woo ↔ Front matches by GTIN first, SKU to Front `externalSKU` second, and SKU to Front `identity` third. Woo discovery also creates a sample readiness report for products and variations. Candidate GTIN/EAN values must be confirmed before final mapping. This is not product sync and does not write final product mappings.
 
+The **Woo Readiness** page at `/woo-readiness` is the simple owner-facing view for the latest WooCommerce discovery sample. It shows ready SKU+EAN items, SKU-only items, blocked items, duplicate SKUs/GTINs, variable parents, sellable variations, missing SKU cases, and missing price cases. It is read-only and does not require a Front account.
+
 Phase 4 adds controlled 10-item mapping PoC preparation:
 
 - Open `/mapping/product-poc` after WooCommerce product discovery has succeeded.
@@ -66,7 +68,7 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 - Product sync profiles define safe defaults, limits, validation rules, scope, identity strategy, GTIN strategy, and preview/limited/full/incremental/production modes.
 - Product sync preview runs convert the latest mapping PoC plan into local run and item status rows from the Testing Lab.
 - Sync runs and run items are paginated and searchable so the portal never loads a full catalog at once.
-- The Product Sync page shows owner-friendly status: Ready, Needs attention, Preview only, Safe mode, and Last checked.
+- The Woo Readiness and Product Sync pages show owner-friendly status: Ready, Needs attention, Preview only, Safe mode, and Last checked.
 - Advanced technical settings are separated from normal store-owner pages.
 - No product writes exist yet.
 
