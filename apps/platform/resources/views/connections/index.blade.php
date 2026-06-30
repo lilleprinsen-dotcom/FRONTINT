@@ -6,7 +6,7 @@
         <p>Connect WooCommerce and Front Systems, then check whether each connection is ready.</p>
         <div class="notice">Stored secrets are encrypted and never shown again. Live connection tests are read-only and controlled by the staging/local environment.</div>
         @unless ($connectionHttpTestsEnabled)
-            <div class="warning">Safe mode is on. Test buttons update status without contacting external systems.</div>
+            <div class="warning">Safe mode is on for normal WooCommerce REST and Front API tests. The Woo plugin adapter test is a separate signed read-only check against the installed WordPress plugin.</div>
         @endunless
     </section>
 
@@ -56,6 +56,12 @@
                             @else
                                 <span class="badge ready">No error saved</span>
                             @endif
+                            @if ($connection->type === 'woocommerce' && data_get($connection->last_test_metadata, 'plugin_adapter.plugin.version'))
+                                <div class="muted">
+                                    Plugin adapter: v{{ data_get($connection->last_test_metadata, 'plugin_adapter.plugin.version') }},
+                                    Woo {{ data_get($connection->last_test_metadata, 'plugin_adapter.woocommerce.version') ?: 'version unknown' }}
+                                </div>
+                            @endif
                             <div class="muted">{{ $connection->credentials->count() }} credential field(s) configured</div>
                         </td>
                         <td>
@@ -63,8 +69,14 @@
                                 <a class="button secondary" href="{{ route('connections.edit', $connection) }}">Edit</a>
                                 <form class="inline-form" method="post" action="{{ route('connections.test', $connection) }}">
                                     @csrf
-                                    <button type="submit">Test connection</button>
+                                    <button type="submit">{{ $connection->type === 'woocommerce' ? 'Test Woo REST' : 'Test connection' }}</button>
                                 </form>
+                                @if ($connection->type === 'woocommerce')
+                                    <form class="inline-form" method="post" action="{{ route('connections.test-woocommerce-plugin', $connection) }}">
+                                        @csrf
+                                        <button type="submit">Test Woo plugin</button>
+                                    </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

@@ -5,6 +5,7 @@
         'woocommerce' => [
             'consumer_key' => 'WooCommerce consumer key',
             'consumer_secret' => 'WooCommerce consumer secret',
+            'plugin_shared_secret' => 'OmniBridge plugin shared secret',
         ],
         'front_systems' => [
             'api_key' => 'Front Systems API key',
@@ -69,7 +70,7 @@
             >
             <p class="muted" data-base-url-help>
                 @if ($selectedType === 'woocommerce')
-                    Use the WooCommerce store URL here, for example https://store.example.com. The encrypted credentials below should only contain the consumer key and consumer secret.
+                    Use the WooCommerce store URL here, for example https://store.example.com. The consumer key/secret test WooCommerce REST. The plugin shared secret tests the installed OmniBridge plugin.
                 @else
                     Front Systems REST API V2 example: https://frontsystemsapis.frontsystems.no/restapi/V2.
                 @endif
@@ -110,7 +111,7 @@
 
                 if (typeSelect.value === 'woocommerce') {
                     baseUrlLabel.textContent = 'WooCommerce site URL';
-                    baseUrlHelp.textContent = 'Use the WooCommerce store URL here, for example https://store.example.com. The encrypted credentials below should only contain the consumer key and consumer secret.';
+                    baseUrlHelp.textContent = 'Use the WooCommerce store URL here, for example https://store.example.com. The consumer key/secret test WooCommerce REST. The plugin shared secret tests the installed OmniBridge plugin.';
                 } else {
                     baseUrlLabel.textContent = 'Base URL';
                     baseUrlHelp.textContent = 'Front Systems REST API V2 example: https://frontsystemsapis.frontsystems.no/restapi/V2.';

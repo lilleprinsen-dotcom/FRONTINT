@@ -74,6 +74,8 @@ WooCommerce plugin foundation:
 - The public health endpoint is `GET /wp-json/omnibridge/v1/health`.
 - The signed read-only adapter test endpoint is `GET /wp-json/omnibridge/v1/connection-test`.
 - Woo-side plugin health checks can be tested directly in WordPress without platform safe-mode skips.
+- The Laravel Connections page can also run a signed **Test Woo plugin** check when the WooCommerce connection has the same plugin shared secret saved.
+- Woo REST testing uses WooCommerce consumer key/secret; Woo plugin adapter testing uses the OmniBridge plugin shared secret.
 - Signed adapter tests use `X-Omnibridge-Timestamp` and `X-Omnibridge-Signature` HMAC headers.
 - Product edit pages can show lightweight OmniBridge eligibility/status metadata.
 - The plugin still does not run sync logic, scan the catalog, call Front, or write prices/stock/orders.

@@ -11,6 +11,7 @@ use App\Http\Controllers\LabController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProductMappingPocController;
 use App\Http\Controllers\ProductSyncController;
+use App\Http\Controllers\WooCommercePluginAdapterTestController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -35,6 +36,8 @@ Route::middleware('auth')->group(function (): void {
 
     Route::post('/connections/{connection}/test', ConnectionTestController::class)
         ->name('connections.test');
+    Route::post('/connections/{connection}/test-woocommerce-plugin', WooCommercePluginAdapterTestController::class)
+        ->name('connections.test-woocommerce-plugin');
 
     Route::get('/connections/{connection}/discovery', [ConnectionDiscoveryController::class, 'show'])
         ->name('connections.discovery');

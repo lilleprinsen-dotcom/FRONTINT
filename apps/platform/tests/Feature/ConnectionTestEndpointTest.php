@@ -113,6 +113,97 @@ class ConnectionTestEndpointTest extends TestCase
         $this->assertStringNotContainsString('ck_test', json_encode($auditLog->metadata_json));
     }
 
+    public function test_woocommerce_plugin_adapter_test_uses_signed_read_only_endpoint(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => false]);
+
+        Http::fake([
+            'https://woo.example.test/wp-json/omnibridge/v1/connection-test' => Http::response([
+                'status' => 'success',
+                'read_only' => true,
+                'writes_performed' => false,
+                'plugin' => [
+                    'version' => '0.2.0',
+                    'environment' => 'staging',
+                    'product_fields_enabled' => true,
+                ],
+                'woocommerce' => [
+                    'active' => true,
+                    'version' => '10.8.1',
+                    'currency' => 'NOK',
+                ],
+                'capabilities' => [
+                    'signed_connection_test' => true,
+                    'product_sync_flags' => true,
+                    'catalog_scan_inside_plugin' => false,
+                    'sync_logic_inside_plugin' => false,
+                ],
+            ]),
+        ]);
+
+        [$user, $connection] = $this->connectionWithCredentials('woocommerce', [
+            'plugin_shared_secret' => 'plugin-secret',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/test-woocommerce-plugin")
+            ->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'service' => 'woocommerce_plugin_adapter',
+                'operation' => 'GET /wp-json/omnibridge/v1/connection-test',
+                'http_checked' => true,
+                'read_only' => true,
+            ]);
+
+        Http::assertSent(function ($request): bool {
+            $timestamp = (string) data_get($request->header('X-Omnibridge-Timestamp'), 0);
+            $expectedSignature = hash_hmac(
+                'sha256',
+                "GET\n/omnibridge/v1/connection-test\n{$timestamp}",
+                'plugin-secret',
+            );
+
+            return $request->method() === 'GET'
+                && $request->url() === 'https://woo.example.test/wp-json/omnibridge/v1/connection-test'
+                && $timestamp !== ''
+                && $request->hasHeader('X-Omnibridge-Signature', $expectedSignature);
+        });
+
+        Http::assertNotSent(fn ($request): bool => in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true));
+
+        $connection->refresh();
+        $this->assertSame('success', $connection->status);
+        $this->assertSame('plugin_adapter_success', $connection->last_test_status);
+        $this->assertSame('0.2.0', $connection->last_test_metadata['plugin_adapter']['plugin']['version']);
+        $this->assertSame('10.8.1', $connection->last_test_metadata['plugin_adapter']['woocommerce']['version']);
+        $this->assertStringNotContainsString('plugin-secret', json_encode($connection->last_test_metadata));
+
+        $auditLog = AuditLog::query()->where('action', 'readonly_woocommerce_plugin_adapter_test')->firstOrFail();
+        $this->assertSame($connection->id, $auditLog->metadata_json['connection_id']);
+        $this->assertSame('GET /wp-json/omnibridge/v1/connection-test', $auditLog->metadata_json['endpoint_group']);
+        $this->assertTrue($auditLog->metadata_json['production_writes_disabled']);
+        $this->assertStringNotContainsString('plugin-secret', json_encode($auditLog->metadata_json));
+    }
+
+    public function test_woocommerce_plugin_adapter_test_requires_shared_secret_without_http_call(): void
+    {
+        Http::fake();
+
+        [$user, $connection] = $this->connectionWithCredentials('woocommerce', []);
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/test-woocommerce-plugin")
+            ->assertOk()
+            ->assertJson([
+                'status' => 'failed',
+                'http_checked' => false,
+                'last_error' => 'Missing required settings: Missing WooCommerce plugin shared secret',
+            ]);
+
+        Http::assertNothingSent();
+    }
+
     public function test_missing_connection_credentials_prevent_http_calls(): void
     {
         config(['omnibridge.allow_connection_test_http' => true]);
@@ -240,7 +331,7 @@ class ConnectionTestEndpointTest extends TestCase
         $this->actingAs($user)
             ->get('/connections')
             ->assertOk()
-            ->assertSee('Safe mode is on. Test buttons update status without contacting external systems.')
+            ->assertSee('Safe mode is on for normal WooCommerce REST and Front API tests.')
             ->assertSee('Last test: success')
             ->assertSee('No error saved')
             ->assertDontSee('Lilleprinsen Test Store')
@@ -252,21 +343,26 @@ class ConnectionTestEndpointTest extends TestCase
         [$user] = $this->connectionWithCredentials('woocommerce', [
             'consumer_key' => 'ck_secret_value',
             'consumer_secret' => 'cs_secret_value',
+            'plugin_shared_secret' => 'plugin_shared_secret_value',
         ]);
 
         $this->actingAs($user)
             ->get('/connections')
             ->assertOk()
-            ->assertSee('2 credential field(s) configured')
+            ->assertSee('3 credential field(s) configured')
+            ->assertSee('Test Woo REST')
+            ->assertSee('Test Woo plugin')
             ->assertDontSee('ck_secret_value')
             ->assertDontSee('cs_secret_value')
+            ->assertDontSee('plugin_shared_secret_value')
             ->assertDontSee('...alue');
 
         $this->actingAs($user)
             ->get('/connections/create?type=woocommerce')
             ->assertOk()
             ->assertDontSee('ck_secret_value')
-            ->assertDontSee('cs_secret_value');
+            ->assertDontSee('cs_secret_value')
+            ->assertDontSee('plugin_shared_secret_value');
     }
 
     public function test_dashboard_does_not_show_front_store_metadata(): void
@@ -295,6 +391,7 @@ class ConnectionTestEndpointTest extends TestCase
             ->assertSee('data-credential-panel="woocommerce"', false)
             ->assertSee('data-credential-panel="webtoffee_adapter"', false)
             ->assertSee('WooCommerce site URL')
+            ->assertSee('OmniBridge plugin shared secret')
             ->assertSee('hidden', false)
             ->assertSee('data-connection-type-select', false);
     }
