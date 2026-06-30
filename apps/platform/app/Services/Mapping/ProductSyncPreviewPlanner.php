@@ -99,11 +99,17 @@ class ProductSyncPreviewPlanner
         $products = collect($snapshot->sample_json['products'] ?? [])
             ->filter(fn ($product): bool => is_array($product))
             ->map(fn (array $product): array => $this->normalizeWooProductItem($product));
+        $parentsById = $products
+            ->filter(fn (array $product): bool => ($product['id'] ?? null) !== null)
+            ->keyBy(fn (array $product): string => (string) $product['id']);
 
         $variations = collect($snapshot->sample_json['variations'] ?? [])
             ->filter(fn ($variation): bool => is_array($variation))
             ->filter(fn (array $variation): bool => ($variation['discovery_status'] ?? 'success') === 'success')
-            ->map(fn (array $variation): array => $this->normalizeWooVariationItem($variation));
+            ->map(fn (array $variation): array => $this->normalizeWooVariationItem(
+                $variation,
+                $parentsById->get((string) ($variation['parent_id'] ?? '')),
+            ));
 
         return $products
             ->concat($variations)
@@ -125,6 +131,12 @@ class ProductSyncPreviewPlanner
         $gtin = $this->gtinValue($wooProduct);
         $sku = $this->stringValue($wooProduct['sku'] ?? null);
         $name = $this->stringValue($wooProduct['name'] ?? null);
+        $frontName = (($wooProduct['type'] ?? null) === 'variation')
+            ? ($this->stringValue($wooProduct['parent_name'] ?? null) ?? $name)
+            : $name;
+        $sizeLabel = (($wooProduct['type'] ?? null) === 'variation')
+            ? $this->variationSizeLabel($wooProduct)
+            : null;
         $price = $this->priceCandidate($wooProduct);
         $brand = $this->firstString($wooProduct['brands'] ?? []);
         $category = $this->firstString($wooProduct['categories'] ?? []);
@@ -226,27 +238,30 @@ class ProductSyncPreviewPlanner
                 'item_key' => $this->wooItemKey($wooProduct),
                 'parent_product_id' => $wooProduct['parent_product_id'] ?? null,
                 'name' => $name,
+                'parent_name' => $wooProduct['parent_name'] ?? null,
                 'sku' => $sku,
                 'type' => $wooProduct['type'] ?? null,
                 'stock_status' => $wooProduct['stock_status'] ?? null,
                 'manage_stock' => $wooProduct['manage_stock'] ?? null,
+                'size_label' => $sizeLabel,
             ],
             'gtin_candidate' => $wooProduct['gtin_candidate'] ?? ['key' => null, 'value' => null, 'confidence' => 'none', 'candidates' => []],
             'front_match' => $frontMatch,
             'proposed_front_payload' => [
-                'name' => $name,
+                'name' => $frontName,
                 'number' => $sku,
-                'variant' => $sku,
+                'variant' => $sizeLabel ?? $sku,
                 'brand' => $brand,
                 'groupName' => $category,
                 'subgroupName' => $subcategory,
                 'price_candidate' => $price,
                 'sale_price_candidate' => $this->stringValue($wooProduct['sale_price'] ?? null),
+                'image_candidate' => $wooProduct['image'] ?? null,
                 'productSizes' => [
                     [
                         'gtin' => $gtin,
                         'externalSKU' => $sku,
-                        'label' => null,
+                        'label' => $sizeLabel,
                     ],
                 ],
             ],
@@ -262,17 +277,25 @@ class ProductSyncPreviewPlanner
     {
         $product['type'] = $product['type'] ?? 'simple';
         $product['item_key'] = $this->wooItemKey($product);
+        $product['image'] = $this->firstImage($product);
 
         return $product;
     }
 
-    private function normalizeWooVariationItem(array $variation): array
+    private function normalizeWooVariationItem(array $variation, ?array $parentProduct = null): array
     {
+        $attributes = $variation['attributes'] ?? [];
+        $sizeLabel = $this->attributeLabel($attributes);
+        $parentName = $this->stringValue($variation['parent_name'] ?? null)
+            ?? $this->stringValue($parentProduct['name'] ?? null);
+        $rawName = $this->stringValue($variation['name'] ?? null);
+        $displayName = $this->variationDisplayName($parentName, $rawName, $sizeLabel);
+
         return [
             'id' => $variation['id'] ?? null,
             'parent_product_id' => $variation['parent_id'] ?? null,
-            'parent_name' => $variation['parent_name'] ?? null,
-            'name' => $variation['name'] ?? null,
+            'parent_name' => $parentName,
+            'name' => $displayName,
             'sku' => $variation['sku'] ?? null,
             'type' => 'variation',
             'status' => $variation['status'] ?? null,
@@ -283,9 +306,11 @@ class ProductSyncPreviewPlanner
             'stock_quantity' => $variation['stock_quantity'] ?? null,
             'stock_status' => $variation['stock_status'] ?? null,
             'manage_stock' => $variation['manage_stock'] ?? null,
-            'categories' => [],
-            'brands' => [],
-            'attributes' => $variation['attributes'] ?? [],
+            'categories' => $variation['categories'] ?? $parentProduct['categories'] ?? [],
+            'brands' => $variation['brands'] ?? $parentProduct['brands'] ?? [],
+            'image' => $this->firstImage($variation) ?? $this->firstImage($parentProduct ?? []),
+            'attributes' => $attributes,
+            'size_label' => $sizeLabel,
             'gtin_candidate' => $variation['gtin_candidate'] ?? ['key' => null, 'value' => null, 'confidence' => 'none', 'candidates' => []],
             'item_key' => 'variation:' . (string) ($variation['id'] ?? ''),
         ];
@@ -418,6 +443,84 @@ class ProductSyncPreviewPlanner
     private function secondString(mixed $value): ?string
     {
         return is_array($value) ? $this->stringValue($value[1] ?? null) : null;
+    }
+
+    private function variationSizeLabel(array $product): ?string
+    {
+        return $this->stringValue($product['size_label'] ?? null)
+            ?? $this->attributeLabel($product['attributes'] ?? []);
+    }
+
+    private function attributeLabel(mixed $attributes): ?string
+    {
+        if (! is_array($attributes)) {
+            return null;
+        }
+
+        $labels = collect($attributes)
+            ->map(function (mixed $attribute): ?string {
+                if (is_array($attribute)) {
+                    return $this->stringValue($attribute['option'] ?? null)
+                        ?? $this->stringValue($attribute['name'] ?? null);
+                }
+
+                return $this->stringValue($attribute);
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return $labels === [] ? null : implode(' / ', $labels);
+    }
+
+    private function variationDisplayName(?string $parentName, ?string $rawName, ?string $sizeLabel): ?string
+    {
+        if ($parentName !== null && $sizeLabel !== null) {
+            return $parentName . ' - ' . $sizeLabel;
+        }
+
+        return $parentName ?? $rawName;
+    }
+
+    private function firstImage(array $item): ?array
+    {
+        $image = $item['image'] ?? null;
+
+        if (is_array($image)) {
+            $src = $this->stringValue($image['src'] ?? null);
+
+            if ($src === null) {
+                return null;
+            }
+
+            return [
+                'src' => $src,
+                'alt' => $this->stringValue($image['alt'] ?? null),
+            ];
+        }
+
+        $images = $item['images'] ?? [];
+
+        if (! is_array($images)) {
+            return null;
+        }
+
+        $first = collect($images)->first(fn (mixed $candidate): bool => is_array($candidate));
+
+        if (! is_array($first)) {
+            return null;
+        }
+
+        $src = $this->stringValue($first['src'] ?? null);
+
+        if ($src === null) {
+            return null;
+        }
+
+        return [
+            'src' => $src,
+            'alt' => $this->stringValue($first['alt'] ?? null),
+        ];
     }
 
     private function stringValue(mixed $value): ?string

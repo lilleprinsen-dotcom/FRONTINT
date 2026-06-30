@@ -147,6 +147,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - A WooCommerce product discovery snapshot is required. A Front product discovery snapshot is optional for Woo-only readiness planning; if missing, Front match status must be clearly marked as `front_sample_missing`.
 - The plan action must reject more than 10 selected WooCommerce products or variations.
 - Selection keys must be explicit Woo item keys such as `product:123` or `variation:456`.
+- Variation preview rows should inherit parent product name, category, brand, and image candidates from the same stored WooCommerce discovery snapshot. Variation attributes should become the proposed Front size label.
 - Generated plans are stored in `product_sync_preview_plans`, not final mapping or sync history.
 - The preview plan must not write to `product_mappings`.
 - Block selected products or variations with missing name, missing SKU, missing GTIN/EAN candidate, empty GTIN/EAN candidate, duplicate selected SKU/GTIN, missing variation parent context, or no price candidate.

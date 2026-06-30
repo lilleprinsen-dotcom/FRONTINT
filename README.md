@@ -55,6 +55,7 @@ Phase 4 adds controlled 10-item mapping PoC preparation:
 - Front product discovery is optional at this stage; without it, the plan becomes a Woo-only readiness plan and Front matches are marked as missing.
 
 The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variation discovery is read-only; variations can be selected as first-class preview candidates, but no variation writes exist yet. GTIN/EAN candidates must be confirmed before any future write test.
+Variation preview rows inherit parent product name, category, brand, and image candidates from the same WooCommerce discovery snapshot, while variation attributes become the proposed Front size label.
 
 Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-product catalog:
 

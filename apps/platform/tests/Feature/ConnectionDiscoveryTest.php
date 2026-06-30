@@ -195,6 +195,9 @@ class ConnectionDiscoveryTest extends TestCase
                     'stock_status' => 'instock',
                     'manage_stock' => true,
                     'categories' => [['name' => 'Shoes']],
+                    'images' => [
+                        ['src' => 'https://woo.example.test/image.jpg', 'alt' => 'Woo Boot image'],
+                    ],
                     'meta_data' => [
                         ['key' => 'Zettle_barcode', 'value' => '7040000000012'],
                         ['key' => 'private_api_key', 'value' => 'do-not-store'],
@@ -231,6 +234,7 @@ class ConnectionDiscoveryTest extends TestCase
         $this->assertSame('Zettle_barcode', $product['gtin_candidate']['key']);
         $this->assertSame('7040000000012', $product['gtin_candidate']['value']);
         $this->assertSame('exact_known_field', $product['gtin_candidate']['confidence']);
+        $this->assertSame('https://woo.example.test/image.jpg', $product['image']['src']);
         $this->assertStringNotContainsString('do-not-store', json_encode($snapshot->sample_json));
         $this->assertStringNotContainsString('cs_secret', json_encode($snapshot->toArray()));
     }
