@@ -235,6 +235,109 @@ class ConnectionDiscoveryTest extends TestCase
         $this->assertStringNotContainsString('cs_secret', json_encode($snapshot->toArray()));
     }
 
+    public function test_woocommerce_variation_discovery_uses_read_only_variations_endpoint_and_builds_readiness_report(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+
+        Http::fake([
+            'https://woo.example.test/wp-json/wc/v3/products/456/variations*' => Http::response([
+                [
+                    'id' => 9001,
+                    'name' => 'Woo Shirt - 92',
+                    'sku' => 'SHIRT-92',
+                    'status' => 'publish',
+                    'price' => '299',
+                    'regular_price' => '299',
+                    'sale_price' => '',
+                    'stock_quantity' => 4,
+                    'stock_status' => 'instock',
+                    'manage_stock' => true,
+                    'attributes' => [
+                        ['name' => 'Size', 'option' => '92'],
+                    ],
+                    'meta_data' => [
+                        ['key' => '_izettle_barcode', 'value' => '7040000000099'],
+                    ],
+                    'description' => '<p>Do not store variation HTML.</p>',
+                ],
+                [
+                    'id' => 9002,
+                    'name' => 'Woo Shirt - 98',
+                    'sku' => '',
+                    'status' => 'publish',
+                    'price' => '',
+                    'regular_price' => '',
+                    'stock_quantity' => 0,
+                    'stock_status' => 'outofstock',
+                    'manage_stock' => false,
+                    'attributes' => [
+                        ['name' => 'Size', 'option' => '98'],
+                    ],
+                    'meta_data' => [],
+                ],
+            ]),
+            'https://woo.example.test/wp-json/wc/v3/products*' => Http::response([
+                [
+                    'id' => 456,
+                    'name' => 'Woo Shirt',
+                    'sku' => 'SHIRT',
+                    'type' => 'variable',
+                    'status' => 'publish',
+                    'price' => '',
+                    'regular_price' => '',
+                    'stock_quantity' => null,
+                    'stock_status' => 'instock',
+                    'manage_stock' => false,
+                    'variations' => [9001, 9002],
+                    'meta_data' => [],
+                ],
+            ]),
+        ]);
+
+        [$user, $connection] = $this->connectionWithCredentials('woocommerce', [
+            'consumer_key' => 'ck_secret',
+            'consumer_secret' => 'cs_secret',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/discover/products")
+            ->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'discovery_type' => 'products',
+            ]);
+
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && str_starts_with($request->url(), 'https://woo.example.test/wp-json/wc/v3/products/456/variations')
+            && str_contains($request->url(), 'per_page=10')
+            && str_contains($request->url(), 'page=1'));
+
+        Http::assertNotSent(fn ($request): bool => in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true));
+
+        $snapshot = ConnectionDiscoverySnapshot::query()->firstOrFail();
+
+        $this->assertSame(1, $snapshot->summary_json['count']);
+        $this->assertSame(2, $snapshot->summary_json['variation_count']);
+        $this->assertSame('GET /wp-json/wc/v3/products/{productId}/variations', $snapshot->summary_json['variation_endpoint']);
+        $this->assertSame(9001, $snapshot->sample_json['variations'][0]['id']);
+        $this->assertSame('7040000000099', $snapshot->sample_json['variations'][0]['gtin_candidate']['value']);
+        $this->assertStringNotContainsString('Do not store variation HTML', json_encode($snapshot->sample_json));
+        $this->assertStringNotContainsString('cs_secret', json_encode($snapshot->toArray()));
+
+        $readiness = $snapshot->sample_json['readiness'];
+        $this->assertSame(1, $readiness['summary']['ready']);
+        $this->assertSame(2, $readiness['summary']['blocked']);
+
+        $readyVariation = collect($readiness['rows'])->firstWhere('woo_variation_id', 9001);
+        $blockedVariation = collect($readiness['rows'])->firstWhere('woo_variation_id', 9002);
+
+        $this->assertSame('ready', $readyVariation['status']);
+        $this->assertSame('blocked', $blockedVariation['status']);
+        $this->assertContains('Missing SKU.', $blockedVariation['errors']);
+        $this->assertContains('Missing GTIN/EAN candidate.', $blockedVariation['errors']);
+        $this->assertContains('Missing price candidate.', $blockedVariation['errors']);
+    }
+
     public function test_woocommerce_product_discovery_limit_cannot_be_overridden_by_request_parameters(): void
     {
         config(['omnibridge.allow_connection_test_http' => true]);
@@ -432,6 +535,8 @@ class ConnectionDiscoveryTest extends TestCase
             ->get("/connections/{$wooConnection->id}/discovery")
             ->assertOk()
             ->assertSee('Mapping Preview')
+            ->assertSee('Woo Readiness Report')
+            ->assertSee('Variation Sample')
             ->assertSee('Woo Boot')
             ->assertSee('Front Boot')
             ->assertSee('gtin')

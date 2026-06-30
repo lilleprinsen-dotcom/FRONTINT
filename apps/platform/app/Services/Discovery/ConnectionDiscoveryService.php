@@ -13,6 +13,8 @@ use Throwable;
 class ConnectionDiscoveryService
 {
     private const PRODUCT_DISCOVERY_LIMIT = 10;
+    private const VARIABLE_PARENT_DISCOVERY_LIMIT = 5;
+    private const VARIATION_DISCOVERY_LIMIT = 10;
     private const SNAPSHOTS_TO_KEEP = 5;
 
     public function __construct(
@@ -106,15 +108,25 @@ class ConnectionDiscoveryService
             }
 
             $products = $this->safeWooProducts($response->json());
+            $variations = $this->discoverWooVariations($connection, $products);
+            $readiness = $this->wooReadinessReport($products, $variations);
 
             return $this->storeSnapshot($connection, 'products', 'success', [
                 'count' => count($products),
+                'variation_count' => count($variations),
                 'endpoint' => 'GET /wp-json/wc/v3/products',
                 'limit' => self::PRODUCT_DISCOVERY_LIMIT,
                 'read_only' => true,
-                'variation_fetching' => 'TODO',
+                'variation_endpoint' => 'GET /wp-json/wc/v3/products/{productId}/variations',
+                'variation_parent_limit' => self::VARIABLE_PARENT_DISCOVERY_LIMIT,
+                'variation_limit_per_parent' => self::VARIATION_DISCOVERY_LIMIT,
+                'readiness_ready' => $readiness['summary']['ready'],
+                'readiness_needs_attention' => $readiness['summary']['needs_attention'],
+                'readiness_blocked' => $readiness['summary']['blocked'],
             ], [
                 'products' => $products,
+                'variations' => $variations,
+                'readiness' => $readiness,
             ]);
         } catch (Throwable $exception) {
             return $this->storeSnapshot($connection, 'products', 'failed', [
@@ -186,6 +198,226 @@ class ConnectionDiscoveryService
             })
             ->values()
             ->all();
+    }
+
+    private function discoverWooVariations(Connection $connection, array $products): array
+    {
+        $variableProducts = collect($products)
+            ->filter(fn (array $product): bool => ($product['type'] ?? null) === 'variable')
+            ->take(self::VARIABLE_PARENT_DISCOVERY_LIMIT);
+
+        $variations = [];
+
+        foreach ($variableProducts as $product) {
+            $productId = (int) ($product['id'] ?? 0);
+
+            if ($productId <= 0) {
+                continue;
+            }
+
+            try {
+                $response = $this->wooCommerce->variations($connection, $productId, self::VARIATION_DISCOVERY_LIMIT);
+
+                if (! $response->successful()) {
+                    $variations[] = [
+                        'parent_id' => $productId,
+                        'discovery_status' => 'failed',
+                        'error' => 'HTTP ' . $response->status(),
+                    ];
+
+                    continue;
+                }
+
+                foreach ($this->safeWooVariations($response->json(), $product) as $variation) {
+                    $variations[] = $variation;
+                }
+            } catch (Throwable $exception) {
+                $variations[] = [
+                    'parent_id' => $productId,
+                    'discovery_status' => 'failed',
+                    'error' => $exception::class,
+                ];
+            }
+        }
+
+        return $variations;
+    }
+
+    private function safeWooVariations(mixed $payload, array $parentProduct): array
+    {
+        $variations = is_array($payload) ? $payload : [];
+        $parentId = $parentProduct['id'] ?? null;
+        $parentName = $parentProduct['name'] ?? null;
+
+        return collect($variations)
+            ->filter(fn ($variation): bool => is_array($variation))
+            ->take(self::VARIATION_DISCOVERY_LIMIT)
+            ->map(function (array $variation) use ($parentId, $parentName): array {
+                return [
+                    'id' => $variation['id'] ?? null,
+                    'parent_id' => $parentId,
+                    'parent_name' => $parentName,
+                    'name' => $variation['name'] ?? $this->variationName($parentName, $variation['attributes'] ?? []),
+                    'sku' => $variation['sku'] ?? null,
+                    'type' => 'variation',
+                    'status' => $variation['status'] ?? null,
+                    'permalink' => $variation['permalink'] ?? null,
+                    'price' => $variation['price'] ?? null,
+                    'regular_price' => $variation['regular_price'] ?? null,
+                    'sale_price' => $variation['sale_price'] ?? null,
+                    'stock_quantity' => $variation['stock_quantity'] ?? null,
+                    'stock_status' => $variation['stock_status'] ?? null,
+                    'manage_stock' => $variation['manage_stock'] ?? null,
+                    'attributes' => $this->safeAttributeNames($variation['attributes'] ?? []),
+                    'gtin_candidate' => $this->gtinDetector->detect($variation),
+                    'discovery_status' => 'success',
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function variationName(?string $parentName, mixed $attributes): ?string
+    {
+        $labels = $this->safeAttributeNames($attributes);
+
+        if ($parentName && $labels !== []) {
+            return $parentName . ' - ' . implode(' / ', $labels);
+        }
+
+        return $parentName;
+    }
+
+    private function safeAttributeNames(mixed $payload): array
+    {
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        return collect($payload)
+            ->filter(fn ($item): bool => is_array($item))
+            ->take(10)
+            ->map(fn (array $item): ?string => $item['option'] ?? $item['name'] ?? null)
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function wooReadinessReport(array $products, array $variations): array
+    {
+        $variationCountByParent = collect($variations)
+            ->filter(fn (array $variation): bool => ($variation['discovery_status'] ?? null) === 'success')
+            ->countBy(fn (array $variation): string => (string) ($variation['parent_id'] ?? ''));
+
+        $rows = [];
+
+        foreach ($products as $product) {
+            if (($product['type'] ?? null) === 'variable') {
+                $rows[] = $this->readinessRow($product, 'product', [
+                    'warnings' => ['Variable parent detected. Review variation rows before any future sync.'],
+                    'errors' => ((int) ($variationCountByParent[(string) ($product['id'] ?? '')] ?? 0)) === 0
+                        ? ['No variations discovered in this read-only sample.']
+                        : [],
+                ]);
+
+                continue;
+            }
+
+            $rows[] = $this->readinessRow($product, 'product');
+        }
+
+        foreach ($variations as $variation) {
+            if (($variation['discovery_status'] ?? null) !== 'success') {
+                $rows[] = [
+                    'item_type' => 'variation',
+                    'woo_product_id' => $variation['parent_id'] ?? null,
+                    'woo_variation_id' => null,
+                    'name' => 'Variation discovery failed',
+                    'sku' => null,
+                    'gtin' => null,
+                    'gtin_key' => null,
+                    'price' => null,
+                    'status' => 'blocked',
+                    'errors' => [$variation['error'] ?? 'Variation discovery failed.'],
+                    'warnings' => [],
+                ];
+
+                continue;
+            }
+
+            $rows[] = $this->readinessRow($variation, 'variation');
+        }
+
+        $summary = [
+            'ready' => collect($rows)->where('status', 'ready')->count(),
+            'needs_attention' => collect($rows)->where('status', 'needs_attention')->count(),
+            'blocked' => collect($rows)->where('status', 'blocked')->count(),
+            'total_rows' => count($rows),
+        ];
+
+        return [
+            'summary' => $summary,
+            'rows' => $rows,
+        ];
+    }
+
+    private function readinessRow(array $item, string $itemType, array $extra = []): array
+    {
+        $errors = $extra['errors'] ?? [];
+        $warnings = $extra['warnings'] ?? [];
+        $gtin = $item['gtin_candidate']['value'] ?? null;
+        $price = ($item['regular_price'] ?? null) ?: ($item['price'] ?? null);
+
+        if (! ($item['name'] ?? null)) {
+            $errors[] = 'Missing product name.';
+        }
+
+        if (! ($item['sku'] ?? null)) {
+            $errors[] = 'Missing SKU.';
+        }
+
+        if (! $gtin) {
+            $errors[] = 'Missing GTIN/EAN candidate.';
+        }
+
+        if (! $price) {
+            $errors[] = 'Missing price candidate.';
+        }
+
+        if (! in_array(($item['type'] ?? null), ['simple', 'variable', 'variation'], true)) {
+            $errors[] = 'Unsupported product type.';
+        }
+
+        if (($item['stock_status'] ?? null) !== 'instock') {
+            $warnings[] = 'Not currently in stock.';
+        }
+
+        if (($item['manage_stock'] ?? null) === false) {
+            $warnings[] = 'Stock is not managed on this WooCommerce item.';
+        }
+
+        if (($item['gtin_candidate']['confidence'] ?? 'none') !== 'exact_known_field') {
+            $warnings[] = 'GTIN/EAN field should be confirmed.';
+        }
+
+        $status = $errors !== []
+            ? 'blocked'
+            : ($warnings !== [] ? 'needs_attention' : 'ready');
+
+        return [
+            'item_type' => $itemType,
+            'woo_product_id' => $itemType === 'variation' ? ($item['parent_id'] ?? null) : ($item['id'] ?? null),
+            'woo_variation_id' => $itemType === 'variation' ? ($item['id'] ?? null) : null,
+            'name' => $item['name'] ?? null,
+            'sku' => $item['sku'] ?? null,
+            'gtin' => $gtin,
+            'gtin_key' => $item['gtin_candidate']['key'] ?? null,
+            'price' => $price,
+            'stock_status' => $item['stock_status'] ?? null,
+            'status' => $status,
+            'errors' => array_values(array_unique($errors)),
+            'warnings' => array_values(array_unique($warnings)),
+        ];
     }
 
     private function safeFrontProducts(mixed $payload): array

@@ -38,12 +38,13 @@ Connection tests record only minimal diagnostics: `success`, `failed`, or `skipp
 Phase 3 adds read-only discovery and mapping preview:
 
 - WooCommerce product sample: `GET /wp-json/wc/v3/products?per_page=10&page=1&status=publish`
+- WooCommerce variation sample for variable products: `GET /wp-json/wc/v3/products/{productId}/variations?per_page=10&page=1`
 - Front stores: `GET /api/Stores`
 - Front product sample: `POST /api/Product` with a read-only search body limited to 10 products
 
 Front's OpenAPI spec documents `POST /api/Product` as the read-only product listing/search endpoint used for discovery. During discovery it must stay capped at `pageSize <= 10` and must not be confused with `/api/products`, which is the product CRUD endpoint.
 
-Discovery stores only sanitized snapshots in `connection_discovery_snapshots` and keeps only the latest 5 snapshots per connection and discovery type. This table is not long-term product storage. It detects likely WooCommerce GTIN/EAN candidate fields such as `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, `_iZettle_barcode`, `ean`, `gtin`, and `barcode`, then previews possible Woo ↔ Front matches by GTIN first, SKU to Front `externalSKU` second, and SKU to Front `identity` third. Candidate GTIN/EAN values must be confirmed before final mapping. This is not product sync and does not write final product mappings.
+Discovery stores only sanitized snapshots in `connection_discovery_snapshots` and keeps only the latest 5 snapshots per connection and discovery type. This table is not long-term product storage. It detects likely WooCommerce GTIN/EAN candidate fields such as `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, `_iZettle_barcode`, `ean`, `gtin`, and `barcode`, then previews possible Woo ↔ Front matches by GTIN first, SKU to Front `externalSKU` second, and SKU to Front `identity` third. Woo discovery also creates a sample readiness report for products and variations. Candidate GTIN/EAN values must be confirmed before final mapping. This is not product sync and does not write final product mappings.
 
 Phase 4 adds controlled 10-product mapping PoC preparation:
 
@@ -52,7 +53,7 @@ Phase 4 adds controlled 10-product mapping PoC preparation:
 - Generate a local preview-only sync plan in `product_sync_preview_plans`.
 - Review ready/blocked validation, warnings, proposed Woo to Front fields, and `NEEDS_CONFIRMATION` items.
 
-The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variation discovery and variation-level sync are planned for the full catalog architecture, but no variation writes exist yet. GTIN/EAN candidates must be confirmed before any future write test.
+The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variation discovery is read-only; no variation writes exist yet. GTIN/EAN candidates must be confirmed before any future write test.
 
 Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-product catalog:
 

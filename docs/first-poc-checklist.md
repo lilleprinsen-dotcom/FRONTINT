@@ -18,6 +18,8 @@ Run all tests in staging or sandbox only.
 - Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` and confirm WooCommerce/Front discovery actions return skipped/safe mode.
 - Enable `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true` only with staging/test credentials.
 - Confirm WooCommerce product discovery calls only `GET /wp-json/wc/v3/products` with a 10-product limit.
+- Confirm WooCommerce variation discovery calls only `GET /wp-json/wc/v3/products/{productId}/variations` for variable products in the capped product sample.
+- Confirm the Woo readiness report shows Ready, Needs attention, and Blocked rows for sampled products/variations.
 - Confirm Front store discovery calls only `GET /api/Stores`.
 - Confirm Front product discovery calls only `POST /api/Product` with a 10-product read-only search body.
 - Confirm `POST /api/Product` is treated as the Front OpenAPI read-only product listing endpoint and is not confused with `/api/products` CRUD.
