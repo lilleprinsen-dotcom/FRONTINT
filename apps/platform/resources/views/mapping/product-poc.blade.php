@@ -60,9 +60,10 @@
     <form method="post" action="{{ route('mapping.product-poc.plan') }}">
         @csrf
         <section class="panel">
-            <h2>Select Products</h2>
+            <h2>Select Products and Variations</h2>
             <p class="muted">
-                Select up to 10 WooCommerce products from the latest read-only discovery sample.
+                Select up to 10 WooCommerce products or variations from the latest read-only discovery sample.
+                Variation rows are sellable candidates for variable products.
                 Detected GTIN/EAN values are candidates only and must be confirmed before any future write test.
             </p>
 
@@ -70,8 +71,9 @@
                 <thead>
                 <tr>
                     <th>Select</th>
-                    <th>Woo ID</th>
+                    <th>Woo item</th>
                     <th>Name</th>
+                    <th>Type</th>
                     <th>SKU</th>
                     <th>Detected GTIN/EAN</th>
                     <th>GTIN key</th>
@@ -88,10 +90,16 @@
                     @php($payload = $row['proposed_front_payload'] ?? [])
                     <tr>
                         <td>
-                            <input type="checkbox" name="woo_product_ids[]" value="{{ $product['id'] }}" @disabled(!$wooSnapshot || !$frontSnapshot || $productionWritesEnabled)>
+                            <input type="checkbox" name="woo_item_keys[]" value="{{ $product['item_key'] }}" @disabled(!$wooSnapshot || !$frontSnapshot || $productionWritesEnabled)>
                         </td>
-                        <td>{{ $product['id'] ?? 'n/a' }}</td>
+                        <td>
+                            {{ $product['item_key'] ?? 'n/a' }}
+                            @if (($product['parent_product_id'] ?? null) !== null)
+                                <div class="muted">Parent: {{ $product['parent_product_id'] }}</div>
+                            @endif
+                        </td>
                         <td>{{ $product['name'] ?? 'n/a' }}</td>
+                        <td>{{ $product['type'] ?? 'n/a' }}</td>
                         <td>{{ $product['sku'] ?? 'n/a' }}</td>
                         <td>{{ $gtin['value'] ?? 'None' }}</td>
                         <td>
@@ -126,7 +134,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10">Run both WooCommerce and Front product discovery before selecting products.</td>
+                        <td colspan="11">Run both WooCommerce and Front product discovery before selecting products or variations.</td>
                     </tr>
                 @endforelse
                 </tbody>
@@ -143,14 +151,14 @@
         @if ($latestPlan)
             <p class="muted">
                 Latest plan: <strong>{{ $latestPlan->status }}</strong>,
-                {{ $latestPlan->selected_count }} product(s),
+                {{ $latestPlan->selected_count }} item(s),
                 created {{ $latestPlan->created_at }}.
                 This is preview storage only, not sync history.
             </p>
             <table>
                 <thead>
                 <tr>
-                    <th>Woo product</th>
+                    <th>Woo item</th>
                     <th>Proposed Front name</th>
                     <th>Number</th>
                     <th>Variant</th>
@@ -169,7 +177,15 @@
                     @php($payload = $row['proposed_front_payload'])
                     @php($size = $payload['productSizes'][0] ?? [])
                     <tr>
-                        <td>{{ $row['woo_product']['name'] ?? 'n/a' }} ({{ $row['woo_product']['id'] ?? 'n/a' }})</td>
+                        <td>
+                            {{ $row['woo_product']['name'] ?? 'n/a' }}
+                            <div class="muted">
+                                {{ $row['woo_product']['item_key'] ?? 'n/a' }}
+                                @if (($row['woo_product']['parent_product_id'] ?? null) !== null)
+                                    / Parent: {{ $row['woo_product']['parent_product_id'] }}
+                                @endif
+                            </div>
+                        </td>
                         <td>{{ $payload['name'] ?? 'n/a' }}</td>
                         <td>{{ $payload['number'] ?? 'n/a' }}</td>
                         <td>{{ $payload['variant'] ?? 'n/a' }}</td>

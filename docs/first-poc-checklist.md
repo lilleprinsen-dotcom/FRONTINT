@@ -33,9 +33,11 @@ Run all tests in staging or sandbox only.
 
 - Open `/mapping/product-poc` after WooCommerce and Front product discovery have both succeeded.
 - Confirm the page shows the safety banner: preview only, no products, prices, stock, or orders are written.
-- Select no more than 10 WooCommerce products.
+- Select no more than 10 WooCommerce products or variations.
 - Generate the preview sync plan.
 - Confirm blocked products show missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price issues.
+- Confirm variations can be selected as first-class candidates with `variation:{id}` item keys.
+- Confirm variable parent products warn that sellable variation rows are usually better candidates.
 - Confirm warnings show missing brand/category, missing sale price, stock status concerns, uncertain category/brand mapping, and no Front sample match.
 - Confirm product and variation handling is preview-only. Variation writes are not implemented yet.
 - Confirm GTIN/EAN candidates, including `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, and `_iZettle_barcode`, are treated as candidates requiring confirmation.

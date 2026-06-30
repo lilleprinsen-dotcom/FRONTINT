@@ -204,7 +204,7 @@ Notes:
 
 ## product_sync_preview_plans
 
-Purpose: local preview-only 10-product mapping PoC plans generated from stored discovery snapshots.
+Purpose: local preview-only 10-item mapping PoC plans generated from stored discovery snapshots. Items may be WooCommerce products or variations.
 
 Fields:
 

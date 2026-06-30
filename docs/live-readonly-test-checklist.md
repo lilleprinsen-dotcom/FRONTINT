@@ -192,12 +192,14 @@ Open:
 http://localhost:8000/mapping/product-poc
 ```
 
-Select up to 10 WooCommerce products and generate the preview sync plan.
+Select up to 10 WooCommerce products or variations and generate the preview sync plan.
 
 Review:
 
 - Ready/blocked status.
 - Blocking issues for missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price.
+- Variation rows use `variation:{id}` item keys and can be selected as first-class preview candidates.
+- Variable parent products should warn that sellable variation rows are usually better Front POS candidates.
 - Warnings for missing brand/category, missing sale price, stock status, uncertain mappings, or no Front match.
 - `NEEDS_CONFIRMATION` items before any future write test.
 

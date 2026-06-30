@@ -338,17 +338,18 @@ After both product discovery samples exist, open:
 http://localhost:8000/mapping/product-poc
 ```
 
-Use this page to select up to 10 WooCommerce products from the stored discovery snapshot and generate a local preview sync plan.
+Use this page to select up to 10 WooCommerce products or variations from the stored discovery snapshot and generate a local preview sync plan.
 
 The plan shows:
 
 - Proposed WooCommerce to Front product fields.
-- Ready or blocked status per selected product.
-- Blocking validation issues such as missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, variable products, or missing price.
+- Ready or blocked status per selected product or variation.
+- Blocking validation issues such as missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price.
 - Non-blocking warnings such as missing brand/category, missing sale price, out-of-stock status, `manage_stock=false`, or no current Front sample match.
+- Variable parent products can be previewed, but sellable variation rows are usually the better candidates for Front POS.
 - `NEEDS_CONFIRMATION` items for category/group mapping, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy.
 
-The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variation discovery is read-only; variation-level writes are planned for the production catalog architecture, but no variation writes exist yet. Confirm GTIN/EAN mapping before any future write test.
+The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variation discovery is read-only; variations can be selected as first-class preview candidates, but no variation writes exist yet. Confirm GTIN/EAN mapping before any future write test.
 
 ## Product Sync Foundation
 

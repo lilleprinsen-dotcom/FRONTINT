@@ -17,7 +17,7 @@ class ProductMappingPocController extends Controller
         [$wooSnapshot, $frontSnapshot] = $this->latestSnapshotPair($request->user()->organizations()->pluck('organizations.id'));
         $latestPlan = $this->latestPlan($request, $wooSnapshot?->organization_id);
 
-        $wooProducts = $this->productsFromSnapshot($wooSnapshot);
+        $wooProducts = $wooSnapshot ? $planner->wooItemsFromSnapshot($wooSnapshot)->all() : [];
         $frontProducts = $this->productsFromSnapshot($frontSnapshot);
 
         return view('mapping.product-poc', [
@@ -34,39 +34,38 @@ class ProductMappingPocController extends Controller
     public function plan(Request $request, ProductSyncPreviewPlanner $planner): RedirectResponse
     {
         $validated = $request->validate([
-            'woo_product_ids' => ['required', 'array', 'min:1', 'max:' . ProductSyncPreviewPlanner::MAX_SELECTED_PRODUCTS],
-            'woo_product_ids.*' => ['required'],
+            'woo_item_keys' => ['required', 'array', 'min:1', 'max:' . ProductSyncPreviewPlanner::MAX_SELECTED_PRODUCTS],
+            'woo_item_keys.*' => ['required', 'string'],
         ], [
-            'woo_product_ids.max' => 'Select no more than 10 WooCommerce products for this PoC plan.',
+            'woo_item_keys.max' => 'Select no more than 10 WooCommerce products or variations for this PoC plan.',
         ]);
 
         [$wooSnapshot, $frontSnapshot] = $this->latestSnapshotPair($request->user()->organizations()->pluck('organizations.id'));
 
         if (! $wooSnapshot) {
-            return back()->withErrors(['woo_product_ids' => 'Run WooCommerce product discovery before generating a mapping PoC plan.']);
+            return back()->withErrors(['woo_item_keys' => 'Run WooCommerce product discovery before generating a mapping PoC plan.']);
         }
 
         if (! $frontSnapshot) {
-            return back()->withErrors(['woo_product_ids' => 'Run Front product discovery before generating a mapping PoC plan.']);
+            return back()->withErrors(['woo_item_keys' => 'Run Front product discovery before generating a mapping PoC plan.']);
         }
 
-        $availableIds = collect($wooSnapshot->sample_json['products'] ?? [])
-            ->filter(fn ($product): bool => is_array($product))
-            ->map(fn (array $product): string => (string) ($product['id'] ?? ''))
+        $availableKeys = $planner->wooItemsFromSnapshot($wooSnapshot)
+            ->map(fn (array $item): string => $planner->wooItemKey($item))
             ->filter()
             ->values();
 
-        $selectedIds = collect($validated['woo_product_ids'])->map(fn (mixed $id): string => (string) $id)->values();
+        $selectedKeys = collect($validated['woo_item_keys'])->map(fn (mixed $key): string => (string) $key)->values();
 
-        if ($selectedIds->diff($availableIds)->isNotEmpty()) {
-            return back()->withErrors(['woo_product_ids' => 'One or more selected products were not found in the latest WooCommerce discovery snapshot.']);
+        if ($selectedKeys->diff($availableKeys)->isNotEmpty()) {
+            return back()->withErrors(['woo_item_keys' => 'One or more selected products or variations were not found in the latest WooCommerce discovery snapshot.']);
         }
 
-        $plan = $planner->createPlan($request->user(), $wooSnapshot, $frontSnapshot, $selectedIds->all());
+        $plan = $planner->createPlan($request->user(), $wooSnapshot, $frontSnapshot, $selectedKeys->all());
 
         return redirect()
             ->route('mapping.product-poc')
-            ->with('status', "Preview sync plan {$plan->status}: {$plan->selected_count} product(s) selected.");
+            ->with('status', "Preview sync plan {$plan->status}: {$plan->selected_count} item(s) selected.");
     }
 
     private function latestSnapshotPair(Collection $organizationIds): array

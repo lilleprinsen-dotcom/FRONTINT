@@ -49,11 +49,11 @@ Discovery stores only sanitized snapshots in `connection_discovery_snapshots` an
 Phase 4 adds controlled 10-product mapping PoC preparation:
 
 - Open `/mapping/product-poc` after WooCommerce and Front product discovery have both succeeded.
-- Select up to 10 WooCommerce products from the stored discovery snapshot.
+- Select up to 10 WooCommerce products or variations from the stored discovery snapshot.
 - Generate a local preview-only sync plan in `product_sync_preview_plans`.
 - Review ready/blocked validation, warnings, proposed Woo to Front fields, and `NEEDS_CONFIRMATION` items.
 
-The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variation discovery is read-only; no variation writes exist yet. GTIN/EAN candidates must be confirmed before any future write test.
+The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variation discovery is read-only; variations can be selected as first-class preview candidates, but no variation writes exist yet. GTIN/EAN candidates must be confirmed before any future write test.
 
 Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-product catalog:
 
