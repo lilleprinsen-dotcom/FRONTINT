@@ -96,7 +96,7 @@ Proceed only if production writes are disabled and the environment is local/stag
 
 ## J. Test WooCommerce Connection
 
-Run WooCommerce connection test from the dashboard.
+Run WooCommerce connection test from the Connections page.
 
 Expected endpoint:
 
@@ -106,7 +106,7 @@ GET /wp-json/wc/v3/system_status
 
 ## K. Test Front Connection
 
-Run Front connection test from the dashboard.
+Run Front connection test from the Connections page.
 
 Expected endpoint:
 

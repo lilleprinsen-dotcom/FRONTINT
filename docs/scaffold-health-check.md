@@ -43,7 +43,9 @@ Use this checklist before starting real integration implementation.
 - [x] Product sync events table exists for later incremental WooCommerce updates.
 - [x] Sync run pages are paginated/filterable and do not load a full catalog at once.
 - [x] Product sync owner pages are separate from Advanced technical pages.
-- [x] Dashboard shows safe connection status context.
+- [x] Dashboard shows plain-language status and keeps test actions out of the normal workflow.
+- [x] Connections page shows safe connection status context.
+- [x] Testing Lab keeps discovery, mapping preview, and preview-run experiments separate.
 - [x] Connection form shows only the selected connection type fields.
 - [x] Duplicate `/api/connections/{connection}/test` route is not present.
 - [x] No real credentials are committed.

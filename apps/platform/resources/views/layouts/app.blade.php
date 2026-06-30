@@ -16,6 +16,8 @@
         nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         nav a { color: #334155; font-weight: 650; padding: 7px 9px; border-radius: 999px; }
         nav a:hover { background: #eef4fb; text-decoration: none; }
+        .brand { display: flex; flex-direction: column; gap: 2px; }
+        .nav-primary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         table { border-collapse: collapse; width: 100%; background: #fff; border: 1px solid #d9dee5; }
         th, td { padding: 10px 12px; border-bottom: 1px solid #e7ebf0; text-align: left; vertical-align: top; }
         th { background: #f0f3f7; font-size: 13px; }
@@ -33,6 +35,11 @@
         .badge.ready { background: #e8f7ee; color: #17633a; }
         .badge.warning-badge { background: #fff3c4; color: #684a00; }
         .badge.blocked { background: #ffe8e8; color: #8a2525; }
+        .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 999px; background: #9aa5b1; margin-right: 6px; }
+        .status-dot.ready { background: #23a36f; }
+        .status-dot.warning { background: #d99700; }
+        .status-dot.blocked { background: #d14b4b; }
+        .action-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
         .progress { height: 10px; background: #e7ebf0; border-radius: 999px; overflow: hidden; }
         .progress > span { display: block; height: 100%; background: linear-gradient(90deg, #0b5cad, #23a36f); }
         .muted { color: #5d6978; font-size: 14px; }
@@ -45,19 +52,18 @@
 </head>
 <body>
 <header>
-    <div>
+    <div class="brand">
         <strong>OmniBridge</strong>
         <span class="muted">WooCommerce ↔ Front Systems</span>
     </div>
     <nav>
         @auth
-            <a href="{{ route('dashboard') }}">Dashboard</a>
-            <a href="{{ route('connections.index') }}">Connections</a>
-            <a href="{{ route('product-sync.index') }}">Product Sync</a>
-            <a href="{{ route('product-sync.runs.index') }}">Sync Runs</a>
-            <a href="{{ route('discovery.index') }}">Discovery</a>
-            <a href="{{ route('mapping.product-poc') }}">Mapping Preview</a>
-            <a href="{{ route('advanced.index') }}">Advanced</a>
+            <div class="nav-primary">
+                <a href="{{ route('dashboard') }}">Dashboard</a>
+                <a href="{{ route('connections.index') }}">Connections</a>
+                <a href="{{ route('product-sync.index') }}">Product Sync</a>
+                <a href="{{ route('advanced.index') }}">Advanced</a>
+            </div>
             <form class="inline-form" method="post" action="{{ route('logout') }}">
                 @csrf
                 <button class="secondary" type="submit">Log out</button>

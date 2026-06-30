@@ -12,6 +12,19 @@ use Illuminate\View\View;
 
 class ConnectionController extends Controller
 {
+    public function index(Request $request): View
+    {
+        return view('connections.index', [
+            'organizations' => $request->user()
+                ->organizations()
+                ->with(['connections.credentials'])
+                ->orderBy('name')
+                ->get(),
+            'connectionTypes' => config('omnibridge.connection_types'),
+            'connectionHttpTestsEnabled' => (bool) config('omnibridge.allow_connection_test_http'),
+        ]);
+    }
+
     public function create(Request $request): View
     {
         $type = $request->query('type', 'woocommerce');
@@ -44,7 +57,7 @@ class ConnectionController extends Controller
         $this->storeCredentials($connection, $request->input('credentials', []), $vault);
 
         return redirect()
-            ->route('dashboard')
+            ->route('connections.index')
             ->with('status', 'Connection saved.');
     }
 
@@ -76,7 +89,7 @@ class ConnectionController extends Controller
         $this->storeCredentials($connection, $request->input('credentials', []), $vault);
 
         return redirect()
-            ->route('dashboard')
+            ->route('connections.index')
             ->with('status', 'Connection updated.');
     }
 

@@ -210,7 +210,7 @@ class ProductMappingPocTest extends TestCase
         $this->actingAs($user)
             ->get('/mapping/product-poc')
             ->assertOk()
-            ->assertSee('10-Product Mapping PoC')
+            ->assertSee('Mapping Preview Lab')
             ->assertSee('Preview only')
             ->assertSee('Woo Boot')
             ->assertSee('Generate 10-product sync plan')

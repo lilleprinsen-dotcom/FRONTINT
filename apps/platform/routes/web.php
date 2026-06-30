@@ -7,6 +7,7 @@ use App\Http\Controllers\ConnectionDiscoveryController;
 use App\Http\Controllers\ConnectionTestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiscoveryIndexController;
+use App\Http\Controllers\LabController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProductMappingPocController;
 use App\Http\Controllers\ProductSyncController;
@@ -22,7 +23,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
-    Route::get('/connections', fn () => redirect()->route('dashboard'))->name('connections.index');
+    Route::get('/lab', LabController::class)->name('lab.index');
     Route::get('/discovery', DiscoveryIndexController::class)->name('discovery.index');
     Route::get('/advanced', AdvancedController::class)->name('advanced.index');
 
@@ -30,7 +31,7 @@ Route::middleware('auth')->group(function (): void {
         ->only(['index', 'create', 'store', 'edit', 'update']);
 
     Route::resource('connections', ConnectionController::class)
-        ->only(['create', 'store', 'edit', 'update']);
+        ->only(['index', 'create', 'store', 'edit', 'update']);
 
     Route::post('/connections/{connection}/test', ConnectionTestController::class)
         ->name('connections.test');

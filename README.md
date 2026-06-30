@@ -60,7 +60,7 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 - Initial full sync must run in controlled batches with checkpoints and queues.
 - Incremental WooCommerce updates will later create deduplicated product sync events.
 - Product sync profiles define safe defaults, limits, validation rules, scope, identity strategy, GTIN strategy, and preview/limited/full/incremental/production modes.
-- Product sync preview runs convert the latest mapping PoC plan into local run and item status rows.
+- Product sync preview runs convert the latest mapping PoC plan into local run and item status rows from the Testing Lab.
 - Sync runs and run items are paginated and searchable so the portal never loads a full catalog at once.
 - The Product Sync page shows owner-friendly status: Ready, Needs attention, Preview only, Safe mode, and Last checked.
 - Advanced technical settings are separated from normal store-owner pages.
@@ -118,7 +118,7 @@ Hosting platforms should use:
 
 `GET /health` is kept for compatibility and behaves like the readiness check.
 
-## Dashboard
+## Portal Navigation
 
 After local setup, open:
 
@@ -126,11 +126,23 @@ After local setup, open:
 http://localhost:8000/dashboard
 ```
 
-Use the dashboard to create organizations, add WooCommerce/Front connections, view webhook path-token URLs, and run staging-safe connection checks. Connection tests do not perform live HTTP checks unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
+The normal merchant workflow is intentionally small:
+
+- `Dashboard`: plain-language status, safety state, setup progress, and next steps.
+- `Connections`: WooCommerce and Front connection setup, status, and read-only connection tests.
+- `Product Sync`: product sync readiness, run status, and production-safe controls.
+- `Advanced`: technical settings, webhooks, raw events, and the Testing Lab link.
+
+Testing and experimental flows are kept out of the normal navigation:
+
+- `Testing Lab` at `/lab`: read-only discovery, mapping preview, and preview-run experiments.
+- Discovery and mapping PoC pages remain available from the Lab, not as daily merchant pages.
+
+Connection tests do not perform live HTTP checks unless `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true`.
 
 When live HTTP checks are enabled, WooCommerce and Front tests and discovery actions use read-only API endpoints only. They do not sync products, prices, stock, orders, refunds, gift cards, or omnichannel orders.
 
-The dashboard connection test button posts to `/connections/{connection}/test`.
+The connection test button posts to `/connections/{connection}/test`.
 Discovery actions use:
 
 ```text
@@ -178,13 +190,13 @@ php artisan test
 php artisan serve
 ```
 
-Open `http://localhost:8000/dashboard`. Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless you are testing read-only staging credentials.
+Open `http://localhost:8000/dashboard`, then use `http://localhost:8000/connections` for connection setup. Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless you are testing read-only staging credentials. Use `http://localhost:8000/lab` only for read-only discovery and mapping experiments.
 
 Before using real staging/test credentials, follow [docs/live-readonly-test-checklist.md](docs/live-readonly-test-checklist.md).
 
 After WooCommerce and Front product discovery are complete, open `http://localhost:8000/mapping/product-poc` to prepare the 10-product mapping PoC plan. The page is preview-only and uses stored snapshots, so live HTTP can be turned off again before using it.
 
-Then open `http://localhost:8000/product-sync` to create a local preview run from the latest mapping PoC plan. This creates local status rows only and performs no API writes.
+Then open `http://localhost:8000/lab` to create a local preview run from the latest mapping PoC plan. This creates local status rows only and performs no API writes.
 
 ## Verification commands
 
