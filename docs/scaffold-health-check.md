@@ -37,6 +37,7 @@ Use this checklist before starting real integration implementation.
 - [x] WooCommerce GTIN/EAN candidate detection exists.
 - [x] WooCommerce variation discovery uses capped read-only variation endpoints.
 - [x] Woo readiness report exists for sampled products and variations.
+- [x] Woo Readiness dashboard summarizes the latest Woo snapshot without Front or external API calls.
 - [x] Mapping preview exists and does not write final product mappings.
 - [x] Product sync profile defaults exist.
 - [x] Product sync profiles are full-catalog capable but default to preview-only selected scope.

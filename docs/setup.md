@@ -320,6 +320,27 @@ It also checks common keys such as `ean`, `_ean`, `gtin`, `_gtin`, `barcode`, an
 
 Detected GTIN/EAN values are candidates only. Confirm them against product data and Front results before final mapping. The Woo readiness report is a preview helper, not approval to sync.
 
+## Woo Readiness Dashboard
+
+Open:
+
+```text
+http://localhost:8000/woo-readiness
+```
+
+This is the easiest page to use before the Front account is ready. It uses only the latest stored WooCommerce discovery snapshot and does not call WooCommerce or Front.
+
+It shows:
+
+- Ready items with SKU and EAN/GTIN.
+- SKU-only items that can use SKU fallback.
+- Blocked items that need SKU, price, or duplicate cleanup.
+- Duplicate SKUs and duplicate EAN/GTIN values.
+- Variable parent products versus sellable variation rows.
+- Missing SKU and missing price counts.
+
+Use this page to decide what product data to fix in WooCommerce before any future Front write test.
+
 When a Front product sample exists, the mapping preview compares the latest WooCommerce and Front product samples for the same organization:
 
 1. Woo detected GTIN/EAN equals Front product size GTIN.
@@ -332,7 +353,7 @@ Discovery snapshots keep only the latest 5 rows per connection and discovery typ
 
 ## 10-Product Mapping PoC
 
-After both product discovery samples exist, open:
+After WooCommerce product discovery exists, open:
 
 ```text
 http://localhost:8000/mapping/product-poc

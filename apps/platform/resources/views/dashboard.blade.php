@@ -40,9 +40,9 @@
             <span class="muted">Connection issues and failed events</span>
         </div>
         <div class="metric">
-            <span class="muted">Product Sync</span>
-            <strong>Preview</strong>
-            <span class="muted">No products are written to Front yet</span>
+            <span class="muted">Woo readiness</span>
+            <strong>Review</strong>
+            <span class="muted">Check product data before Front setup</span>
         </div>
     </section>
 
@@ -57,10 +57,10 @@
 
         <div class="panel">
             <h2>Next Steps</h2>
-            <p class="muted">Normal setup should stay simple: connect systems, review readiness, then prepare product sync.</p>
+            <p class="muted">Normal setup should stay simple: connect WooCommerce, review product readiness, then prepare product sync.</p>
             <div class="action-row">
                 <a class="button" href="{{ route('connections.index') }}">Manage connections</a>
-                <a class="button secondary" href="{{ route('product-sync.index') }}">Open product sync</a>
+                <a class="button secondary" href="{{ route('woo-readiness.index') }}">Review Woo readiness</a>
             </div>
         </div>
 
@@ -85,9 +85,9 @@
                     <td><a href="{{ route('connections.index') }}">Review connections</a></td>
                 </tr>
                 <tr>
-                    <td>Product sync</td>
-                    <td>Preview only</td>
-                    <td><a href="{{ route('product-sync.index') }}">Review readiness</a></td>
+                    <td>Woo readiness</td>
+                    <td>Read-only</td>
+                    <td><a href="{{ route('woo-readiness.index') }}">Review products</a></td>
                 </tr>
                 <tr>
                     <td>Technical setup</td>
