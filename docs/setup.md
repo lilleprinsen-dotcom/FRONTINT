@@ -100,6 +100,23 @@ Expected result:
 - No secrets, customer data, order data, or product payloads are returned.
 - No WooCommerce, Front, stock, price, order, refund, gift card, or customer writes occur.
 
+Portal-side plugin adapter test:
+
+1. Open the local OmniBridge portal.
+2. Edit the WooCommerce connection.
+3. Set **WooCommerce site URL** to the staging store URL.
+4. Save the same shared secret in **OmniBridge plugin shared secret**.
+5. Open **Connections**.
+6. Click **Test Woo plugin**.
+
+This signs and calls:
+
+```text
+GET /wp-json/omnibridge/v1/connection-test
+```
+
+This is separate from **Test Woo REST**, which uses WooCommerce consumer key/secret and `GET /wp-json/wc/v3/system_status`.
+
 ## 1. Clone the Repo
 
 ```bash

@@ -56,7 +56,17 @@ http://localhost:8000/dashboard
 
 ## E. Add WooCommerce Staging Connection
 
-In the portal, add the WooCommerce staging/test site URL, consumer key, and consumer secret.
+In the portal, add:
+
+- WooCommerce staging/test site URL.
+- WooCommerce consumer key and consumer secret for **Test Woo REST**.
+- OmniBridge plugin shared secret for **Test Woo plugin**.
+
+Click **Test Woo plugin** to verify the installed WordPress plugin adapter from the portal. This signs and calls only:
+
+```text
+GET /wp-json/omnibridge/v1/connection-test
+```
 
 ## F. Add Front Connection
 

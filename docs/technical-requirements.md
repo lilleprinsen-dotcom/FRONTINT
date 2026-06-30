@@ -95,6 +95,10 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - The signed endpoint must reject missing secrets, missing signature headers, expired timestamps, and invalid signatures.
 - Plugin test endpoints must return no secrets, customer data, order data, full product payloads, or raw credentials.
 - Plugin test endpoints must report `read_only=true` and `writes_performed=false`.
+- The Laravel portal may run a signed WooCommerce plugin adapter test from the WooCommerce connection using the encrypted `plugin_shared_secret` credential.
+- The portal plugin adapter test must call only `GET /wp-json/omnibridge/v1/connection-test`.
+- The portal plugin adapter test must not call WooCommerce write endpoints, Front endpoints, product sync endpoints, stock endpoints, order endpoints, refund endpoints, or gift card endpoints.
+- Portal-side plugin adapter test results may store safe metadata such as plugin version, WooCommerce version, currency, and boolean capability flags.
 - The plugin may store lightweight product metadata for future platform-driven sync eligibility and status.
 - Product meta saves must use WordPress/WooCommerce permission and nonce checks.
 - Product bulk actions must check per-product edit capability before updating local metadata.

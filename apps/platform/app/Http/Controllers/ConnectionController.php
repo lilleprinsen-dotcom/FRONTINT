@@ -113,7 +113,7 @@ class ConnectionController extends Controller
     private function credentialTypesForConnection(string $connectionType): array
     {
         return match ($connectionType) {
-            'woocommerce' => ['consumer_key', 'consumer_secret'],
+            'woocommerce' => ['consumer_key', 'consumer_secret', 'plugin_shared_secret'],
             'front', 'front_systems' => ['api_key'],
             'webtoffee_adapter' => ['shared_secret'],
             'dintero', 'stripe' => ['note'],
