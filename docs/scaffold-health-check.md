@@ -46,6 +46,13 @@ Use this checklist before starting real integration implementation.
 - [x] Dashboard shows plain-language status and keeps test actions out of the normal workflow.
 - [x] Connections page shows safe connection status context.
 - [x] Testing Lab keeps discovery, mapping preview, and preview-run experiments separate.
+- [x] WooCommerce plugin has an installable admin settings page.
+- [x] WooCommerce plugin exposes a public read-only health endpoint.
+- [x] WooCommerce plugin exposes a signed read-only connection test endpoint.
+- [x] WooCommerce plugin direct tests can run from WordPress without Laravel safe-mode skips.
+- [x] WooCommerce plugin product fields use permission and nonce checks.
+- [x] WooCommerce plugin remains thin and avoids heavy catalog queries or Front writes.
+- [x] Static plugin guard tests exist.
 - [x] Connection form shows only the selected connection type fields.
 - [x] Duplicate `/api/connections/{connection}/test` route is not present.
 - [x] No real credentials are committed.

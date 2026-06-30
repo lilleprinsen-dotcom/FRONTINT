@@ -82,6 +82,27 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Safe Front store metadata is limited to store name, store ID, stock ID, currency, and time zone.
 - Connection test actions must not print or return secret values.
 
+## WooCommerce Plugin Adapter
+
+- The WooCommerce plugin must remain thin.
+- The plugin may expose read-only diagnostics and signed adapter endpoints.
+- The plugin health endpoint is `GET /wp-json/omnibridge/v1/health` and must not require secrets.
+- The signed connection test endpoint is `GET /wp-json/omnibridge/v1/connection-test`.
+- Signed plugin requests use:
+  - `X-Omnibridge-Timestamp`
+  - `X-Omnibridge-Signature`
+  - HMAC-SHA256 over `METHOD + "\n" + ROUTE + "\n" + TIMESTAMP`
+- The signed endpoint must reject missing secrets, missing signature headers, expired timestamps, and invalid signatures.
+- Plugin test endpoints must return no secrets, customer data, order data, full product payloads, or raw credentials.
+- Plugin test endpoints must report `read_only=true` and `writes_performed=false`.
+- The plugin may store lightweight product metadata for future platform-driven sync eligibility and status.
+- Product meta saves must use WordPress/WooCommerce permission and nonce checks.
+- Product bulk actions must check per-product edit capability before updating local metadata.
+- The plugin must not call Front Systems.
+- The plugin must not run catalog sync jobs.
+- The plugin must not scan the full product catalog.
+- The plugin must not update prices, stock, orders, refunds, gift cards, customers, or Front data.
+
 ## Read-Only Discovery
 
 - Discovery actions use the same safety gate as live connection tests: `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP`.

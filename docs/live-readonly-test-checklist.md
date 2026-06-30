@@ -24,7 +24,25 @@ OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false
 
 Production writes must remain disabled.
 
-## C. Start Portal
+## C. Test the WooCommerce Plugin Directly
+
+If the OmniBridge WooCommerce Adapter is installed on the staging WooCommerce site, test it before enabling platform live HTTP checks.
+
+Public plugin health check:
+
+```text
+GET /wp-json/omnibridge/v1/health
+```
+
+Signed plugin connection test:
+
+```text
+GET /wp-json/omnibridge/v1/connection-test
+```
+
+The signed test uses `X-Omnibridge-Timestamp` and `X-Omnibridge-Signature` HMAC headers. These plugin endpoints are read-only and do not use the Laravel safe-mode skip, so they can confirm the Woo-side adapter is installed and responding without running sync.
+
+## D. Start Portal
 
 ```bash
 php artisan serve
@@ -36,17 +54,17 @@ Open:
 http://localhost:8000/dashboard
 ```
 
-## D. Add WooCommerce Staging Connection
+## E. Add WooCommerce Staging Connection
 
 In the portal, add the WooCommerce staging/test site URL, consumer key, and consumer secret.
 
-## E. Add Front Connection
+## F. Add Front Connection
 
 In the portal, add the Front Systems base URL and API key.
 
 Use a Front sandbox/test API key if available. If only a production Front API key exists, test only `GET /api/Environment` and `GET /api/Stores` first.
 
-## F. Test With Live HTTP Disabled
+## G. Test With Live HTTP Disabled
 
 Keep:
 
@@ -64,7 +82,7 @@ skipped / safe mode
 
 No external HTTP calls should be made.
 
-## G. Enable Live Read-Only Tests
+## H. Enable Live Read-Only Tests
 
 Stop the server.
 
@@ -80,13 +98,13 @@ Keep:
 OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false
 ```
 
-## H. Restart Server
+## I. Restart Server
 
 ```bash
 php artisan serve
 ```
 
-## I. Run Preflight Again
+## J. Run Preflight Again
 
 ```bash
 php artisan omnibridge:preflight-readonly
@@ -94,7 +112,7 @@ php artisan omnibridge:preflight-readonly
 
 Proceed only if production writes are disabled and the environment is local/staging.
 
-## J. Test WooCommerce Connection
+## K. Test WooCommerce Connection
 
 Run WooCommerce connection test from the Connections page.
 
@@ -104,7 +122,7 @@ Expected endpoint:
 GET /wp-json/wc/v3/system_status
 ```
 
-## K. Test Front Connection
+## L. Test Front Connection
 
 Run Front connection test from the Connections page.
 
@@ -114,7 +132,7 @@ Expected endpoint:
 GET /api/Environment
 ```
 
-## L. Run Front Stores Discovery
+## M. Run Front Stores Discovery
 
 Run Front stores discovery before Front product discovery.
 
@@ -124,7 +142,7 @@ Expected endpoint:
 GET /api/Stores
 ```
 
-## M. Run WooCommerce Product Discovery
+## N. Run WooCommerce Product Discovery
 
 Expected endpoint:
 
@@ -132,7 +150,7 @@ Expected endpoint:
 GET /wp-json/wc/v3/products?per_page=10&page=1&status=publish
 ```
 
-## N. Run Front Product Discovery Last
+## O. Run Front Product Discovery Last
 
 Only after the previous checks work, run Front product discovery.
 
@@ -144,7 +162,7 @@ POST /api/Product
 
 This is read-only according to the Front OpenAPI spec. It must use `pageSize=10` and must not call `/api/products`.
 
-## O. Turn Live HTTP Tests Back Off
+## P. Turn Live HTTP Tests Back Off
 
 After testing, set:
 
@@ -154,7 +172,7 @@ OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false
 
 Confirm no write endpoints were called and no product sync, price sync, stock sync, order sync, refunds, gift cards, or omnichannel actions occurred.
 
-## P. Prepare the 10-Product Mapping PoC
+## Q. Prepare the 10-Product Mapping PoC
 
 After live read-only discovery has succeeded, turn live HTTP tests back off if no more external checks are needed.
 
@@ -175,7 +193,7 @@ Review:
 
 This is not product sync. The plan uses stored snapshots only, stores preview data in `product_sync_preview_plans`, does not write `product_mappings`, and does not call WooCommerce or Front APIs.
 
-## Q. Create a Product Sync Preview Run
+## R. Create a Product Sync Preview Run
 
 Open:
 
