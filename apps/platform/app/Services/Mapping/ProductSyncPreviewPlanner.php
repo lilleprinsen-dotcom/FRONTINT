@@ -15,16 +15,15 @@ class ProductSyncPreviewPlanner
         User $user,
         ConnectionDiscoverySnapshot $wooSnapshot,
         ConnectionDiscoverySnapshot $frontSnapshot,
-        array $selectedWooProductIds,
+        array $selectedWooItemKeys,
     ): ProductSyncPreviewPlan {
-        $selectedIds = collect($selectedWooProductIds)
-            ->map(fn (mixed $id): string => (string) $id)
+        $selectedKeys = collect($selectedWooItemKeys)
+            ->map(fn (mixed $key): string => (string) $key)
             ->take(self::MAX_SELECTED_PRODUCTS)
             ->values();
 
-        $wooProducts = collect($wooSnapshot->sample_json['products'] ?? [])
-            ->filter(fn ($product): bool => is_array($product))
-            ->filter(fn (array $product): bool => $selectedIds->contains((string) ($product['id'] ?? '')))
+        $wooItems = $this->wooItemsFromSnapshot($wooSnapshot)
+            ->filter(fn (array $item): bool => $selectedKeys->contains($this->wooItemKey($item)))
             ->values();
 
         $frontProducts = collect($frontSnapshot->sample_json['products'] ?? [])
@@ -32,12 +31,12 @@ class ProductSyncPreviewPlanner
             ->values()
             ->all();
 
-        $duplicateGtins = $this->duplicateValues($wooProducts, fn (array $product): ?string => $this->gtinValue($product));
-        $duplicateSkus = $this->duplicateValues($wooProducts, fn (array $product): ?string => $this->stringValue($product['sku'] ?? null));
+        $duplicateGtins = $this->duplicateValues($wooItems, fn (array $item): ?string => $this->gtinValue($item));
+        $duplicateSkus = $this->duplicateValues($wooItems, fn (array $item): ?string => $this->stringValue($item['sku'] ?? null));
         $frontSizes = $this->flattenFrontSizes($frontProducts);
 
-        $rows = $wooProducts
-            ->map(fn (array $product): array => $this->planRow($product, $frontSizes, $duplicateGtins, $duplicateSkus))
+        $rows = $wooItems
+            ->map(fn (array $item): array => $this->planRow($item, $frontSizes, $duplicateGtins, $duplicateSkus))
             ->values()
             ->all();
 
@@ -67,7 +66,9 @@ class ProductSyncPreviewPlanner
             'validation_json' => [
                 'rows' => collect($rows)
                     ->map(fn (array $row): array => [
-                        'woo_product_id' => $row['woo_product']['id'] ?? null,
+                        'woo_item_key' => $row['woo_product']['item_key'] ?? null,
+                        'woo_product_id' => $row['woo_product']['parent_product_id'] ?? $row['woo_product']['id'] ?? null,
+                        'woo_variation_id' => $row['woo_product']['type'] === 'variation' ? ($row['woo_product']['id'] ?? null) : null,
                         'status' => $row['status'],
                         'blocks' => $row['blocks'],
                         'warnings' => $row['warnings'],
@@ -81,7 +82,7 @@ class ProductSyncPreviewPlanner
 
     public function previewRows(array $wooProducts, array $frontProducts): array
     {
-        $wooCollection = collect($wooProducts)->filter(fn ($product): bool => is_array($product))->take(self::MAX_SELECTED_PRODUCTS)->values();
+        $wooCollection = collect($wooProducts)->filter(fn ($product): bool => is_array($product))->values();
         $duplicateGtins = $this->duplicateValues($wooCollection, fn (array $product): ?string => $this->gtinValue($product));
         $duplicateSkus = $this->duplicateValues($wooCollection, fn (array $product): ?string => $this->stringValue($product['sku'] ?? null));
         $frontSizes = $this->flattenFrontSizes($frontProducts);
@@ -90,6 +91,32 @@ class ProductSyncPreviewPlanner
             ->map(fn (array $product): array => $this->planRow($product, $frontSizes, $duplicateGtins, $duplicateSkus))
             ->values()
             ->all();
+    }
+
+    public function wooItemsFromSnapshot(ConnectionDiscoverySnapshot $snapshot): Collection
+    {
+        $products = collect($snapshot->sample_json['products'] ?? [])
+            ->filter(fn ($product): bool => is_array($product))
+            ->map(fn (array $product): array => $this->normalizeWooProductItem($product));
+
+        $variations = collect($snapshot->sample_json['variations'] ?? [])
+            ->filter(fn ($variation): bool => is_array($variation))
+            ->filter(fn (array $variation): bool => ($variation['discovery_status'] ?? 'success') === 'success')
+            ->map(fn (array $variation): array => $this->normalizeWooVariationItem($variation));
+
+        return $products
+            ->concat($variations)
+            ->filter(fn (array $item): bool => $this->wooItemKey($item) !== '')
+            ->values();
+    }
+
+    public function wooItemKey(array $item): string
+    {
+        if (($item['type'] ?? null) === 'variation') {
+            return 'variation:' . (string) ($item['id'] ?? '');
+        }
+
+        return 'product:' . (string) ($item['id'] ?? '');
     }
 
     private function planRow(array $wooProduct, array $frontSizes, array $duplicateGtins, array $duplicateSkus): array
@@ -137,7 +164,11 @@ class ProductSyncPreviewPlanner
         }
 
         if (($wooProduct['type'] ?? null) === 'variable') {
-            $blocks[] = 'Variable product: variations are not fetched yet.';
+            $warnings[] = 'Variable parent selected. Usually the sellable variation rows should be selected instead.';
+        }
+
+        if (($wooProduct['type'] ?? null) === 'variation' && ($wooProduct['parent_product_id'] ?? null) === null) {
+            $blocks[] = 'Variation is missing parent product context.';
         }
 
         if ($price === null) {
@@ -187,6 +218,8 @@ class ProductSyncPreviewPlanner
         return [
             'woo_product' => [
                 'id' => $wooProduct['id'] ?? null,
+                'item_key' => $this->wooItemKey($wooProduct),
+                'parent_product_id' => $wooProduct['parent_product_id'] ?? null,
                 'name' => $name,
                 'sku' => $sku,
                 'type' => $wooProduct['type'] ?? null,
@@ -217,6 +250,39 @@ class ProductSyncPreviewPlanner
             'warnings' => array_values(array_unique($warnings)),
             'needs_confirmation' => array_values(array_unique($needsConfirmation)),
             'preview_only' => true,
+        ];
+    }
+
+    private function normalizeWooProductItem(array $product): array
+    {
+        $product['type'] = $product['type'] ?? 'simple';
+        $product['item_key'] = $this->wooItemKey($product);
+
+        return $product;
+    }
+
+    private function normalizeWooVariationItem(array $variation): array
+    {
+        return [
+            'id' => $variation['id'] ?? null,
+            'parent_product_id' => $variation['parent_id'] ?? null,
+            'parent_name' => $variation['parent_name'] ?? null,
+            'name' => $variation['name'] ?? null,
+            'sku' => $variation['sku'] ?? null,
+            'type' => 'variation',
+            'status' => $variation['status'] ?? null,
+            'permalink' => $variation['permalink'] ?? null,
+            'price' => $variation['price'] ?? null,
+            'regular_price' => $variation['regular_price'] ?? null,
+            'sale_price' => $variation['sale_price'] ?? null,
+            'stock_quantity' => $variation['stock_quantity'] ?? null,
+            'stock_status' => $variation['stock_status'] ?? null,
+            'manage_stock' => $variation['manage_stock'] ?? null,
+            'categories' => [],
+            'brands' => [],
+            'attributes' => $variation['attributes'] ?? [],
+            'gtin_candidate' => $variation['gtin_candidate'] ?? ['key' => null, 'value' => null, 'confidence' => 'none', 'candidates' => []],
+            'item_key' => 'variation:' . (string) ($variation['id'] ?? ''),
         ];
     }
 

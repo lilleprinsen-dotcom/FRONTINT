@@ -7,6 +7,7 @@ use App\Models\ConnectionDiscoverySnapshot;
 use App\Models\Organization;
 use App\Models\ProductMapping;
 use App\Models\ProductSyncPreviewPlan;
+use App\Models\ProductSyncRunItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -28,8 +29,8 @@ class ProductMappingPocTest extends TestCase
         [$user] = $this->userWithOrganization();
 
         $this->actingAs($user)
-            ->post('/mapping/product-poc/plan', ['woo_product_ids' => [123]])
-            ->assertSessionHasErrors('woo_product_ids');
+            ->post('/mapping/product-poc/plan', ['woo_item_keys' => ['product:123']])
+            ->assertSessionHasErrors('woo_item_keys');
 
         $this->assertSame(0, ProductSyncPreviewPlan::query()->count());
     }
@@ -41,8 +42,8 @@ class ProductMappingPocTest extends TestCase
         $this->snapshot($organization, $wooConnection, 'woocommerce', [$this->wooProduct()]);
 
         $this->actingAs($user)
-            ->post('/mapping/product-poc/plan', ['woo_product_ids' => [123]])
-            ->assertSessionHasErrors('woo_product_ids');
+            ->post('/mapping/product-poc/plan', ['woo_item_keys' => ['product:123']])
+            ->assertSessionHasErrors('woo_item_keys');
 
         $this->assertSame(0, ProductSyncPreviewPlan::query()->count());
     }
@@ -61,8 +62,8 @@ class ProductMappingPocTest extends TestCase
         $this->snapshot($organization, $frontConnection, 'front_systems', [$this->frontProduct()]);
 
         $this->actingAs($user)
-            ->post('/mapping/product-poc/plan', ['woo_product_ids' => range(1, 11)])
-            ->assertSessionHasErrors('woo_product_ids');
+            ->post('/mapping/product-poc/plan', ['woo_item_keys' => collect(range(1, 11))->map(fn (int $id): string => "product:{$id}")->all()])
+            ->assertSessionHasErrors('woo_item_keys');
 
         $this->assertSame(0, ProductSyncPreviewPlan::query()->count());
     }
@@ -92,7 +93,7 @@ class ProductMappingPocTest extends TestCase
         $plan = $this->planForProducts([
             $this->wooProduct(id: 123, sku: 'BOOT-24', gtin: '7040000000012'),
             $this->wooProduct(id: 124, sku: 'BOOT-25', gtin: '7040000000012'),
-        ], [123, 124]);
+        ], ['product:123', 'product:124']);
 
         $this->assertSame('blocked', $plan->status);
         $this->assertContains('Duplicate GTIN/EAN within selected sample.', $plan->plan_json['rows'][0]['blocks']);
@@ -104,7 +105,7 @@ class ProductMappingPocTest extends TestCase
         $plan = $this->planForProducts([
             $this->wooProduct(id: 123, sku: 'BOOT-24', gtin: '7040000000012'),
             $this->wooProduct(id: 124, sku: 'BOOT-24', gtin: '7040000000013'),
-        ], [123, 124]);
+        ], ['product:123', 'product:124']);
 
         $this->assertSame('blocked', $plan->status);
         $this->assertContains('Duplicate SKU within selected sample.', $plan->plan_json['rows'][0]['blocks']);
@@ -123,21 +124,21 @@ class ProductMappingPocTest extends TestCase
         $this->assertContains('No price candidate exists.', $plan->plan_json['rows'][0]['blocks']);
     }
 
-    public function test_variable_product_is_blocked_for_now(): void
+    public function test_variable_parent_warns_that_variations_are_usually_sellable_candidates(): void
     {
         $plan = $this->planForProducts([
-            $this->wooProduct(type: 'variable'),
+            $this->wooProduct(type: 'variable', gtin: '7040000000012'),
         ]);
 
-        $this->assertSame('blocked', $plan->status);
-        $this->assertContains('Variable product: variations are not fetched yet.', $plan->plan_json['rows'][0]['blocks']);
+        $this->assertSame('ready', $plan->status);
+        $this->assertContains('Variable parent selected. Usually the sellable variation rows should be selected instead.', $plan->plan_json['rows'][0]['warnings']);
     }
 
     public function test_gtin_match_beats_sku_match(): void
     {
         $plan = $this->planForProducts([
             $this->wooProduct(sku: 'SAME-SKU', gtin: 'GTIN-WINS'),
-        ], [123], [
+        ], ['product:123'], [
             $this->frontProduct(productId: 501, name: 'GTIN Match', gtin: 'GTIN-WINS', externalSku: 'OTHER-SKU', identity: 'OTHER-ID'),
             $this->frontProduct(productId: 502, name: 'SKU Match', gtin: 'OTHER-GTIN', externalSku: 'SAME-SKU', identity: 'SAME-SKU'),
         ]);
@@ -154,7 +155,7 @@ class ProductMappingPocTest extends TestCase
     {
         $plan = $this->planForProducts([
             $this->wooProduct(sku: 'SKU-FALLBACK', gtin: 'NO-GTIN-MATCH'),
-        ], [123], [
+        ], ['product:123'], [
             $this->frontProduct(productId: 501, name: 'SKU Match', gtin: null, externalSku: 'SKU-FALLBACK', identity: 'OTHER-ID'),
         ]);
 
@@ -204,7 +205,7 @@ class ProductMappingPocTest extends TestCase
         $this->snapshot($organization, $frontConnection, 'front_systems', [$this->frontProduct()]);
 
         $this->actingAs($user)
-            ->post('/mapping/product-poc/plan', ['woo_product_ids' => [123]])
+            ->post('/mapping/product-poc/plan', ['woo_item_keys' => ['product:123']])
             ->assertRedirect('/mapping/product-poc');
 
         $this->actingAs($user)
@@ -212,13 +213,57 @@ class ProductMappingPocTest extends TestCase
             ->assertOk()
             ->assertSee('Mapping Preview Lab')
             ->assertSee('Preview only')
+            ->assertSee('Select Products and Variations')
             ->assertSee('Woo Boot')
             ->assertSee('Generate 10-product sync plan')
             ->assertSee('Generated Plan')
             ->assertSee('NEEDS_CONFIRMATION');
     }
 
-    private function planForProducts(array $wooProducts, array $selectedIds = [123], ?array $frontProducts = null): ProductSyncPreviewPlan
+    public function test_variation_from_discovery_snapshot_can_be_selected_as_first_class_candidate(): void
+    {
+        [$user, $organization] = $this->userWithOrganization();
+        $wooConnection = $this->connection($organization, 'woocommerce');
+        $frontConnection = $this->connection($organization, 'front_systems');
+        $variation = $this->wooVariation();
+
+        $this->snapshot($organization, $wooConnection, 'woocommerce', [
+            $this->wooProduct(id: 123, sku: 'PARENT-SKU', gtin: null, type: 'variable'),
+        ], [$variation]);
+        $this->snapshot($organization, $frontConnection, 'front_systems', [
+            $this->frontProduct(gtin: '7040000000456', externalSku: 'BOOT-24-BLUE', identity: 'BOOT-24-BLUE'),
+        ]);
+
+        $this->actingAs($user)
+            ->post('/mapping/product-poc/plan', ['woo_item_keys' => ['variation:456']])
+            ->assertRedirect('/mapping/product-poc');
+
+        $plan = ProductSyncPreviewPlan::query()->firstOrFail();
+        $row = $plan->plan_json['rows'][0];
+
+        $this->assertSame('ready', $plan->status);
+        $this->assertSame('variation:456', $row['woo_product']['item_key']);
+        $this->assertSame(123, $row['woo_product']['parent_product_id']);
+        $this->assertSame('variation', $row['woo_product']['type']);
+        $this->assertSame('7040000000456', $row['proposed_front_payload']['productSizes'][0]['gtin']);
+        $this->assertSame('BOOT-24-BLUE', $row['proposed_front_payload']['productSizes'][0]['externalSKU']);
+        $this->assertSame('matched_existing_front_product', $row['front_match']['status']);
+        $this->assertSame('gtin', $row['front_match']['method']);
+
+        $this->actingAs($user)
+            ->post('/product-sync/preview-run')
+            ->assertRedirect();
+
+        $runItem = ProductSyncRunItem::query()->firstOrFail();
+
+        $this->assertSame('variation:456', $runItem->woo_item_key);
+        $this->assertSame(123, $runItem->woo_product_id);
+        $this->assertSame(456, $runItem->woo_variation_id);
+        $this->assertSame('BOOT-24-BLUE', $runItem->woo_sku);
+        $this->assertSame('7040000000456', $runItem->detected_gtin);
+    }
+
+    private function planForProducts(array $wooProducts, array $selectedKeys = ['product:123'], ?array $frontProducts = null): ProductSyncPreviewPlan
     {
         [$user, $organization] = $this->userWithOrganization();
         $wooConnection = $this->connection($organization, 'woocommerce');
@@ -228,7 +273,7 @@ class ProductMappingPocTest extends TestCase
         $this->snapshot($organization, $frontConnection, 'front_systems', $frontProducts ?? [$this->frontProduct()]);
 
         $this->actingAs($user)
-            ->post('/mapping/product-poc/plan', ['woo_product_ids' => $selectedIds])
+            ->post('/mapping/product-poc/plan', ['woo_item_keys' => $selectedKeys])
             ->assertRedirect('/mapping/product-poc');
 
         return ProductSyncPreviewPlan::query()->firstOrFail();
@@ -265,7 +310,7 @@ class ProductMappingPocTest extends TestCase
         ]);
     }
 
-    private function snapshot(Organization $organization, Connection $connection, string $source, array $products): ConnectionDiscoverySnapshot
+    private function snapshot(Organization $organization, Connection $connection, string $source, array $products, array $variations = []): ConnectionDiscoverySnapshot
     {
         return ConnectionDiscoverySnapshot::query()->create([
             'organization_id' => $organization->id,
@@ -274,7 +319,7 @@ class ProductMappingPocTest extends TestCase
             'discovery_type' => 'products',
             'status' => 'success',
             'summary_json' => ['count' => count($products), 'read_only' => true],
-            'sample_json' => ['products' => $products],
+            'sample_json' => ['products' => $products, 'variations' => $variations],
             'checked_at' => now(),
         ]);
     }
@@ -308,6 +353,40 @@ class ProductMappingPocTest extends TestCase
                     ['key' => 'Zettle_barcode', 'value' => $gtin, 'confidence' => 'exact_known_field'],
                 ],
             ],
+        ];
+    }
+
+    private function wooVariation(
+        int $id = 456,
+        int $parentId = 123,
+        ?string $name = 'Woo Boot Blue',
+        ?string $sku = 'BOOT-24-BLUE',
+        ?string $gtin = '7040000000456',
+    ): array {
+        return [
+            'id' => $id,
+            'parent_id' => $parentId,
+            'parent_name' => 'Woo Boot',
+            'name' => $name,
+            'sku' => $sku,
+            'type' => 'variation',
+            'status' => 'publish',
+            'price' => '599',
+            'regular_price' => '599',
+            'sale_price' => '',
+            'stock_quantity' => 2,
+            'stock_status' => 'instock',
+            'manage_stock' => true,
+            'attributes' => ['Blue', '24'],
+            'gtin_candidate' => [
+                'key' => $gtin === null || $gtin === '' ? null : '_izettle_barcode',
+                'value' => $gtin,
+                'confidence' => $gtin === null || $gtin === '' ? 'none' : 'exact_known_field',
+                'candidates' => $gtin === null || $gtin === '' ? [] : [
+                    ['key' => '_izettle_barcode', 'value' => $gtin, 'confidence' => 'exact_known_field'],
+                ],
+            ],
+            'discovery_status' => 'success',
         ];
     }
 

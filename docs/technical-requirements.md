@@ -144,10 +144,12 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 
 - The `/mapping/product-poc` page must be authenticated.
 - The page and plan action must use stored `connection_discovery_snapshots` only and must not make external HTTP calls.
-- The plan action must reject more than 10 selected WooCommerce products.
+- The plan action must reject more than 10 selected WooCommerce products or variations.
+- Selection keys must be explicit Woo item keys such as `product:123` or `variation:456`.
 - Generated plans are stored in `product_sync_preview_plans`, not final mapping or sync history.
 - The preview plan must not write to `product_mappings`.
-- Block products with missing name, missing SKU, missing GTIN/EAN candidate, empty GTIN/EAN candidate, duplicate selected SKU/GTIN, variable product type, or no price candidate.
+- Block selected products or variations with missing name, missing SKU, missing GTIN/EAN candidate, empty GTIN/EAN candidate, duplicate selected SKU/GTIN, missing variation parent context, or no price candidate.
+- Variable parent products may be previewed but should warn that sellable variation rows are usually better Front POS candidates.
 - Warn, but do not block, for missing brand, missing category, missing sale price, out-of-stock status, `manage_stock=false`, no Front sample match, uncertain category mapping, or uncertain brand mapping.
 - Proposed Front fields are candidates only. Group/subgroup, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy must be marked `NEEDS_CONFIRMATION`.
 - This phase must not use Front `/api/products`, `POST /api/PricelistV2`, `POST /api/Stock/adjust`, `PUT /api/Sale`, `POST /api/OmniChannel`, or any WooCommerce write endpoint.
@@ -159,7 +161,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Default mode is `preview_only`.
 - Production mode must not be selectable unless `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=true`.
 - Preview runs are local planning records only and must not call external APIs.
-- Sync run items store selected products only, not the whole catalog.
+- Sync run items store selected products or variations only, not the whole catalog.
 - Future large-catalog scanning must be background-job based, paginated, and incremental.
 - Owner pages should use plain-language status. Testing workflows belong in the Testing Lab. Technical details belong in Advanced.
 
