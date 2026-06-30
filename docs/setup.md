@@ -295,6 +295,7 @@ OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true
 Read-only discovery endpoints:
 
 - WooCommerce product sample: `GET /wp-json/wc/v3/products?per_page=10&page=1&status=publish`
+- WooCommerce variation sample for variable products: `GET /wp-json/wc/v3/products/{productId}/variations?per_page=10&page=1`
 - Front stores: `GET /api/Stores`
 - Front product sample: `POST /api/Product` with `pageSize=10` and read-only search filters
 
@@ -304,6 +305,8 @@ Stored discovery data is intentionally small and sanitized:
 
 - Latest store metadata: store ID, store no, store name, stock ID, external stock ID, currency, and time zone.
 - WooCommerce product sample metadata: ID, name, SKU, type, status, price, stock fields, categories, brand names if present, variation count, and likely GTIN/EAN candidate.
+- WooCommerce variation sample metadata: parent product ID, variation ID, name, SKU, attributes, price, stock fields, and likely GTIN/EAN candidate.
+- WooCommerce readiness report: sampled products and variations marked Ready, Needs attention, or Blocked with missing SKU, GTIN/EAN, price, stock, and variation-readiness notes.
 - Front product sample metadata: product ID, name, number, variant, brand, group/subgroup, web/discontinued flags, and safe product size identifiers.
 
 GTIN/EAN candidate detection checks Lilleprinsen-relevant WooCommerce meta keys first:
@@ -315,7 +318,7 @@ GTIN/EAN candidate detection checks Lilleprinsen-relevant WooCommerce meta keys 
 
 It also checks common keys such as `ean`, `_ean`, `gtin`, `_gtin`, `barcode`, and `_barcode`.
 
-Detected GTIN/EAN values are candidates only. Confirm them against product data and Front results before final mapping.
+Detected GTIN/EAN values are candidates only. Confirm them against product data and Front results before final mapping. The Woo readiness report is a preview helper, not approval to sync.
 
 The mapping preview compares the latest WooCommerce and Front product samples for the same organization:
 
@@ -345,7 +348,7 @@ The plan shows:
 - Non-blocking warnings such as missing brand/category, missing sale price, out-of-stock status, `manage_stock=false`, or no current Front sample match.
 - `NEEDS_CONFIRMATION` items for category/group mapping, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy.
 
-The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variation-level sync is planned for the production catalog architecture, but no variation writes exist yet. Confirm GTIN/EAN mapping before any future write test.
+The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variation discovery is read-only; variation-level writes are planned for the production catalog architecture, but no variation writes exist yet. Confirm GTIN/EAN mapping before any future write test.
 
 ## Product Sync Foundation
 

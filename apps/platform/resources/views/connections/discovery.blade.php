@@ -3,6 +3,10 @@
 @php
     $storeRows = $latestStores?->sample_json['stores'] ?? [];
     $productRows = $latestProducts?->sample_json['products'] ?? [];
+    $variationRows = $latestProducts?->sample_json['variations'] ?? [];
+    $readiness = $latestProducts?->sample_json['readiness'] ?? [];
+    $readinessRows = $readiness['rows'] ?? [];
+    $readinessSummary = $readiness['summary'] ?? [];
 @endphp
 
 @section('content')
@@ -122,6 +126,10 @@
                 Detected GTIN/EAN values are candidates only and must be confirmed before final mapping.
                 Lilleprinsen-relevant fields include <code>Zettle_barcode</code>, <code>iZettle_barcode</code>, <code>_Zettle_barcode</code>, and <code>_iZettle_barcode</code>.
             </p>
+            <p class="muted">
+                Variable product variations are fetched read-only from <code>GET /wp-json/wc/v3/products/{productId}/variations</code>.
+                This sample is capped and is not a catalog scan.
+            </p>
             <table>
                 <thead>
                 <tr>
@@ -200,6 +208,110 @@
             </table>
         @endif
     </section>
+
+    @if ($connection->type === 'woocommerce')
+        <section class="panel">
+            <h2>Variation Sample</h2>
+            <p class="muted">Read-only variation sample for variable products in the latest WooCommerce product sample. This does not write or sync anything.</p>
+            <table>
+                <thead>
+                <tr>
+                    <th>Parent Woo ID</th>
+                    <th>Variation ID</th>
+                    <th>Name</th>
+                    <th>SKU</th>
+                    <th>Attributes</th>
+                    <th>Stock</th>
+                    <th>Regular price</th>
+                    <th>Candidate GTIN/EAN</th>
+                </tr>
+                </thead>
+                <tbody>
+                @forelse ($variationRows as $variation)
+                    <tr>
+                        <td>{{ $variation['parent_id'] ?? 'n/a' }}</td>
+                        <td>{{ $variation['id'] ?? 'n/a' }}</td>
+                        <td>{{ $variation['name'] ?? 'n/a' }}</td>
+                        <td>{{ $variation['sku'] ?? 'n/a' }}</td>
+                        <td>{{ implode(' / ', $variation['attributes'] ?? []) ?: 'n/a' }}</td>
+                        <td>{{ $variation['stock_status'] ?? 'n/a' }} / {{ $variation['stock_quantity'] ?? 'n/a' }}</td>
+                        <td>{{ $variation['regular_price'] ?? 'n/a' }}</td>
+                        <td>
+                            @php($candidate = $variation['gtin_candidate'] ?? [])
+                            {{ $candidate['value'] ?? 'None' }}
+                            <div class="muted">{{ $candidate['key'] ?? 'no key' }} / {{ $candidate['confidence'] ?? 'none' }}</div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="8">No WooCommerce variation discovery sample yet.</td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <h2>Woo Readiness Report</h2>
+            <p class="muted">Preview only. This report checks sampled WooCommerce products and variations for fields needed before a future Woo to Front sync.</p>
+            <div class="action-row">
+                <span class="badge ready">Ready: {{ $readinessSummary['ready'] ?? 0 }}</span>
+                <span class="badge warning">Needs attention: {{ $readinessSummary['needs_attention'] ?? 0 }}</span>
+                <span class="badge blocked">Blocked: {{ $readinessSummary['blocked'] ?? 0 }}</span>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Name</th>
+                    <th>SKU</th>
+                    <th>GTIN/EAN</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                </tr>
+                </thead>
+                <tbody>
+                @forelse ($readinessRows as $row)
+                    <tr>
+                        <td>
+                            {{ $row['item_type'] ?? 'item' }}
+                            <div class="muted">
+                                Product: {{ $row['woo_product_id'] ?? 'n/a' }}
+                                @if (($row['woo_variation_id'] ?? null) !== null)
+                                    / Variation: {{ $row['woo_variation_id'] }}
+                                @endif
+                            </div>
+                        </td>
+                        <td>{{ $row['name'] ?? 'n/a' }}</td>
+                        <td>{{ $row['sku'] ?? 'n/a' }}</td>
+                        <td>
+                            {{ $row['gtin'] ?? 'n/a' }}
+                            <div class="muted">{{ $row['gtin_key'] ?? 'no key' }}</div>
+                        </td>
+                        <td>{{ $row['price'] ?? 'n/a' }}</td>
+                        <td><span class="badge {{ $row['status'] === 'ready' ? 'ready' : ($row['status'] === 'blocked' ? 'blocked' : 'warning') }}">{{ str_replace('_', ' ', $row['status'] ?? 'unknown') }}</span></td>
+                        <td>
+                            @foreach (($row['errors'] ?? []) as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                            @foreach (($row['warnings'] ?? []) as $warning)
+                                <div class="muted">{{ $warning }}</div>
+                            @endforeach
+                            @if (($row['errors'] ?? []) === [] && ($row['warnings'] ?? []) === [])
+                                None
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7">Run WooCommerce product discovery to generate a readiness report.</td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+        </section>
+    @endif
 
     <section class="panel">
         <h2>Mapping Preview</h2>

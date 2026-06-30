@@ -35,6 +35,8 @@ Use this checklist before starting real integration implementation.
 - [x] Discovery is skipped in safe mode and makes no HTTP calls.
 - [x] Discovery snapshots store sanitized samples only.
 - [x] WooCommerce GTIN/EAN candidate detection exists.
+- [x] WooCommerce variation discovery uses capped read-only variation endpoints.
+- [x] Woo readiness report exists for sampled products and variations.
 - [x] Mapping preview exists and does not write final product mappings.
 - [x] Product sync profile defaults exist.
 - [x] Product sync profiles are full-catalog capable but default to preview-only selected scope.

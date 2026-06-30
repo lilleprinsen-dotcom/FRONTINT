@@ -114,11 +114,15 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Discovery actions are authenticated, tenant-scoped, and grouped under the Testing Lab rather than normal owner navigation.
 - Before the first live read-only test, run `php artisan omnibridge:preflight-readonly`.
 - WooCommerce product discovery uses `GET /wp-json/wc/v3/products` with `per_page=10`, `page=1`, and `status=publish`.
+- WooCommerce variation discovery uses `GET /wp-json/wc/v3/products/{productId}/variations` with `per_page=10` and `page=1` for variable products in the capped product sample.
+- WooCommerce variation discovery is capped to a small number of variable parents and must never become a full catalog scan.
 - Front store discovery uses `GET /api/Stores`.
 - Front product discovery uses `POST /api/Product` as a read-only search/listing endpoint according to the Front OpenAPI spec, with `pageSize=10`, `pageSkip=0`, `isWebAvailable=true`, `isDiscontinued=false`, `excludeDeleted=true`, `includeEmptyGTINs=false`, `includeStockQuantity=false`, and `includeAlternativeIdentifiers=true`.
 - Front product discovery must keep `pageSize <= 10` and must not accept UI/request overrides in this phase.
 - Do not confuse Front `POST /api/Product` discovery with `/api/products`, which is the product CRUD endpoint.
 - WooCommerce product discovery must keep `per_page <= 10` and must not accept UI/request overrides in this phase.
+- Woo readiness reports may use sanitized Woo product and variation samples to mark rows as Ready, Needs attention, or Blocked.
+- Woo readiness reports are advisory only and must not create sync runs or final mappings by themselves.
 - Store only sanitized discovery snapshots in `connection_discovery_snapshots`.
 - Keep only the latest 5 snapshots per connection and discovery type. Delete older snapshots.
 - `connection_discovery_snapshots` is not long-term product storage.

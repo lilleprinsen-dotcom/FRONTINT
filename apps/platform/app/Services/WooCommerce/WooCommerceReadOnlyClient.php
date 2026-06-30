@@ -63,6 +63,15 @@ class WooCommerceReadOnlyClient
             ]);
     }
 
+    public function variations(Connection $connection, int $productId, int $limit = 10): Response
+    {
+        return $this->request($connection)
+            ->get($this->url($connection, "/wp-json/wc/v3/products/{$productId}/variations"), [
+                'per_page' => min(max($limit, 1), 10),
+                'page' => 1,
+            ]);
+    }
+
     private function request(Connection $connection): PendingRequest
     {
         return Http::timeout(10)
