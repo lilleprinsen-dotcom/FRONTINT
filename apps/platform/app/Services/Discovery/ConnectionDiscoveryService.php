@@ -192,6 +192,7 @@ class ConnectionDiscoveryService
                     'manage_stock' => $product['manage_stock'] ?? null,
                     'categories' => $this->safeNames($product['categories'] ?? []),
                     'brands' => $this->safeNames($product['brands'] ?? []),
+                    'image' => $this->safeFirstImage($product['images'] ?? []),
                     'variation_count' => is_array($variationIds) ? count($variationIds) : 0,
                     'gtin_candidate' => $this->gtinDetector->detect($product),
                 ];
@@ -301,6 +302,30 @@ class ConnectionDiscoveryService
             ->filter()
             ->values()
             ->all();
+    }
+
+    private function safeFirstImage(mixed $payload): ?array
+    {
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        $image = collect($payload)->first(fn (mixed $item): bool => is_array($item));
+
+        if (! is_array($image) || ! is_scalar($image['src'] ?? null)) {
+            return null;
+        }
+
+        $src = trim((string) $image['src']);
+
+        if ($src === '') {
+            return null;
+        }
+
+        return [
+            'src' => $src,
+            'alt' => is_scalar($image['alt'] ?? null) ? trim((string) $image['alt']) : null,
+        ];
     }
 
     private function wooReadinessReport(array $products, array $variations): array

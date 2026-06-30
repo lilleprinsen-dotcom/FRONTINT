@@ -349,7 +349,7 @@ The plan shows:
 - Variable parent products can be previewed, but sellable variation rows are usually the better candidates for Front POS.
 - `NEEDS_CONFIRMATION` items for category/group mapping, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy.
 
-The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variation discovery is read-only; variations can be selected as first-class preview candidates, but no variation writes exist yet. Confirm GTIN/EAN mapping before any future write test.
+The plan is stored in `product_sync_preview_plans` only. It is not final sync history, does not write to `product_mappings`, and does not call WooCommerce or Front APIs. Variation discovery is read-only; variations can be selected as first-class preview candidates, but no variation writes exist yet. Variation preview rows inherit parent product name, category, brand, and image candidates from the stored WooCommerce discovery snapshot. Variation attributes are shown as the proposed Front size label. Confirm GTIN/EAN mapping before any future write test.
 
 ## Product Sync Foundation
 

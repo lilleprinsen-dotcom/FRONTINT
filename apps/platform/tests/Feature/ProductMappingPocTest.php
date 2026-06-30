@@ -238,7 +238,8 @@ class ProductMappingPocTest extends TestCase
             ->assertOk()
             ->assertSee('You can still create a Woo-only readiness plan')
             ->assertSee('variation:456')
-            ->assertSee('BOOT-24-BLUE')
+            ->assertSee('Woo Boot - Blue / 24')
+            ->assertSee('Blue / 24')
             ->assertSee('front_sample_missing')
             ->assertSee('Run Front product discovery later to check for existing matches.');
     }
@@ -267,9 +268,18 @@ class ProductMappingPocTest extends TestCase
         $this->assertSame('ready', $plan->status);
         $this->assertSame('variation:456', $row['woo_product']['item_key']);
         $this->assertSame(123, $row['woo_product']['parent_product_id']);
+        $this->assertSame('Woo Boot', $row['woo_product']['parent_name']);
         $this->assertSame('variation', $row['woo_product']['type']);
+        $this->assertSame('Blue / 24', $row['woo_product']['size_label']);
+        $this->assertSame('Woo Boot', $row['proposed_front_payload']['name']);
+        $this->assertSame('Blue / 24', $row['proposed_front_payload']['variant']);
         $this->assertSame('7040000000456', $row['proposed_front_payload']['productSizes'][0]['gtin']);
         $this->assertSame('BOOT-24-BLUE', $row['proposed_front_payload']['productSizes'][0]['externalSKU']);
+        $this->assertSame('Blue / 24', $row['proposed_front_payload']['productSizes'][0]['label']);
+        $this->assertSame('Brand A', $row['proposed_front_payload']['brand']);
+        $this->assertSame('Shoes', $row['proposed_front_payload']['groupName']);
+        $this->assertSame('Boots', $row['proposed_front_payload']['subgroupName']);
+        $this->assertSame('https://woo.example.test/boot.jpg', $row['proposed_front_payload']['image_candidate']['src']);
         $this->assertSame('matched_existing_front_product', $row['front_match']['status']);
         $this->assertSame('gtin', $row['front_match']['method']);
 
@@ -368,6 +378,7 @@ class ProductMappingPocTest extends TestCase
             'manage_stock' => true,
             'categories' => ['Shoes', 'Boots'],
             'brands' => ['Brand A'],
+            'image' => ['src' => 'https://woo.example.test/boot.jpg', 'alt' => 'Woo Boot'],
             'gtin_candidate' => [
                 'key' => $gtin === null || $gtin === '' ? null : 'Zettle_barcode',
                 'value' => $gtin,

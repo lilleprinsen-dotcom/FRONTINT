@@ -200,6 +200,8 @@ Review:
 - Ready/blocked status.
 - Blocking issues for missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price.
 - Variation rows use `variation:{id}` item keys and can be selected as first-class preview candidates.
+- Variation rows inherit parent product name/category/brand/image candidates from the stored WooCommerce discovery snapshot.
+- Variation attributes appear as the proposed Front size label.
 - Variable parent products should warn that sellable variation rows are usually better Front POS candidates.
 - Warnings for missing brand/category, missing sale price, stock status, uncertain mappings, or no Front match.
 - `NEEDS_CONFIRMATION` items before any future write test.

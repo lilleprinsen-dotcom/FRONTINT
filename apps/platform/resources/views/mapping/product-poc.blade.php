@@ -76,6 +76,7 @@
                     <th>Woo item</th>
                     <th>Name</th>
                     <th>Type</th>
+                    <th>Size label</th>
                     <th>SKU</th>
                     <th>Detected GTIN/EAN</th>
                     <th>GTIN key</th>
@@ -98,10 +99,14 @@
                             {{ $product['item_key'] ?? 'n/a' }}
                             @if (($product['parent_product_id'] ?? null) !== null)
                                 <div class="muted">Parent: {{ $product['parent_product_id'] }}</div>
+                                @if (($product['parent_name'] ?? null) !== null)
+                                    <div class="muted">{{ $product['parent_name'] }}</div>
+                                @endif
                             @endif
                         </td>
                         <td>{{ $product['name'] ?? 'n/a' }}</td>
                         <td>{{ $product['type'] ?? 'n/a' }}</td>
+                        <td>{{ $product['size_label'] ?? 'n/a' }}</td>
                         <td>{{ $product['sku'] ?? 'n/a' }}</td>
                         <td>{{ $gtin['value'] ?? 'None' }}</td>
                         <td>
@@ -139,7 +144,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="11">Run WooCommerce product discovery before selecting products or variations.</td>
+                        <td colspan="12">Run WooCommerce product discovery before selecting products or variations.</td>
                     </tr>
                 @endforelse
                 </tbody>
@@ -167,10 +172,12 @@
                     <th>Proposed Front name</th>
                     <th>Number</th>
                     <th>Variant</th>
+                    <th>Size label</th>
                     <th>GTIN</th>
                     <th>External SKU</th>
                     <th>Brand</th>
                     <th>Group/subgroup</th>
+                    <th>Image</th>
                     <th>Price</th>
                     <th>Status</th>
                     <th>Warnings</th>
@@ -194,10 +201,18 @@
                         <td>{{ $payload['name'] ?? 'n/a' }}</td>
                         <td>{{ $payload['number'] ?? 'n/a' }}</td>
                         <td>{{ $payload['variant'] ?? 'n/a' }}</td>
+                        <td>{{ $size['label'] ?? 'n/a' }}</td>
                         <td>{{ $size['gtin'] ?? 'n/a' }}</td>
                         <td>{{ $size['externalSKU'] ?? 'n/a' }}</td>
                         <td>{{ $payload['brand'] ?? 'n/a' }}</td>
                         <td>{{ $payload['groupName'] ?? 'n/a' }} / {{ $payload['subgroupName'] ?? 'n/a' }}</td>
+                        <td>
+                            @if (($payload['image_candidate']['src'] ?? null) !== null)
+                                <a href="{{ $payload['image_candidate']['src'] }}" target="_blank" rel="noreferrer">image</a>
+                            @else
+                                n/a
+                            @endif
+                        </td>
                         <td>{{ $payload['price_candidate'] ?? 'n/a' }}</td>
                         <td>
                             <strong>{{ $row['status'] }}</strong>

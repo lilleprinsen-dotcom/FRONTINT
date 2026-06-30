@@ -38,6 +38,8 @@ Run all tests in staging or sandbox only.
 - Generate the preview sync plan.
 - Confirm blocked products show missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price issues.
 - Confirm variations can be selected as first-class candidates with `variation:{id}` item keys.
+- Confirm variation rows inherit parent product name/category/brand/image candidates from the stored WooCommerce discovery snapshot.
+- Confirm variation attributes appear as the proposed Front size label.
 - Confirm variable parent products warn that sellable variation rows are usually better candidates.
 - Confirm warnings show missing brand/category, missing sale price, stock status concerns, uncertain category/brand mapping, and no Front sample match.
 - Confirm product and variation handling is preview-only. Variation writes are not implemented yet.
