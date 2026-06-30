@@ -401,8 +401,10 @@ class ConnectionDiscoveryService
             $errors[] = 'Missing SKU.';
         }
 
-        if (! $gtin) {
-            $errors[] = 'Missing GTIN/EAN candidate.';
+        if (! $gtin && ! ($item['sku'] ?? null)) {
+            $errors[] = 'Missing both SKU and GTIN/EAN candidate.';
+        } elseif (! $gtin) {
+            $warnings[] = 'Missing GTIN/EAN candidate; SKU fallback may be used if the SKU is unique and approved.';
         }
 
         if (! $price) {

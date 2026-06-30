@@ -36,7 +36,8 @@ Run all tests in staging or sandbox only.
 - Confirm the page shows the safety banner: preview only, no products, prices, stock, or orders are written.
 - Select no more than 10 WooCommerce products or variations.
 - Generate the preview sync plan.
-- Confirm blocked products show missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price issues.
+- Confirm blocked products show missing SKU, missing both SKU and GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price issues.
+- Confirm missing GTIN/EAN is shown as a warning when SKU exists.
 - Confirm variations can be selected as first-class candidates with `variation:{id}` item keys.
 - Confirm variation rows inherit parent product name/category/brand/image candidates from the stored WooCommerce discovery snapshot.
 - Confirm variation attributes appear as the proposed Front size label.

@@ -261,7 +261,7 @@ Fields:
 - `include_out_of_stock_products`
 - `exclude_discontinued_products`
 - `require_sku`
-- `require_gtin`
+- `require_gtin` default false; GTIN/EAN is recommended when available but SKU fallback is allowed unless a strict profile enables this.
 - `require_price`
 - `require_brand`
 - `require_category`

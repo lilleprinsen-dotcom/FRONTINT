@@ -9,7 +9,7 @@ class ProductSyncProfileProvisioner
 {
     public function ensureDefault(Organization $organization): ProductSyncProfile
     {
-        return ProductSyncProfile::query()->firstOrCreate(
+        $profile = ProductSyncProfile::query()->firstOrCreate(
             [
                 'organization_id' => $organization->id,
                 'name' => 'Default safe product sync profile',
@@ -35,7 +35,7 @@ class ProductSyncProfileProvisioner
                 'include_out_of_stock_products' => true,
                 'exclude_discontinued_products' => true,
                 'require_sku' => true,
-                'require_gtin' => true,
+                'require_gtin' => false,
                 'require_price' => true,
                 'require_brand' => false,
                 'require_category' => false,
@@ -54,5 +54,18 @@ class ProductSyncProfileProvisioner
                 'reconciliation_enabled' => false,
             ],
         );
+
+        if (
+            ! $profile->wasRecentlyCreated
+            && $profile->mode === 'preview_only'
+            && $profile->sync_scope === 'selected_only'
+            && $profile->require_gtin
+            && $profile->created_at?->equalTo($profile->updated_at)
+            && $profile->created_at?->lt(now()->subMinute())
+        ) {
+            $profile->forceFill(['require_gtin' => false])->save();
+        }
+
+        return $profile;
     }
 }

@@ -344,8 +344,8 @@ The plan shows:
 
 - Proposed WooCommerce to Front product fields.
 - Ready or blocked status per selected product or variation.
-- Blocking validation issues such as missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price.
-- Non-blocking warnings such as missing brand/category, missing sale price, out-of-stock status, `manage_stock=false`, or no current Front sample match.
+- Blocking validation issues such as missing SKU, missing both SKU and GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price.
+- Non-blocking warnings such as missing GTIN/EAN when SKU exists, missing brand/category, missing sale price, out-of-stock status, `manage_stock=false`, or no current Front sample match.
 - Variable parent products can be previewed, but sellable variation rows are usually the better candidates for Front POS.
 - `NEEDS_CONFIRMATION` items for category/group mapping, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy.
 

@@ -83,14 +83,26 @@ class ProductMappingPocTest extends TestCase
         $this->assertContains('Missing SKU.', $plan->plan_json['rows'][0]['blocks']);
     }
 
-    public function test_product_missing_gtin_is_blocked(): void
+    public function test_product_missing_gtin_warns_when_sku_exists(): void
     {
         $plan = $this->planForProducts([
             $this->wooProduct(gtin: ''),
         ]);
 
+        $this->assertSame('ready', $plan->status);
+        $this->assertNotContains('Missing GTIN/EAN candidate.', $plan->plan_json['rows'][0]['blocks']);
+        $this->assertContains('Missing GTIN/EAN candidate; SKU fallback may be used if the SKU is unique and approved.', $plan->plan_json['rows'][0]['warnings']);
+    }
+
+    public function test_product_missing_both_sku_and_gtin_is_blocked(): void
+    {
+        $plan = $this->planForProducts([
+            $this->wooProduct(sku: '', gtin: ''),
+        ]);
+
         $this->assertSame('blocked', $plan->status);
-        $this->assertContains('Missing GTIN/EAN candidate.', $plan->plan_json['rows'][0]['blocks']);
+        $this->assertContains('Missing SKU.', $plan->plan_json['rows'][0]['blocks']);
+        $this->assertContains('Missing both SKU and GTIN/EAN candidate.', $plan->plan_json['rows'][0]['blocks']);
     }
 
     public function test_duplicate_gtin_is_blocked(): void

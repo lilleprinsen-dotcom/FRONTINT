@@ -31,6 +31,8 @@ class ProductSyncValidationService
 
         if ($profile->require_gtin && $gtin === null) {
             $errors[] = 'Missing GTIN/EAN candidate.';
+        } elseif (! $profile->require_gtin && $gtin === null) {
+            $warnings[] = 'Missing GTIN/EAN candidate; SKU fallback may be used if the SKU is unique and approved.';
         }
 
         if ($profile->require_price && $this->stringValue($payload['price_candidate'] ?? null) === null) {
