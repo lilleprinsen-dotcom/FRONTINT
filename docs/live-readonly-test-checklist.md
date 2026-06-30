@@ -193,6 +193,7 @@ http://localhost:8000/mapping/product-poc
 ```
 
 Select up to 10 WooCommerce products or variations and generate the preview sync plan.
+Front product discovery is optional for this step. If Front is not ready yet, the plan will still validate WooCommerce products and variations and mark Front matching as missing.
 
 Review:
 

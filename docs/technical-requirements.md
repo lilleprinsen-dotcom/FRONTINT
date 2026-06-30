@@ -144,6 +144,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 
 - The `/mapping/product-poc` page must be authenticated.
 - The page and plan action must use stored `connection_discovery_snapshots` only and must not make external HTTP calls.
+- A WooCommerce product discovery snapshot is required. A Front product discovery snapshot is optional for Woo-only readiness planning; if missing, Front match status must be clearly marked as `front_sample_missing`.
 - The plan action must reject more than 10 selected WooCommerce products or variations.
 - Selection keys must be explicit Woo item keys such as `product:123` or `variation:456`.
 - Generated plans are stored in `product_sync_preview_plans`, not final mapping or sync history.

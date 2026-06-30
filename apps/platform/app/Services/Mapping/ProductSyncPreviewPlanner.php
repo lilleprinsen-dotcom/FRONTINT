@@ -14,7 +14,7 @@ class ProductSyncPreviewPlanner
     public function createPlan(
         User $user,
         ConnectionDiscoverySnapshot $wooSnapshot,
-        ConnectionDiscoverySnapshot $frontSnapshot,
+        ?ConnectionDiscoverySnapshot $frontSnapshot,
         array $selectedWooItemKeys,
     ): ProductSyncPreviewPlan {
         $selectedKeys = collect($selectedWooItemKeys)
@@ -26,7 +26,7 @@ class ProductSyncPreviewPlanner
             ->filter(fn (array $item): bool => $selectedKeys->contains($this->wooItemKey($item)))
             ->values();
 
-        $frontProducts = collect($frontSnapshot->sample_json['products'] ?? [])
+        $frontProducts = collect($frontSnapshot?->sample_json['products'] ?? [])
             ->filter(fn ($product): bool => is_array($product))
             ->values()
             ->all();
@@ -48,7 +48,7 @@ class ProductSyncPreviewPlanner
             'organization_id' => $wooSnapshot->organization_id,
             'created_by_user_id' => $user->id,
             'woo_connection_id' => $wooSnapshot->connection_id,
-            'front_connection_id' => $frontSnapshot->connection_id,
+            'front_connection_id' => $frontSnapshot?->connection_id,
             'status' => $status,
             'selected_count' => count($rows),
             'summary_json' => [
@@ -59,6 +59,7 @@ class ProductSyncPreviewPlanner
                 'preview_only' => true,
                 'external_api_calls' => false,
                 'writes_performed' => false,
+                'front_sample_available' => $frontSnapshot !== null,
             ],
             'plan_json' => [
                 'rows' => $rows,
@@ -205,6 +206,10 @@ class ProductSyncPreviewPlanner
             $warnings[] = 'Multiple GTIN/EAN candidates found; confirm the correct field before syncing.';
         }
 
+        if ($frontMatch['status'] === 'front_sample_missing') {
+            $warnings[] = 'Front product sample is missing; existing Front match could not be checked.';
+        }
+
         if ($frontMatch['status'] === 'no_match') {
             $warnings[] = 'No Front match found in current Front sample.';
         }
@@ -301,6 +306,19 @@ class ProductSyncPreviewPlanner
 
     private function matchFrontSize(?string $gtin, ?string $sku, array $frontSizes): array
     {
+        if ($frontSizes === []) {
+            return [
+                'status' => 'front_sample_missing',
+                'productid' => null,
+                'name' => null,
+                'gtin' => null,
+                'identity' => null,
+                'external_sku' => null,
+                'method' => 'none',
+                'confidence' => 'none',
+            ];
+        }
+
         if ($gtin !== null) {
             $match = collect($frontSizes)->first(fn (array $size): bool => (string) ($size['gtin'] ?? '') === $gtin);
 

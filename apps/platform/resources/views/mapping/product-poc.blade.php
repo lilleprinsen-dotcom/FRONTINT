@@ -16,7 +16,8 @@
         @endif
 
         <p class="muted">
-            Run WooCommerce and Front product discovery first. This page does not call external APIs, does not create final mappings,
+            Run WooCommerce product discovery first. Front product discovery is optional for match preview and can wait until Front is ready.
+            This page does not call external APIs, does not create final mappings,
             and does not use Front write endpoints such as <code>/api/products</code>, <code>/api/PricelistV2</code>, or <code>/api/Stock/adjust</code>.
         </p>
     </section>
@@ -41,7 +42,7 @@
                     @if ($frontSnapshot)
                         Present, checked {{ $frontSnapshot->checked_at }}. Products: {{ count($frontProducts) }}.
                     @else
-                        Missing. Run Front product discovery first.
+                        Missing. You can still create a Woo-only readiness plan; Front matching will show as missing.
                     @endif
                 </td>
             </tr>
@@ -64,6 +65,7 @@
             <p class="muted">
                 Select up to 10 WooCommerce products or variations from the latest read-only discovery sample.
                 Variation rows are sellable candidates for variable products.
+                Front product discovery is not required for Woo readiness, but it is needed before this page can detect existing Front matches.
                 Detected GTIN/EAN values are candidates only and must be confirmed before any future write test.
             </p>
 
@@ -90,7 +92,7 @@
                     @php($payload = $row['proposed_front_payload'] ?? [])
                     <tr>
                         <td>
-                            <input type="checkbox" name="woo_item_keys[]" value="{{ $product['item_key'] }}" @disabled(!$wooSnapshot || !$frontSnapshot || $productionWritesEnabled)>
+                            <input type="checkbox" name="woo_item_keys[]" value="{{ $product['item_key'] }}" @disabled(!$wooSnapshot || $productionWritesEnabled)>
                         </td>
                         <td>
                             {{ $product['item_key'] ?? 'n/a' }}
@@ -122,7 +124,10 @@
                         </td>
                         <td>
                             {{ $row['front_match']['status'] ?? 'no_match' }}
-                            @if (($row['front_match']['status'] ?? 'no_match') !== 'no_match')
+                            @if (($row['front_match']['status'] ?? null) === 'front_sample_missing')
+                                <div class="muted">Run Front product discovery later to check for existing matches.</div>
+                            @endif
+                            @if (in_array(($row['front_match']['status'] ?? 'no_match'), ['matched_existing_front_product', 'possible_duplicate'], true))
                                 <div class="muted">
                                     {{ $row['front_match']['name'] ?? 'n/a' }} |
                                     GTIN: {{ $row['front_match']['gtin'] ?? 'n/a' }} |
@@ -134,14 +139,14 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="11">Run both WooCommerce and Front product discovery before selecting products or variations.</td>
+                        <td colspan="11">Run WooCommerce product discovery before selecting products or variations.</td>
                     </tr>
                 @endforelse
                 </tbody>
             </table>
 
             <p>
-                <button type="submit" @disabled(!$wooSnapshot || !$frontSnapshot || $productionWritesEnabled)>Generate 10-product sync plan</button>
+                <button type="submit" @disabled(!$wooSnapshot || $productionWritesEnabled)>Generate 10-product sync plan</button>
             </p>
         </section>
     </form>

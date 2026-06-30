@@ -320,13 +320,13 @@ It also checks common keys such as `ean`, `_ean`, `gtin`, `_gtin`, `barcode`, an
 
 Detected GTIN/EAN values are candidates only. Confirm them against product data and Front results before final mapping. The Woo readiness report is a preview helper, not approval to sync.
 
-The mapping preview compares the latest WooCommerce and Front product samples for the same organization:
+When a Front product sample exists, the mapping preview compares the latest WooCommerce and Front product samples for the same organization:
 
 1. Woo detected GTIN/EAN equals Front product size GTIN.
 2. Woo SKU equals Front product size `externalSKU`.
 3. Woo SKU equals Front product size `identity`.
 
-This preview is not final mapping and does not save rows to `product_mappings`.
+If the Front product sample is missing, `/mapping/product-poc` still allows a Woo-only readiness plan from the latest WooCommerce discovery snapshot. Front match status will show as missing until Front product discovery is available. This preview is not final mapping and does not save rows to `product_mappings`.
 
 Discovery snapshots keep only the latest 5 rows per connection and discovery type. The table is not long-term product storage.
 
