@@ -21,6 +21,9 @@ Future Codex/AI agents must follow these rules.
 - Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` unless staging-safe read-only checks are intentionally being verified.
 - Keep WooCommerce plugin thin.
 - Keep business logic in the Laravel platform.
+- The WooCommerce plugin may expose health checks, signed adapter endpoints, and lightweight product eligibility/status fields.
+- The WooCommerce plugin must not contain Front API clients, catalog scans, sync jobs, queue workers, or core business logic.
+- Direct WooCommerce plugin health tests can be run in WordPress without enabling Laravel live HTTP tests.
 
 ## Front Systems
 

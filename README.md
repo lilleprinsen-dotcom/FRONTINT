@@ -68,6 +68,18 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 
 See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).
 
+WooCommerce plugin foundation:
+
+- The plugin has a WooCommerce admin settings page.
+- The public health endpoint is `GET /wp-json/omnibridge/v1/health`.
+- The signed read-only adapter test endpoint is `GET /wp-json/omnibridge/v1/connection-test`.
+- Woo-side plugin health checks can be tested directly in WordPress without platform safe-mode skips.
+- Signed adapter tests use `X-Omnibridge-Timestamp` and `X-Omnibridge-Signature` HMAC headers.
+- Product edit pages can show lightweight OmniBridge eligibility/status metadata.
+- The plugin still does not run sync logic, scan the catalog, call Front, or write prices/stock/orders.
+
+See [apps/woocommerce-plugin/README.md](apps/woocommerce-plugin/README.md).
+
 It is still staging-first: real integration writes are disabled unless explicitly enabled and reviewed.
 
 The scaffold now includes a root `.gitignore`, executable helper scripts, a committed Laravel `composer.lock`, and a minimal GitHub Actions workflow for platform tests.

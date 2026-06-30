@@ -55,6 +55,51 @@ http://localhost:8000/dashboard
 
 Keep `OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=false` for dummy credentials. Enable live checks only with staging/test WooCommerce or Front Systems credentials.
 
+## WooCommerce Plugin Setup and Direct Test
+
+The WooCommerce plugin can be tested directly inside a WooCommerce staging site. This does not use the Laravel platform safe-mode skip.
+
+1. Copy `apps/woocommerce-plugin` into the staging WordPress plugins folder as:
+
+```text
+wp-content/plugins/omnibridge-woocommerce-adapter/
+```
+
+2. Activate **OmniBridge WooCommerce Adapter** in WordPress admin.
+3. Open **WooCommerce > OmniBridge**.
+4. Keep environment set to `staging`.
+5. Add the OmniBridge platform URL if available.
+6. Add a tenant key if available.
+7. Add a shared secret for signed endpoint tests.
+8. Keep signed endpoints enabled.
+9. Keep product fields enabled if you want to mark products for future sync readiness.
+
+Public health check:
+
+```text
+https://your-staging-store.example/wp-json/omnibridge/v1/health
+```
+
+Signed read-only connection test:
+
+```bash
+SECRET="replace-with-shared-secret"
+TS="$(date +%s)"
+SIG="$(printf "GET\n/omnibridge/v1/connection-test\n${TS}" | openssl dgst -sha256 -hmac "${SECRET}" -binary | xxd -p -c 256)"
+
+curl \
+  -H "X-Omnibridge-Timestamp: ${TS}" \
+  -H "X-Omnibridge-Signature: ${SIG}" \
+  "https://your-staging-store.example/wp-json/omnibridge/v1/connection-test"
+```
+
+Expected result:
+
+- The plugin responds with `status: success`.
+- The response says `read_only: true` and `writes_performed: false`.
+- No secrets, customer data, order data, or product payloads are returned.
+- No WooCommerce, Front, stock, price, order, refund, gift card, or customer writes occur.
+
 ## 1. Clone the Repo
 
 ```bash
