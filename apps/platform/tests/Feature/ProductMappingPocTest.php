@@ -35,7 +35,7 @@ class ProductMappingPocTest extends TestCase
         $this->assertSame(0, ProductSyncPreviewPlan::query()->count());
     }
 
-    public function test_cannot_create_plan_without_front_discovery_snapshot(): void
+    public function test_can_create_woo_only_plan_without_front_discovery_snapshot(): void
     {
         [$user, $organization] = $this->userWithOrganization();
         $wooConnection = $this->connection($organization, 'woocommerce');
@@ -43,9 +43,14 @@ class ProductMappingPocTest extends TestCase
 
         $this->actingAs($user)
             ->post('/mapping/product-poc/plan', ['woo_item_keys' => ['product:123']])
-            ->assertSessionHasErrors('woo_item_keys');
+            ->assertRedirect('/mapping/product-poc');
 
-        $this->assertSame(0, ProductSyncPreviewPlan::query()->count());
+        $plan = ProductSyncPreviewPlan::query()->firstOrFail();
+
+        $this->assertNull($plan->front_connection_id);
+        $this->assertFalse($plan->summary_json['front_sample_available']);
+        $this->assertSame('front_sample_missing', $plan->plan_json['rows'][0]['front_match']['status']);
+        $this->assertContains('Front product sample is missing; existing Front match could not be checked.', $plan->plan_json['rows'][0]['warnings']);
     }
 
     public function test_max_ten_products_is_enforced(): void
@@ -218,6 +223,24 @@ class ProductMappingPocTest extends TestCase
             ->assertSee('Generate 10-product sync plan')
             ->assertSee('Generated Plan')
             ->assertSee('NEEDS_CONFIRMATION');
+    }
+
+    public function test_page_shows_woo_candidates_when_front_snapshot_is_missing(): void
+    {
+        [$user, $organization] = $this->userWithOrganization();
+        $wooConnection = $this->connection($organization, 'woocommerce');
+        $this->snapshot($organization, $wooConnection, 'woocommerce', [
+            $this->wooProduct(id: 123, sku: 'PARENT-SKU', gtin: null, type: 'variable'),
+        ], [$this->wooVariation()]);
+
+        $this->actingAs($user)
+            ->get('/mapping/product-poc')
+            ->assertOk()
+            ->assertSee('You can still create a Woo-only readiness plan')
+            ->assertSee('variation:456')
+            ->assertSee('BOOT-24-BLUE')
+            ->assertSee('front_sample_missing')
+            ->assertSee('Run Front product discovery later to check for existing matches.');
     }
 
     public function test_variation_from_discovery_snapshot_can_be_selected_as_first_class_candidate(): void

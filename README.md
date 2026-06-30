@@ -46,12 +46,13 @@ Front's OpenAPI spec documents `POST /api/Product` as the read-only product list
 
 Discovery stores only sanitized snapshots in `connection_discovery_snapshots` and keeps only the latest 5 snapshots per connection and discovery type. This table is not long-term product storage. It detects likely WooCommerce GTIN/EAN candidate fields such as `Zettle_barcode`, `iZettle_barcode`, `_Zettle_barcode`, `_iZettle_barcode`, `ean`, `gtin`, and `barcode`, then previews possible Woo ↔ Front matches by GTIN first, SKU to Front `externalSKU` second, and SKU to Front `identity` third. Woo discovery also creates a sample readiness report for products and variations. Candidate GTIN/EAN values must be confirmed before final mapping. This is not product sync and does not write final product mappings.
 
-Phase 4 adds controlled 10-product mapping PoC preparation:
+Phase 4 adds controlled 10-item mapping PoC preparation:
 
-- Open `/mapping/product-poc` after WooCommerce and Front product discovery have both succeeded.
+- Open `/mapping/product-poc` after WooCommerce product discovery has succeeded.
 - Select up to 10 WooCommerce products or variations from the stored discovery snapshot.
 - Generate a local preview-only sync plan in `product_sync_preview_plans`.
 - Review ready/blocked validation, warnings, proposed Woo to Front fields, and `NEEDS_CONFIRMATION` items.
+- Front product discovery is optional at this stage; without it, the plan becomes a Woo-only readiness plan and Front matches are marked as missing.
 
 The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variation discovery is read-only; variations can be selected as first-class preview candidates, but no variation writes exist yet. GTIN/EAN candidates must be confirmed before any future write test.
 
@@ -209,7 +210,7 @@ Open `http://localhost:8000/dashboard`, then use `http://localhost:8000/connecti
 
 Before using real staging/test credentials, follow [docs/live-readonly-test-checklist.md](docs/live-readonly-test-checklist.md).
 
-After WooCommerce and Front product discovery are complete, open `http://localhost:8000/mapping/product-poc` to prepare the 10-product mapping PoC plan. The page is preview-only and uses stored snapshots, so live HTTP can be turned off again before using it.
+After WooCommerce product discovery is complete, open `http://localhost:8000/mapping/product-poc` to prepare the 10-item mapping PoC plan. Front product discovery is only needed for existing Front match preview; without it, the page still supports a Woo-only readiness plan. The page is preview-only and uses stored snapshots, so live HTTP can be turned off again before using it.
 
 Then open `http://localhost:8000/lab` to create a local preview run from the latest mapping PoC plan. This creates local status rows only and performs no API writes.
 

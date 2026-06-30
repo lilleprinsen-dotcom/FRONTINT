@@ -31,7 +31,8 @@ Run all tests in staging or sandbox only.
 
 ## 0.2 10-Product Mapping PoC Preparation
 
-- Open `/mapping/product-poc` after WooCommerce and Front product discovery have both succeeded.
+- Open `/mapping/product-poc` after WooCommerce product discovery has succeeded.
+- If Front product discovery is not ready yet, confirm the page still allows a Woo-only readiness plan and marks Front matching as missing.
 - Confirm the page shows the safety banner: preview only, no products, prices, stock, or orders are written.
 - Select no more than 10 WooCommerce products or variations.
 - Generate the preview sync plan.

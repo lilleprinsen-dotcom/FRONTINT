@@ -26,7 +26,7 @@ class ProductMappingPocController extends Controller
             'latestPlan' => $latestPlan,
             'wooProducts' => $wooProducts,
             'frontProducts' => $frontProducts,
-            'previewRows' => $wooSnapshot && $frontSnapshot ? $planner->previewRows($wooProducts, $frontProducts) : [],
+            'previewRows' => $wooSnapshot ? $planner->previewRows($wooProducts, $frontProducts) : [],
             'productionWritesEnabled' => (bool) config('omnibridge.allow_production_writes'),
         ]);
     }
@@ -44,10 +44,6 @@ class ProductMappingPocController extends Controller
 
         if (! $wooSnapshot) {
             return back()->withErrors(['woo_item_keys' => 'Run WooCommerce product discovery before generating a mapping PoC plan.']);
-        }
-
-        if (! $frontSnapshot) {
-            return back()->withErrors(['woo_item_keys' => 'Run Front product discovery before generating a mapping PoC plan.']);
         }
 
         $availableKeys = $planner->wooItemsFromSnapshot($wooSnapshot)
