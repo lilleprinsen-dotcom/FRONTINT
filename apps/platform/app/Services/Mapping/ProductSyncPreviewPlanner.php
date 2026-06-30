@@ -164,8 +164,10 @@ class ProductSyncPreviewPlanner
             $blocks[] = 'Missing SKU.';
         }
 
-        if ($gtin === null) {
-            $blocks[] = 'Missing GTIN/EAN candidate.';
+        if ($sku === null && $gtin === null) {
+            $blocks[] = 'Missing both SKU and GTIN/EAN candidate.';
+        } elseif ($gtin === null) {
+            $warnings[] = 'Missing GTIN/EAN candidate; SKU fallback may be used if the SKU is unique and approved.';
         }
 
         if ($gtin !== null && in_array($gtin, $duplicateGtins, true)) {

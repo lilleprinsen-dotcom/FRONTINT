@@ -198,7 +198,8 @@ Front product discovery is optional for this step. If Front is not ready yet, th
 Review:
 
 - Ready/blocked status.
-- Blocking issues for missing SKU, missing GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price.
+- Blocking issues for missing SKU, missing both SKU and GTIN/EAN, duplicate SKU/GTIN, missing variation parent context, or missing price.
+- Missing GTIN/EAN should appear as a warning when SKU exists.
 - Variation rows use `variation:{id}` item keys and can be selected as first-class preview candidates.
 - Variation rows inherit parent product name/category/brand/image candidates from the stored WooCommerce discovery snapshot.
 - Variation attributes appear as the proposed Front size label.

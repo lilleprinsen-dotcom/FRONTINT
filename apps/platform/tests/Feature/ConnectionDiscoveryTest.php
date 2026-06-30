@@ -338,7 +338,7 @@ class ConnectionDiscoveryTest extends TestCase
         $this->assertSame('ready', $readyVariation['status']);
         $this->assertSame('blocked', $blockedVariation['status']);
         $this->assertContains('Missing SKU.', $blockedVariation['errors']);
-        $this->assertContains('Missing GTIN/EAN candidate.', $blockedVariation['errors']);
+        $this->assertContains('Missing both SKU and GTIN/EAN candidate.', $blockedVariation['errors']);
         $this->assertContains('Missing price candidate.', $blockedVariation['errors']);
     }
 

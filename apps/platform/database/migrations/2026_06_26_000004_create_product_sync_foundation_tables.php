@@ -22,7 +22,7 @@ return new class extends Migration {
             $table->boolean('include_variable_products')->default(false);
             $table->boolean('include_variations')->default(false);
             $table->boolean('require_sku')->default(true);
-            $table->boolean('require_gtin')->default(true);
+            $table->boolean('require_gtin')->default(false);
             $table->boolean('require_price')->default(true);
             $table->boolean('require_brand')->default(false);
             $table->boolean('require_category')->default(false);

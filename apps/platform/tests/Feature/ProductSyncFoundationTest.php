@@ -45,10 +45,34 @@ class ProductSyncFoundationTest extends TestCase
             'sync_only_opted_in_products' => true,
             'include_variable_products' => true,
             'include_variations' => true,
+            'require_gtin' => false,
             'incremental_sync_enabled' => false,
             'webhook_updates_enabled' => false,
             'reconciliation_enabled' => false,
         ]);
+    }
+
+    public function test_untouched_default_sync_profile_is_migrated_to_sku_fallback_gtin_policy(): void
+    {
+        [, $organization] = $this->userWithOrganization();
+        $profile = ProductSyncProfile::query()->create([
+            'organization_id' => $organization->id,
+            'name' => 'Default safe product sync profile',
+            'is_active' => true,
+            'mode' => 'preview_only',
+            'sync_scope' => 'selected_only',
+            'require_gtin' => true,
+        ]);
+
+        $timestamp = now()->subMinute();
+        ProductSyncProfile::query()->whereKey($profile->id)->update([
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ]);
+
+        $ensured = app(ProductSyncProfileProvisioner::class)->ensureDefault($organization);
+
+        $this->assertFalse($ensured->require_gtin);
     }
 
     public function test_production_mode_cannot_be_enabled_when_production_writes_disabled(): void
@@ -114,10 +138,30 @@ class ProductSyncFoundationTest extends TestCase
         $this->assertSame(1, ProductSyncRun::query()->firstOrFail()->items()->count());
     }
 
-    public function test_validation_blocks_missing_sku_and_gtin_when_required(): void
+    public function test_validation_warns_for_missing_gtin_when_sku_exists_and_gtin_not_required(): void
     {
         [$user, $organization] = $this->userWithOrganization();
         app(ProductSyncProfileProvisioner::class)->ensureDefault($organization);
+        $this->previewPlan($organization, [
+            $this->planRow(123, 'BOOT-24', null),
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/preview-run')
+            ->assertRedirect();
+
+        $item = ProductSyncRun::query()->firstOrFail()->items()->firstOrFail();
+
+        $this->assertSame('warning', $item->validation_status);
+        $this->assertNotContains('Missing GTIN/EAN candidate.', $item->validation_errors_json);
+        $this->assertContains('Missing GTIN/EAN candidate; SKU fallback may be used if the SKU is unique and approved.', $item->validation_warnings_json);
+    }
+
+    public function test_validation_blocks_missing_sku_and_gtin_when_gtin_required(): void
+    {
+        [$user, $organization] = $this->userWithOrganization();
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['require_gtin' => true]);
         $this->previewPlan($organization, [
             $this->planRow(123, null, null),
         ]);

@@ -150,7 +150,8 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Variation preview rows should inherit parent product name, category, brand, and image candidates from the same stored WooCommerce discovery snapshot. Variation attributes should become the proposed Front size label.
 - Generated plans are stored in `product_sync_preview_plans`, not final mapping or sync history.
 - The preview plan must not write to `product_mappings`.
-- Block selected products or variations with missing name, missing SKU, missing GTIN/EAN candidate, empty GTIN/EAN candidate, duplicate selected SKU/GTIN, missing variation parent context, or no price candidate.
+- Block selected products or variations with missing name, missing SKU, missing both SKU and GTIN/EAN candidate, duplicate selected SKU/GTIN, missing variation parent context, or no price candidate.
+- Missing GTIN/EAN should be a warning when SKU exists unless the active sync profile explicitly requires GTIN/EAN.
 - Variable parent products may be previewed but should warn that sellable variation rows are usually better Front POS candidates.
 - Warn, but do not block, for missing brand, missing category, missing sale price, out-of-stock status, `manage_stock=false`, no Front sample match, uncertain category mapping, or uncertain brand mapping.
 - Proposed Front fields are candidates only. Group/subgroup, brand source, size label, product number/variant strategy, sale price handling, and primary identifier strategy must be marked `NEEDS_CONFIRMATION`.

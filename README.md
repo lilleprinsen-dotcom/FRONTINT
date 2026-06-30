@@ -56,6 +56,7 @@ Phase 4 adds controlled 10-item mapping PoC preparation:
 
 The PoC plan uses stored snapshots only. It performs no external API calls, does not write products, prices, stock, orders, or final `product_mappings`, and does not call Front or WooCommerce write endpoints. Variation discovery is read-only; variations can be selected as first-class preview candidates, but no variation writes exist yet. GTIN/EAN candidates must be confirmed before any future write test.
 Variation preview rows inherit parent product name, category, brand, and image candidates from the same WooCommerce discovery snapshot, while variation attributes become the proposed Front size label.
+SKU and Woo product/variation IDs are valid identity inputs for products without GTIN/EAN. Missing GTIN/EAN is a warning by default when SKU exists, not a blocker, though a strict sync profile can still require GTIN/EAN for barcode-specific tests.
 
 Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-product catalog:
 
