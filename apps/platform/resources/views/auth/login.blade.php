@@ -1,10 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
         <h1>Log in</h1>
-        <p class="muted">Use the admin user created with <code>php artisan omnibridge:create-admin</code>.</p>
+        <p>Use the admin user created during local setup.</p>
+    </section>
 
+    <section class="panel">
         <form method="post" action="{{ route('login.store') }}">
             @csrf
             <label for="email">Email</label>

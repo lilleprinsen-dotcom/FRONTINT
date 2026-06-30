@@ -10,9 +10,10 @@
 @endphp
 
 @section('content')
-    <section class="panel">
-        <h1>Dashboard</h1>
-        <p>OmniBridge keeps WooCommerce as the master and prepares Front Systems for store operations.</p>
+    <section class="panel page-header">
+        <span class="kicker">Store owner overview</span>
+        <h1>Know what is ready, and what needs attention.</h1>
+        <p>OmniBridge keeps WooCommerce as the master. Start with WooCommerce, check the product data, then prepare a safe Front sync plan when the Front account is ready.</p>
         <div class="notice">Production writes are {{ $productionWritesEnabled ? 'enabled' : 'disabled' }}. {{ $productionWritesEnabled ? 'Review the launch checklist before continuing.' : 'This is the expected safe mode.' }}</div>
         @if ($connectionHttpTestsEnabled)
             <div class="warning">Live read-only checks are enabled. Real external systems may be contacted from testing pages.</div>
@@ -25,77 +26,80 @@
 
     <section class="metric-grid">
         <div class="metric">
-            <span class="muted">Organizations</span>
-            <strong>{{ $organizations->count() }}</strong>
-            <span class="muted">Configured accounts</span>
+            <span class="muted">WooCommerce</span>
+            <strong>{{ $wooConnections > 0 ? 'Added' : 'Missing' }}</strong>
+            <span class="badge {{ $wooConnections > 0 ? 'ready' : 'warning-badge' }}">{{ $wooConnections > 0 ? 'Ready to test' : 'Add first' }}</span>
         </div>
         <div class="metric">
-            <span class="muted">Connections</span>
-            <strong>{{ $readyConnections }} / {{ $connectionCount }}</strong>
-            <span class="muted">Ready connections</span>
+            <span class="muted">Front Systems</span>
+            <strong>{{ $frontConnections > 0 ? 'Added' : 'Later' }}</strong>
+            <span class="muted">{{ $frontConnections > 0 ? 'Ready for read-only checks' : 'Not needed for Woo readiness' }}</span>
         </div>
         <div class="metric">
             <span class="muted">Needs attention</span>
             <strong>{{ $connectionsNeedingAttention + $failedEventsCount }}</strong>
-            <span class="muted">Connection issues and failed events</span>
+            <span class="muted">Connection or setup issues</span>
         </div>
         <div class="metric">
-            <span class="muted">Woo readiness</span>
+            <span class="muted">Product data</span>
             <strong>Review</strong>
-            <span class="muted">Check product data before Front setup</span>
+            <span class="muted">SKU, EAN/GTIN, price and variations</span>
         </div>
     </section>
 
-    <section class="grid">
-        <div class="panel">
-            <h2>Setup Progress</h2>
-            <p><span class="status-dot {{ $organizations->isNotEmpty() ? 'ready' : 'warning' }}"></span>Organization created</p>
-            <p><span class="status-dot {{ $wooConnections > 0 ? 'ready' : 'warning' }}"></span>WooCommerce connection added</p>
-            <p><span class="status-dot {{ $frontConnections > 0 ? 'ready' : 'warning' }}"></span>Front Systems connection added</p>
-            <p><span class="status-dot warning"></span>Product sync writes not enabled</p>
+    <section class="panel">
+        <div class="split-row">
+            <div>
+                <h2>Recommended path</h2>
+                <p class="muted">Use these three pages for normal setup. Everything else is tucked away in Advanced.</p>
+            </div>
+            <a class="button secondary" href="{{ route('advanced.index') }}">Advanced tools</a>
         </div>
-
-        <div class="panel">
-            <h2>Next Steps</h2>
-            <p class="muted">Normal setup should stay simple: connect WooCommerce, review product readiness, then prepare product sync.</p>
-            <div class="action-row">
-                <a class="button" href="{{ route('connections.index') }}">Manage connections</a>
+        <div class="owner-flow">
+            <div class="flow-step">
+                <span class="step-number">1</span>
+                <strong>Connect WooCommerce</strong>
+                <p class="muted">Add the store URL and credentials, then run the read-only checks.</p>
+                <a class="button" href="{{ route('connections.index') }}">Open connections</a>
+            </div>
+            <div class="flow-step">
+                <span class="step-number">2</span>
+                <strong>Review product readiness</strong>
+                <p class="muted">See which sampled products and variations look ready before Front is connected.</p>
                 <a class="button secondary" href="{{ route('woo-readiness.index') }}">Review Woo readiness</a>
             </div>
+            <div class="flow-step">
+                <span class="step-number">3</span>
+                <strong>Prepare sync plan</strong>
+                <p class="muted">Preview what will be synced later. Product writes are still disabled.</p>
+                <a class="button secondary" href="{{ route('product-sync.index') }}">Open product sync</a>
+            </div>
         </div>
-
     </section>
 
     @forelse ($organizations as $organization)
         <section class="panel">
-            <h2>{{ $organization->name }}</h2>
-            <p class="muted">Environment: {{ $organization->environment }} | Status: {{ $organization->status }}</p>
-            <table>
-                <thead>
-                <tr>
-                    <th>Area</th>
-                    <th>Status</th>
-                    <th>What to do</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>Connections</td>
-                    <td>{{ $organization->connections->count() }} configured</td>
-                    <td><a href="{{ route('connections.index') }}">Review connections</a></td>
-                </tr>
-                <tr>
-                    <td>Woo readiness</td>
-                    <td>Read-only</td>
-                    <td><a href="{{ route('woo-readiness.index') }}">Review products</a></td>
-                </tr>
-                <tr>
-                    <td>Technical setup</td>
-                    <td>{{ $organization->webhookEndpoints->count() }} webhook endpoint(s)</td>
-                    <td><a href="{{ route('advanced.index') }}">Open Advanced</a></td>
-                </tr>
-                </tbody>
-            </table>
+            <div class="split-row">
+                <div>
+                    <h2>{{ $organization->name }}</h2>
+                    <p class="muted">{{ ucfirst($organization->environment) }} environment. {{ $organization->connections->count() }} connection(s) configured.</p>
+                </div>
+                <span class="badge {{ $organization->status === 'active' ? 'ready' : 'warning-badge' }}">{{ $organization->status }}</span>
+            </div>
+            <div class="summary-list">
+                <div class="summary-item">
+                    <span><span class="status-dot {{ $wooConnections > 0 ? 'ready' : 'warning' }}"></span>WooCommerce connection</span>
+                    <a href="{{ route('connections.index') }}">{{ $wooConnections > 0 ? 'Review' : 'Add' }}</a>
+                </div>
+                <div class="summary-item">
+                    <span><span class="status-dot warning"></span>Product readiness</span>
+                    <a href="{{ route('woo-readiness.index') }}">Review products</a>
+                </div>
+                <div class="summary-item">
+                    <span><span class="status-dot {{ $frontConnections > 0 ? 'ready' : 'warning' }}"></span>Front connection</span>
+                    <a href="{{ route('connections.index') }}">{{ $frontConnections > 0 ? 'Review' : 'Add later' }}</a>
+                </div>
+            </div>
         </section>
     @empty
         <section class="panel">

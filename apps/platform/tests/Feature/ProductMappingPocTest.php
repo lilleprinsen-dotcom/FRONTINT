@@ -248,7 +248,7 @@ class ProductMappingPocTest extends TestCase
         $this->actingAs($user)
             ->get('/mapping/product-poc')
             ->assertOk()
-            ->assertSee('You can still create a Woo-only readiness plan')
+            ->assertSee('Optional for now. Matching will show as missing.')
             ->assertSee('variation:456')
             ->assertSee('Woo Boot - Blue / 24')
             ->assertSee('Blue / 24')

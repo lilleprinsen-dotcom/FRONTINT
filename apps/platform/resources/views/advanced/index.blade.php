@@ -1,10 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Technical area</span>
         <h1>Advanced</h1>
         <div class="warning">Technical settings. Only change these if you know what they do.</div>
-        <p class="muted">This area contains webhooks, API settings, raw logs, and sync profile technical details.</p>
+        <p>This area keeps testing tools, webhook URLs, API notes, raw logs, and sync profile technical details away from the normal store-owner workflow.</p>
     </section>
 
     <section class="grid">
@@ -40,6 +41,7 @@
     @foreach ($organizations as $organization)
         <section class="panel">
             <h2>{{ $organization->name }} Webhooks</h2>
+            <div class="table-wrap">
             <table>
                 <thead>
                 <tr>
@@ -58,11 +60,13 @@
                 @endforeach
                 </tbody>
             </table>
+            </div>
         </section>
     @endforeach
 
     <section class="panel">
         <h2>Recent Events</h2>
+        <div class="table-wrap">
         <table>
             <thead>
             <tr>
@@ -87,5 +91,6 @@
             @endforelse
             </tbody>
         </table>
+        </div>
     </section>
 @endsection

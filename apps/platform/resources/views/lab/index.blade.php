@@ -1,9 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Advanced</span>
         <h1>Testing Lab</h1>
-        <p>Use this page for staging checks, read-only discovery, mapping previews, and other setup experiments.</p>
+        <p>Use this page for staging checks, read-only discovery, mapping previews, and other setup experiments. Normal store-owner work should happen on Dashboard, Connections, Woo Readiness, and Product Sync.</p>
         <div class="warning">This page is intentionally separate from the normal merchant workflow. It is for setup, testing, and troubleshooting only.</div>
 
         @if ($productionWritesEnabled)
@@ -69,6 +70,7 @@
     @foreach ($organizations as $organization)
         <section class="panel">
             <h2>{{ $organization->name }} Lab Actions</h2>
+            <div class="table-wrap">
             <table>
                 <thead>
                 <tr>
@@ -117,6 +119,7 @@
                 @endforelse
                 </tbody>
             </table>
+            </div>
         </section>
     @endforeach
 @endsection

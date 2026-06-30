@@ -1,7 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Preview history</span>
         <h1>Sync Runs</h1>
         <p>Each run tracks a planned group of WooCommerce products or variations. No products are written to Front in the current phase.</p>
         <div class="notice">Large catalog runs must be processed in batches later. This page shows run summaries and links to paginated item views.</div>
@@ -9,6 +10,7 @@
 
     <section class="panel">
         <h2>Recent Runs</h2>
+        <div class="table-wrap">
         <table>
             <thead>
             <tr>
@@ -46,6 +48,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
         <div style="margin-top: 16px">
             {{ $runs->links() }}
         </div>

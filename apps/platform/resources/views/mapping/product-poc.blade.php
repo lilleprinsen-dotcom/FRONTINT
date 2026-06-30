@@ -5,8 +5,10 @@
 @endphp
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Testing Lab</span>
         <h1>Mapping Preview Lab</h1>
+        <p>Select a few sampled WooCommerce items and see what a future Front product could look like. This is still a preview.</p>
         <div class="warning">Preview only. No products, prices, stock or orders are written to WooCommerce or Front.</div>
 
         @if ($productionWritesEnabled)
@@ -24,38 +26,30 @@
 
     <section class="panel">
         <h2>Prerequisites</h2>
-        <table>
-            <tbody>
-            <tr>
-                <th>WooCommerce product discovery snapshot</th>
-                <td>
+        <div class="summary-list">
+            <div class="summary-item">
+                <span>WooCommerce product sample</span>
+                <strong>
                     @if ($wooSnapshot)
                         Present, checked {{ $wooSnapshot->checked_at }}. Products: {{ count($wooProducts) }}.
                     @else
                         Missing. Run WooCommerce product discovery first.
                     @endif
-                </td>
-            </tr>
-            <tr>
-                <th>Front product discovery snapshot</th>
-                <td>
+                </strong>
+            </div>
+            <div class="summary-item">
+                <span>Front product sample</span>
+                <strong>
                     @if ($frontSnapshot)
                         Present, checked {{ $frontSnapshot->checked_at }}. Products: {{ count($frontProducts) }}.
                     @else
-                        Missing. You can still create a Woo-only readiness plan; Front matching will show as missing.
+                        Optional for now. Matching will show as missing.
                     @endif
-                </td>
-            </tr>
-            <tr>
-                <th>Production writes</th>
-                <td>{{ $productionWritesEnabled ? 'Enabled - stop and disable before continuing.' : 'Disabled.' }}</td>
-            </tr>
-            <tr>
-                <th>Live HTTP</th>
-                <td>Can be off. This page only reads stored local snapshots.</td>
-            </tr>
-            </tbody>
-        </table>
+                </strong>
+            </div>
+            <div class="summary-item"><span>Production writes</span><strong>{{ $productionWritesEnabled ? 'Enabled - stop and disable before continuing.' : 'Disabled' }}</strong></div>
+            <div class="summary-item"><span>Live HTTP</span><strong>Not needed on this page</strong></div>
+        </div>
     </section>
 
     <form method="post" action="{{ route('mapping.product-poc.plan') }}">
@@ -69,6 +63,7 @@
                 Detected GTIN/EAN values are candidates only and must be confirmed before any future write test.
             </p>
 
+            <div class="table-wrap">
             <table>
                 <thead>
                 <tr>
@@ -149,6 +144,7 @@
                 @endforelse
                 </tbody>
             </table>
+            </div>
 
             <p>
                 <button type="submit" @disabled(!$wooSnapshot || $productionWritesEnabled)>Generate 10-product sync plan</button>
@@ -165,6 +161,7 @@
                 created {{ $latestPlan->created_at }}.
                 This is preview storage only, not sync history.
             </p>
+            <div class="table-wrap">
             <table>
                 <thead>
                 <tr>
@@ -236,6 +233,7 @@
                 @endforeach
                 </tbody>
             </table>
+            </div>
         @else
             <p>No preview sync plan generated yet.</p>
         @endif

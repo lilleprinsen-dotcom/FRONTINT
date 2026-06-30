@@ -6,7 +6,8 @@
 @endphp
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Preview run</span>
         <h1>Sync Run #{{ $run->id }}</h1>
         <p>
             <span class="badge">{{ $run->run_type }}</span>
@@ -64,6 +65,7 @@
             <a class="button secondary" href="{{ route('product-sync.runs.show', $run) }}">Clear</a>
         </form>
 
+        <div class="table-wrap">
         <table>
             <thead>
             <tr>
@@ -114,6 +116,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
         <div style="margin-top: 16px">
             {{ $items->links() }}
         </div>
