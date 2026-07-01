@@ -61,6 +61,31 @@
     </section>
 
     <section class="panel">
+        <h2>Sale price sync</h2>
+        <p class="muted">
+            Sends WooCommerce sale prices for already-synced products to Front <code>POST /api/PricelistV2</code>.
+            Regular product prices, WooCommerce, stock, orders, refunds, and gift cards are not changed.
+        </p>
+        <p class="muted">
+            Price list: <strong>{{ $run->profile?->sale_price_list_name ?: 'WooCommerce Sale Prices' }}</strong>.
+            Eligible sale price items: {{ $eligibleSalePriceItems->count() }}.
+        </p>
+        @if (! in_array($run->profile?->price_strategy, ['regular_price_now_sale_price_later', 'pricelist_v2_later'], true))
+            <div class="warning">Set price strategy to “Regular price now, sale price later” or “PriceListV2 later” before syncing sale prices.</div>
+        @endif
+        <div class="action-row">
+            <form class="inline-form" method="post" action="{{ route('product-sync.runs.sale-prices', $run) }}">
+                @csrf
+                <button type="submit" @disabled($eligibleSalePriceItems->isEmpty())>Sync sale prices</button>
+            </form>
+            <form class="inline-form" method="post" action="{{ route('product-sync.runs.retry-sale-prices', $run) }}">
+                @csrf
+                <button class="secondary" type="submit">Retry failed sale prices</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="panel">
         <h2>Next step: Front write dry-run</h2>
         <p class="muted">
             Select up to 10 ready or warning items to preview the exact Front product payload.
@@ -146,6 +171,7 @@
                 <th>Front match</th>
                 <th>Validation</th>
                 <th>Sync status</th>
+                <th>Sale price</th>
                 <th>Front result</th>
                 <th>Needs attention</th>
                 <th>Proposed Front fields</th>
@@ -161,6 +187,14 @@
                     <td>{{ $item->front_match_status ?: 'no match' }}</td>
                     <td><span class="badge {{ $item->validation_status === 'ready' ? 'ready' : ($item->validation_status === 'blocked' ? 'blocked' : 'warning-badge') }}">{{ $item->validation_status }}</span></td>
                     <td>{{ $item->sync_status }}<div class="muted">Attempts: {{ $item->attempt_count }}</div></td>
+                    <td>
+                        @php($payload = $item->proposed_front_payload_json ?? [])
+                        <div>{{ $payload['sale_price_candidate'] ?? 'n/a' }}</div>
+                        <div class="muted">{{ $item->sale_price_sync_status }}</div>
+                        @if ($item->sale_price_last_error)
+                            <div class="danger">{{ $item->sale_price_last_error }}</div>
+                        @endif
+                    </td>
                     <td>
                         <div>Product ID: {{ $item->front_product_id ?: 'n/a' }}</div>
                         <div>Ext ID: {{ $item->front_product_ext_id ?: 'n/a' }}</div>
@@ -179,7 +213,6 @@
                         @endforelse
                     </td>
                     <td>
-                        @php($payload = $item->proposed_front_payload_json ?? [])
                         @php($size = $payload['productSizes'][0] ?? [])
                         <div>Name: {{ $payload['name'] ?? 'n/a' }}</div>
                         <div>Number: {{ $payload['number'] ?? 'n/a' }}</div>
@@ -191,7 +224,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10">No run items match this view.</td>
+                    <td colspan="11">No run items match this view.</td>
                 </tr>
             @endforelse
             </tbody>

@@ -104,6 +104,9 @@
                     <option value="regular_price_now_sale_price_later" @selected($profile->price_strategy === 'regular_price_now_sale_price_later')>Regular price now, sale price later</option>
                     <option value="pricelist_v2_later" @selected($profile->price_strategy === 'pricelist_v2_later')>PriceListV2 later</option>
                 </select>
+                <label for="sale_price_list_name">Front sale price list name</label>
+                <input id="sale_price_list_name" name="sale_price_list_name" value="{{ old('sale_price_list_name', $profile->sale_price_list_name ?? 'WooCommerce Sale Prices') }}">
+                <p class="muted">Used by staging sale price sync through Front <code>POST /api/PricelistV2</code>.</p>
 
                 <label for="stock_strategy">Stock strategy</label>
                 <select id="stock_strategy" name="stock_strategy">

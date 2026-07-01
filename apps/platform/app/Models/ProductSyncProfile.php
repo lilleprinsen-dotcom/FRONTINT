@@ -47,6 +47,7 @@ class ProductSyncProfile extends Model
         'default_front_subgroup_strategy',
         'default_front_brand_strategy',
         'price_strategy',
+        'sale_price_list_name',
         'stock_strategy',
         'incremental_sync_enabled',
         'webhook_updates_enabled',

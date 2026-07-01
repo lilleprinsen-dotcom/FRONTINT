@@ -10,6 +10,7 @@ use App\Models\ProductSyncProfile;
 use App\Models\ProductSyncEvent;
 use App\Models\ProductSyncRun;
 use App\Jobs\RunLimitedFrontProductWriteTest;
+use App\Jobs\RunFrontSalePriceSync;
 use App\Services\ProductSync\ProductSyncPreviewRunBuilder;
 use App\Services\ProductSync\ProductSyncProfileProvisioner;
 use App\Services\ProductSync\DryRun\FrontProductWriteDryRunBuilder;
@@ -98,6 +99,7 @@ class ProductSyncController extends Controller
             'category_mapping_strategy' => ['nullable', 'string', 'max:120'],
             'brand_mapping_strategy' => ['nullable', 'string', 'max:120'],
             'price_strategy' => ['required', Rule::in(['regular_price_only', 'regular_price_now_sale_price_later', 'pricelist_v2_later'])],
+            'sale_price_list_name' => ['nullable', 'string', 'max:120'],
             'stock_strategy' => ['required', Rule::in(['do_not_sync_stock_yet', 'preview_only', 'stock_sync_later'])],
             'incremental_sync_enabled' => ['nullable', 'boolean'],
             'webhook_updates_enabled' => ['nullable', 'boolean'],
@@ -123,6 +125,11 @@ class ProductSyncController extends Controller
             'reconciliation_enabled',
         ] as $checkbox) {
             $validated[$checkbox] = (bool) ($validated[$checkbox] ?? false);
+        }
+
+        $validated['sale_price_list_name'] = trim((string) ($validated['sale_price_list_name'] ?? ''));
+        if ($validated['sale_price_list_name'] === '') {
+            $validated['sale_price_list_name'] = 'WooCommerce Sale Prices';
         }
 
         $profile->update($validated);
@@ -225,6 +232,14 @@ class ProductSyncController extends Controller
                 ->where('sync_status', 'not_started')
                 ->limit(FrontProductWriteDryRunBuilder::MAX_ITEMS)
                 ->get(),
+            'eligibleSalePriceItems' => $run->items()
+                ->where('sync_status', 'synced')
+                ->whereIn('sale_price_sync_status', ['not_applicable', 'failed', 'needs_retry'])
+                ->orderBy('id')
+                ->get()
+                ->filter(fn ($item): bool => is_numeric($item->proposed_front_payload_json['sale_price_candidate'] ?? null))
+                ->take(100)
+                ->values(),
         ]);
     }
 
@@ -362,6 +377,36 @@ class ProductSyncController extends Controller
             ->with('status', 'Retry queued for ' . count($itemIds) . ' failed item(s).');
     }
 
+    public function runSalePriceSync(Request $request, ProductSyncRun $run): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $itemIds = $this->salePriceItemIds($run, ['not_applicable', 'failed', 'needs_retry']);
+
+        foreach ($itemIds as $itemId) {
+            RunFrontSalePriceSync::dispatch($run->id, $request->user()->id, [(int) $itemId]);
+        }
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Sale price sync queued for ' . count($itemIds) . ' item(s).');
+    }
+
+    public function retrySalePrices(Request $request, ProductSyncRun $run): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $itemIds = $this->salePriceItemIds($run, ['failed']);
+
+        foreach ($itemIds as $itemId) {
+            RunFrontSalePriceSync::dispatch($run->id, $request->user()->id, [(int) $itemId]);
+        }
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Sale price retry queued for ' . count($itemIds) . ' item(s).');
+    }
+
     public function runs(Request $request): View
     {
         $organizationIds = $request->user()->organizations()->pluck('organizations.id');
@@ -431,6 +476,19 @@ class ProductSyncController extends Controller
         return app(ProductSyncPreviewPlanner::class)
             ->wooItemsFromSnapshot($snapshot)
             ->take(StagingBatchProductSyncRunBuilder::MAX_ITEMS);
+    }
+
+    private function salePriceItemIds(ProductSyncRun $run, array $statuses): array
+    {
+        return $run->items()
+            ->where('sync_status', 'synced')
+            ->whereIn('sale_price_sync_status', $statuses)
+            ->orderBy('id')
+            ->get()
+            ->filter(fn ($item): bool => is_numeric($item->proposed_front_payload_json['sale_price_candidate'] ?? null))
+            ->take(100)
+            ->pluck('id')
+            ->all();
     }
 
     private function connectionStatuses(Organization $organization): array

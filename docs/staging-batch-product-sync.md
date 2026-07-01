@@ -11,7 +11,7 @@ It is intentionally limited:
 - Writes only product create/update payloads to Front.
 - Does not write to WooCommerce.
 - Does not write stock.
-- Does not write price lists or sale prices.
+- Writes sale prices only through the separate explicit PriceListV2 action after products are synced.
 - Does not create orders, refunds, gift cards, or omnichannel records.
 - Does not sync the full catalog.
 
@@ -51,9 +51,16 @@ WooCommerce product and variation IDs are the stable mapping identity. SKU and G
 
 Staging batch v1 sends WooCommerce regular price as the Front product `price`.
 
-WooCommerce sale price is not written yet. It is shown and stored as a future `POST /api/PricelistV2` candidate because Front sale prices belong in a price list, not in the base product price field.
+WooCommerce sale price is written through the separate sale price action on the run page. That action calls `POST /api/PricelistV2`, uses the configured sale price list name, and only processes already-synced product run items.
 
 Do not overwrite regular price with sale price.
+
+Sale price sync:
+
+- prefers Front `productExtId`
+- falls back to GTIN if no Front ext id is stored
+- stores separate sale-price status on the run item
+- is retryable without rerunning product sync
 
 ## How To Test
 
@@ -93,7 +100,6 @@ Raw API keys and full response bodies are not stored.
 - Full catalog sync for 70,000 products.
 - Background cursor-based catalog scan.
 - Product deletion handling.
-- PriceListV2 writes.
 - Stock writes.
 - WooCommerce writes.
 - Order/refund/gift-card/omnichannel sync.

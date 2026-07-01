@@ -727,6 +727,159 @@ class ProductSyncFoundationTest extends TestCase
         $this->assertSame('future PriceListV2 candidate', $summary['sale_price_destination']);
     }
 
+    public function test_sale_price_sync_posts_pricelist_v2_without_product_stock_or_woo_writes(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/PricelistV2' => Http::response([
+                'pricelistId' => 77,
+                'name' => 'Lilleprinsen Sale',
+                'productCount' => 1,
+            ]),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update([
+                'mode' => 'staging_batch',
+                'price_strategy' => 'pricelist_v2_later',
+                'sale_price_list_name' => 'Lilleprinsen Sale',
+            ]);
+        $run = $this->runWithItems($organization, [
+            [
+                'sku' => 'READY-1',
+                'gtin' => '7040000002001',
+                'validation_status' => 'ready',
+                'sync_status' => 'synced',
+                'sale_price' => '499',
+                'front_product_ext_id' => 'woo-product-1000',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/sale-prices')
+            ->assertRedirect();
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return $request->method() === 'POST'
+                && (string) $request->url() === 'https://front.example.test/restapi/V2/api/PricelistV2'
+                && ($payload['name'] ?? null) === 'Lilleprinsen Sale'
+                && ($payload['prices'][0]['productExtId'] ?? null) === 'woo-product-1000'
+                && ($payload['prices'][0]['price'] ?? null) === 499;
+        });
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/wp-json/'));
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/api/products'));
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/api/Stock'));
+
+        $item = $run->fresh()->items()->firstOrFail();
+        $this->assertSame('synced', $item->sale_price_sync_status);
+        $this->assertSame(77, $item->sale_price_last_response_summary_json['pricelistId']);
+        $this->assertSame('POST /api/PricelistV2', $item->sale_price_last_request_summary_json['endpoint']);
+        $this->assertArrayNotHasKey('x-api-key', $item->sale_price_last_request_summary_json);
+        $auditJson = AuditLog::query()->where('action', 'front_sale_price_sync')->get()->toJson();
+        $this->assertStringNotContainsString('front-secret-key', $auditJson);
+    }
+
+    public function test_sale_price_sync_uses_gtin_when_front_ext_id_is_missing(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/PricelistV2' => Http::response(['pricelistId' => 77]),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'staging_batch', 'price_strategy' => 'pricelist_v2_later']);
+        $run = $this->runWithItems($organization, [
+            [
+                'sku' => 'READY-1',
+                'gtin' => '7040000002001',
+                'validation_status' => 'ready',
+                'sync_status' => 'synced',
+                'sale_price' => '499',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/sale-prices')
+            ->assertRedirect();
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return ($payload['prices'][0]['gtin'] ?? null) === '7040000002001'
+                && ! array_key_exists('productExtId', $payload['prices'][0]);
+        });
+    }
+
+    public function test_sale_price_sync_does_not_call_http_when_gates_fail(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        $run = $this->runWithItems($organization, [
+            [
+                'sku' => 'READY-1',
+                'gtin' => '7040000002001',
+                'validation_status' => 'ready',
+                'sync_status' => 'synced',
+                'sale_price' => '499',
+                'front_product_ext_id' => 'woo-product-1000',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/sale-prices')
+            ->assertRedirect();
+
+        Http::assertNothingSent();
+        $this->assertSame('not_applicable', $run->fresh()->items()->firstOrFail()->sale_price_sync_status);
+    }
+
+    public function test_sale_price_sync_marks_failed_front_response_and_retry_can_succeed(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/PricelistV2' => Http::sequence()
+                ->push(['message' => 'Bad sale price'], 422)
+                ->push(['pricelistId' => 88, 'name' => 'WooCommerce Sale Prices'], 200),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'staging_batch', 'price_strategy' => 'pricelist_v2_later']);
+        $run = $this->runWithItems($organization, [
+            [
+                'sku' => 'READY-1',
+                'gtin' => '7040000002001',
+                'validation_status' => 'ready',
+                'sync_status' => 'synced',
+                'sale_price' => '499',
+                'front_product_ext_id' => 'woo-product-1000',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/sale-prices')
+            ->assertRedirect();
+
+        $item = $run->fresh()->items()->firstOrFail();
+        $this->assertSame('failed', $item->sale_price_sync_status);
+        $this->assertSame('HTTP 422', $item->sale_price_last_error);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/retry-sale-prices')
+            ->assertRedirect();
+
+        $item = $run->fresh()->items()->firstOrFail();
+        $this->assertSame('synced', $item->sale_price_sync_status);
+        $this->assertSame(2, $item->sale_price_attempt_count);
+        $this->assertSame(88, $item->sale_price_last_response_summary_json['pricelistId']);
+    }
+
     public function test_staging_batch_sync_updates_when_existing_product_mapping_exists(): void
     {
         Http::fake([
@@ -1164,6 +1317,7 @@ class ProductSyncFoundationTest extends TestCase
             'product_identity_strategy' => 'woo_id_as_front_extid',
             'gtin_field_strategy' => 'auto_detect',
             'price_strategy' => 'regular_price_only',
+            'sale_price_list_name' => 'WooCommerce Sale Prices',
             'stock_strategy' => 'do_not_sync_stock_yet',
         ];
     }
@@ -1195,6 +1349,8 @@ class ProductSyncFoundationTest extends TestCase
                 'woo_sku' => $item['sku'],
                 'detected_gtin' => $item['gtin'],
                 'front_match_status' => 'no_match',
+                'front_product_ext_id' => $item['front_product_ext_id'] ?? null,
+                'front_product_id' => $item['front_product_id'] ?? null,
                 'proposed_front_payload_json' => [
                     'name' => 'Product ' . ($index + 1),
                     'number' => $item['sku'],
@@ -1218,6 +1374,7 @@ class ProductSyncFoundationTest extends TestCase
                 ],
                 'validation_status' => $item['validation_status'] ?? 'warning',
                 'sync_status' => $item['sync_status'] ?? 'not_started',
+                'sale_price_sync_status' => $item['sale_price_sync_status'] ?? 'not_applicable',
                 'validation_errors_json' => [],
                 'validation_warnings_json' => [],
             ]);

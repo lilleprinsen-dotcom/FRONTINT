@@ -34,14 +34,21 @@ class ProductSyncRunItem extends Model
         'payload_hash',
         'validation_status',
         'sync_status',
+        'sale_price_sync_status',
         'validation_errors_json',
         'validation_warnings_json',
         'last_error',
+        'sale_price_last_error',
         'last_request_summary_json',
         'last_response_summary_json',
+        'sale_price_last_request_summary_json',
+        'sale_price_last_response_summary_json',
         'attempt_count',
+        'sale_price_attempt_count',
         'last_attempted_at',
+        'sale_price_last_attempted_at',
         'synced_at',
+        'sale_price_synced_at',
     ];
 
     protected function casts(): array
@@ -52,8 +59,12 @@ class ProductSyncRunItem extends Model
             'validation_warnings_json' => 'array',
             'last_request_summary_json' => 'array',
             'last_response_summary_json' => 'array',
+            'sale_price_last_request_summary_json' => 'array',
+            'sale_price_last_response_summary_json' => 'array',
             'last_attempted_at' => 'datetime',
+            'sale_price_last_attempted_at' => 'datetime',
             'synced_at' => 'datetime',
+            'sale_price_synced_at' => 'datetime',
         ];
     }
 
