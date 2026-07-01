@@ -9,6 +9,7 @@ use App\Models\ProductSyncPreviewPlan;
 use App\Models\ProductSyncProfile;
 use App\Models\ProductSyncEvent;
 use App\Models\ProductSyncRun;
+use App\Models\ProductSyncRunItem;
 use App\Jobs\RunLimitedFrontProductWriteTest;
 use App\Jobs\RunFrontSalePriceSync;
 use App\Jobs\RunFrontStockSync;
@@ -188,9 +189,15 @@ class ProductSyncController extends Controller
                 ->withErrors(['staging_batch' => 'Run WooCommerce product discovery before creating a staging batch.']);
         }
 
+        $profile = $profiles->ensureDefault($organization);
+
+        if ($profile->mode === 'preview_only') {
+            $profile->update(['mode' => 'staging_batch']);
+        }
+
         $run = $builder->createFromWooDiscovery(
             $request->user(),
-            $profiles->ensureDefault($organization),
+            $profile->fresh(),
             $snapshot,
             $validated['woo_item_keys'],
         );
@@ -385,6 +392,18 @@ class ProductSyncController extends Controller
         return redirect()
             ->route('product-sync.runs.show', $run)
             ->with('status', 'Retry queued for ' . count($itemIds) . ' failed item(s).');
+    }
+
+    public function resyncItemToFront(Request $request, ProductSyncRun $run, ProductSyncRunItem $item): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+        abort_unless($item->product_sync_run_id === $run->id, 404);
+
+        RunLimitedFrontProductWriteTest::dispatch($run->id, $request->user()->id, [$item->id]);
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Manual Front resync queued for ' . ($item->woo_name ?: $item->woo_item_key) . '.');
     }
 
     public function runSalePriceSync(Request $request, ProductSyncRun $run): RedirectResponse

@@ -42,7 +42,7 @@
         <h2>Staging batch controls</h2>
         <p class="muted">
             This processes up to 100 ready or warning items in this run. It writes only products to Front.
-            It does not write WooCommerce, price lists, stock, orders, refunds, or gift cards.
+            It does not write WooCommerce, sale price lists, stock, orders, refunds, or gift cards.
         </p>
         <p class="muted">
             Stable matching uses the WooCommerce product or variation ID. SKU and EAN/GTIN are updated in Front as fields,
@@ -234,6 +234,28 @@
                         <div>External SKU: {{ $item->front_external_sku ?: 'n/a' }}</div>
                         @if ($item->last_request_summary_json)
                             <div class="muted">{{ $item->last_request_summary_json['endpoint'] ?? 'n/a' }}</div>
+                            <div class="muted">Decision: {{ $item->last_request_summary_json['decision'] ?? 'n/a' }} / {{ $item->last_request_summary_json['decision_source'] ?? 'n/a' }}</div>
+                            <div class="muted">Sizes sent: {{ $item->last_request_summary_json['product_size_count'] ?? 'n/a' }}</div>
+                        @endif
+                        @if ($item->last_error)
+                            <div class="danger">{{ $item->last_error }}</div>
+                        @endif
+                        <form method="post" action="{{ route('product-sync.runs.items.resync-front', [$run, $item]) }}" style="margin-top: 8px">
+                            @csrf
+                            <button class="secondary" type="submit" @disabled(! in_array($item->validation_status, ['ready', 'warning'], true))>Resync this item</button>
+                        </form>
+                        @if ($item->last_request_summary_json || $item->last_response_summary_json)
+                            <details class="technical-details">
+                                <summary>Inspect Front request/response</summary>
+                                @if ($item->last_request_summary_json)
+                                    <strong>Request summary</strong>
+                                    <pre>{{ json_encode($item->last_request_summary_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
+                                @endif
+                                @if ($item->last_response_summary_json)
+                                    <strong>Response summary</strong>
+                                    <pre>{{ json_encode($item->last_response_summary_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
+                                @endif
+                            </details>
                         @endif
                     </td>
                     <td>

@@ -429,9 +429,13 @@ Current behavior:
 - Uses the latest mapping preview plan when a lab user creates a preview run.
 - Creates local preview runs only from the Testing Lab.
 - Can create a staging batch run from the latest WooCommerce discovery snapshot.
+- Has quick selectors for 10, 25, and 100 item staging batches.
 - Can write up to 100 selected ready/warning products or variations to Front when the profile mode is `staging_batch` or `limited_write_test`.
-- Can write WooCommerce sale prices to Front PriceListV2 for already-synced products when the price strategy allows it.
-- Can write WooCommerce stock quantities to Front Stock adjust for already-synced products when the stock strategy and Front stock location are configured.
+- Can write one selected simple product to Front staging.
+- Can write one selected variable parent to Front staging with discovered Woo variations as Front `productSizes`.
+- Shows a safe request/response inspector per run item so Front API feedback can be copied for review.
+- Can manually resync a mapped product row to Front staging.
+- Sale price and stock sync are separate staging controls and are not part of the fast product-write test.
 - Can capture Front sale-like and return-like events, reduce or increase WooCommerce stock for matched POS transactions, and optionally create paid WooCommerce orders manually for sales from the `Front Sales` page.
 - Stores per-product status in `product_sync_run_items`.
 - Stores product and variation-level run structure for future batched full catalog sync.

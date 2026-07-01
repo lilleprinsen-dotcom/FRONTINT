@@ -85,6 +85,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('product-sync.runs.staging-batch-sync');
     Route::post('/product-sync/runs/{run}/retry-failed', [ProductSyncController::class, 'retryFailedItems'])
         ->name('product-sync.runs.retry-failed');
+    Route::post('/product-sync/runs/{run}/items/{item}/resync-front', [ProductSyncController::class, 'resyncItemToFront'])
+        ->name('product-sync.runs.items.resync-front');
     Route::post('/product-sync/runs/{run}/sale-prices', [ProductSyncController::class, 'runSalePriceSync'])
         ->name('product-sync.runs.sale-prices');
     Route::post('/product-sync/runs/{run}/retry-sale-prices', [ProductSyncController::class, 'retrySalePrices'])

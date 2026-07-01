@@ -101,10 +101,10 @@
 
         <section class="panel">
             <h2>Create staging batch</h2>
-            <p class="muted">Select up to 100 products or variations. Start small: choose a few ready variation rows first.</p>
+            <p class="muted">Select up to 100 products or variations. Use 1 item for a smoke test, 10 or 25 for API feedback, and 100 for the largest staging batch.</p>
             <details class="technical-details">
                 <summary>Price behavior</summary>
-                Regular price is sent as the Front product price. Sale price can be sent afterward from the run page using the configured Front sale price list.
+                Regular price is sent as the Front product price. Sale price is not part of this staging product-write test.
             </details>
             @if ($wooBatchCandidates->isEmpty())
                 <div class="warning">No WooCommerce discovery sample is available. Run Woo product discovery first.</div>
@@ -112,7 +112,13 @@
                 <form method="post" action="{{ route('product-sync.staging-batch-run') }}">
                     @csrf
                     <div class="next-step" style="margin-bottom: 12px">
-                        <strong>Tip:</strong> select a few green/ready variation rows first. Avoid blocked rows until the Woo data is fixed.
+                        <strong>Tip:</strong> select one simple product first, then one variable parent, then a 25-item batch. Variable parents are written with discovered variations as Front sizes.
+                    </div>
+                    <div class="action-row" style="margin-bottom: 12px">
+                        <button class="secondary" type="button" data-select-count="10">Select first 10</button>
+                        <button class="secondary" type="button" data-select-count="25">Select first 25</button>
+                        <button class="secondary" type="button" data-select-count="100">Select max 100</button>
+                        <button class="secondary" type="button" data-clear-selection>Clear</button>
                     </div>
                     <div class="table-wrap">
                         <table>
@@ -130,7 +136,7 @@
                             @foreach ($wooBatchCandidates as $candidate)
                                 @php($itemKey = $candidate['item_key'] ?? (($candidate['type'] ?? null) === 'variation' ? 'variation:'.($candidate['id'] ?? '') : 'product:'.($candidate['id'] ?? '')))
                                 <tr>
-                                    <td><input type="checkbox" name="woo_item_keys[]" value="{{ $itemKey }}"></td>
+                                    <td><input class="batch-candidate-checkbox" type="checkbox" name="woo_item_keys[]" value="{{ $itemKey }}"></td>
                                     <td>
                                         {{ $itemKey }}
                                         <div class="muted">{{ $candidate['type'] ?? 'product' }}</div>
@@ -146,6 +152,22 @@
                     </div>
                     <p><button type="submit">Create staging batch run</button></p>
                 </form>
+                <script>
+                    document.querySelectorAll('[data-select-count]').forEach((button) => {
+                        button.addEventListener('click', () => {
+                            const limit = Number(button.dataset.selectCount || 0);
+                            const boxes = Array.from(document.querySelectorAll('.batch-candidate-checkbox'));
+                            boxes.forEach((box, index) => {
+                                box.checked = index < limit;
+                            });
+                        });
+                    });
+                    document.querySelector('[data-clear-selection]')?.addEventListener('click', () => {
+                        document.querySelectorAll('.batch-candidate-checkbox').forEach((box) => {
+                            box.checked = false;
+                        });
+                    });
+                </script>
             @endif
         </section>
 

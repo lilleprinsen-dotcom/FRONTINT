@@ -7,11 +7,12 @@ It is intentionally limited:
 - Maximum 100 selected WooCommerce products or variations per batch.
 - Uses the latest local WooCommerce discovery snapshot.
 - Variations are first-class sync candidates.
+- Selecting a WooCommerce variable parent writes one Front product payload with discovered Woo variations as `productSizes`.
 - Validates each item before writing.
 - Writes only product create/update payloads to Front.
 - Does not write to WooCommerce.
-- Writes stock only through the separate explicit Stock adjust action after products are synced.
-- Writes sale prices only through the separate explicit PriceListV2 action after products are synced.
+- Does not write stock as part of this product-write test.
+- Does not write sale prices as part of this product-write test.
 - Does not create orders, refunds, gift cards, or omnichannel records.
 - Does not sync the full catalog.
 
@@ -21,7 +22,7 @@ Before running a staging batch:
 
 1. WooCommerce staging connection exists.
 2. Front staging connection exists with encrypted API key.
-3. Product sync profile mode is `staging_batch` or `limited_write_test`.
+3. Product sync profile mode is `staging_batch` or `limited_write_test`. Creating a staging batch from the Product Sync page will move the default `preview_only` profile to `staging_batch`.
 4. `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false`.
 5. WooCommerce product discovery has been run.
 
@@ -51,30 +52,15 @@ WooCommerce product and variation IDs are the stable mapping identity. SKU and G
 
 Staging batch v1 sends WooCommerce regular price as the Front product `price`.
 
-WooCommerce sale price is written through the separate sale price action on the run page. That action calls `POST /api/PricelistV2`, uses the configured sale price list name, and only processes already-synced product run items.
+WooCommerce sale price is not part of this fast product-write test. It stays visible as a future PriceListV2 candidate only.
 
 Do not overwrite regular price with sale price.
 
-Sale price sync:
-
-- prefers Front `productExtId`
-- falls back to GTIN if no Front ext id is stored
-- stores separate sale-price status on the run item
-- is retryable without rerunning product sync
-
 ## Stock Behavior
 
-Stock sync uses Front `POST /api/Stock/adjust` after products have synced.
+Stock sync is not part of this fast product-write test.
 
-It is sent as a partial stock count:
-
-- `isCompleteStockCount=false`
-- one selected item per queued job
-- target stock location from the product sync profile
-- quantity from the WooCommerce discovery snapshot
-- GTIN and/or external SKU as the item identifier
-
-This must not be used as a full stock count. It must not write WooCommerce stock.
+Do not use `POST /api/Stock/adjust` while testing the product payloads unless you are explicitly testing the separate stock flow.
 
 ## How To Test
 
@@ -83,13 +69,52 @@ This must not be used as a full stock count. It must not write WooCommerce stock
 3. Confirm Front staging connection exists with API key.
 4. Run WooCommerce product discovery.
 5. Open `Product Sync`.
-6. Set the sync profile mode to `staging_batch`.
-7. Select up to 100 WooCommerce products or variations from the staging batch section.
+6. Select WooCommerce products or variations from the staging batch section.
+7. Use `Select first 10`, `Select first 25`, or `Select max 100` for quick batches.
 8. Create a staging batch run.
 9. Open the run detail page.
 10. Click `Run staging batch sync`.
 11. Watch item statuses change to `synced` or `failed`.
-12. Use `Retry failed items` after fixing any failed data or Front validation issue.
+12. Open `Inspect Front request/response` on each row to copy the safe request/response summary.
+13. Use `Retry failed items` after fixing any failed data or Front validation issue.
+14. Use `Resync this item` on a mapped row to manually send the product to Front again.
+
+## Specific Staging Tests
+
+### 1 simple product
+
+1. Open `Product Sync`.
+2. Select one simple product row with a SKU and price.
+3. Create the staging batch run.
+4. Open the run.
+5. Click `Run staging batch sync`.
+6. Confirm the row becomes `synced` or inspect the Front error summary.
+
+### 1 variable product
+
+1. Open `Product Sync`.
+2. Select one variable parent product row.
+3. Create the staging batch run.
+4. Open the run.
+5. Confirm the row says multiple sizes in `Inspect Front request/response` after sync.
+6. Click `Run staging batch sync`.
+
+The variable parent payload should include the discovered Woo variations as Front `productSizes`.
+
+### 25 products
+
+1. Open `Product Sync`.
+2. Click `Select first 25`.
+3. Create the staging batch run.
+4. Open the run.
+5. Click `Run staging batch sync`.
+6. Review synced and failed rows. Failed rows should not stop the rest of the batch.
+
+### Manual resync
+
+1. Open a run with a previously synced row.
+2. Click `Resync this item`.
+3. OmniBridge should use the existing `product_mappings` row and update Front with `PUT /api/products/{productId}`.
 
 ## Result Storage
 
@@ -106,6 +131,8 @@ Failed items store:
 - `sync_status=failed`
 - `last_error`
 - sanitized response summary
+
+The run page includes an expandable `Inspect Front request/response` section per row so staging feedback can be copied into bug reports.
 
 Raw API keys and full response bodies are not stored.
 
