@@ -6,15 +6,15 @@
     $readyTotal = $counts['ready_sku_gtin'] + $counts['ready_sku_only'];
     $total = max(1, $counts['total']);
     $readyPercent = (int) round(($readyTotal / $total) * 100);
+    $attentionPercent = (int) round(($counts['needs_attention'] / $total) * 100);
+    $blockedPercent = max(0, 100 - $readyPercent - $attentionPercent);
 @endphp
 
 @section('content')
     <section class="panel page-header">
         <span class="kicker">WooCommerce only</span>
-        <h1>Woo Readiness</h1>
-        <p>
-            A simple product-data health check before Front is connected. It looks at the latest read-only WooCommerce sample and shows what can probably be used later.
-        </p>
+        <h1>WooCommerce readiness</h1>
+        <p>A simple health check for product data. It answers one question: are the sampled products ready for a later Front sync?</p>
         <div class="notice">Read-only. No products, prices, stock, orders, WooCommerce data, or Front data are changed.</div>
 
         @if ($snapshot)
@@ -28,7 +28,7 @@
             </p>
             <div class="action-row">
                 <a class="button secondary" href="{{ route('connections.discovery', $snapshot->connection) }}">Open Woo sample</a>
-                <a class="button secondary" href="{{ route('mapping.product-poc') }}">Select sample items</a>
+                <a class="button secondary" href="{{ route('testing-log.index') }}">Open Testing Log</a>
             </div>
         @else
             <div class="warning">
@@ -40,37 +40,80 @@
 
     @if ($snapshot)
         <section class="panel">
-            <h2>Overview</h2>
-            <div class="progress" aria-label="Ready progress"><span style="width: {{ $readyPercent }}%"></span></div>
-            <p class="muted">{{ $readyTotal }} of {{ $counts['total'] }} sampled items look ready or usable with SKU fallback.</p>
+            <h2>Readiness score</h2>
+            <div class="progress-segments" aria-label="Woo readiness progress">
+                <span class="ready-part" style="width: {{ $readyPercent }}%"></span>
+                <span class="warning-part" style="width: {{ $attentionPercent }}%"></span>
+                <span class="blocked-part" style="width: {{ $blockedPercent }}%"></span>
+            </div>
+            <p class="muted">{{ $readyTotal }} of {{ $counts['total'] }} sampled items are usable now. Yellow means review. Red means fix first.</p>
 
-            <div class="metric-grid">
-                <div class="metric">
-                    <span class="muted">Ready with SKU + EAN</span>
+            <div class="status-board">
+                <div class="status-card ready">
+                    <span class="muted">Best</span>
                     <strong>{{ $counts['ready_sku_gtin'] }}</strong>
-                    <span class="muted">Best candidates</span>
+                    <span>Ready with SKU + EAN</span>
                 </div>
-                <div class="metric">
-                    <span class="muted">Ready with SKU only</span>
+                <div class="status-card ready">
+                    <span class="muted">Usable</span>
                     <strong>{{ $counts['ready_sku_only'] }}</strong>
-                    <span class="muted">Usable, barcode optional</span>
+                    <span>Ready with SKU only</span>
                 </div>
-                <div class="metric">
-                    <span class="muted">Needs attention</span>
+                <div class="status-card warning">
+                    <span class="muted">Review</span>
                     <strong>{{ $counts['needs_attention'] }}</strong>
-                    <span class="muted">Review before syncing</span>
+                    <span>Needs attention</span>
                 </div>
-                <div class="metric">
-                    <span class="muted">Blocked</span>
+                <div class="status-card {{ $counts['blocked'] > 0 ? 'blocked' : 'ready' }}">
+                    <span class="muted">Fix first</span>
                     <strong>{{ $counts['blocked'] }}</strong>
-                    <span class="muted">Fix before sync</span>
+                    <span>Blocked</span>
                 </div>
             </div>
         </section>
 
+        <section class="panel">
+            <h2>Main things to fix</h2>
+            <p class="muted">Start here. A product should at minimum have a SKU and a price. EAN/GTIN is useful, but SKU-only products can still be handled.</p>
+            <div class="status-board">
+                <div class="status-card {{ $counts['missing_sku'] > 0 ? 'blocked' : 'ready' }}">
+                    <span class="muted">Must fix</span>
+                    <strong>{{ $counts['missing_sku'] }}</strong>
+                    <span>Missing SKU</span>
+                </div>
+                <div class="status-card {{ $counts['missing_price'] > 0 ? 'blocked' : 'ready' }}">
+                    <span class="muted">Must fix</span>
+                    <strong>{{ $counts['missing_price'] }}</strong>
+                    <span>Missing price</span>
+                </div>
+                <div class="status-card {{ count($summary['duplicates']['skus']) > 0 ? 'blocked' : 'ready' }}">
+                    <span class="muted">Must check</span>
+                    <strong>{{ count($summary['duplicates']['skus']) }}</strong>
+                    <span>Duplicate SKUs</span>
+                </div>
+                <div class="status-card {{ count($summary['duplicates']['gtins']) > 0 ? 'warning' : 'ready' }}">
+                    <span class="muted">Barcode check</span>
+                    <strong>{{ count($summary['duplicates']['gtins']) }}</strong>
+                    <span>Duplicate EAN/GTIN</span>
+                </div>
+            </div>
+
+            @if ($summary['duplicates']['skus'] !== [] || $summary['duplicates']['gtins'] !== [])
+                <details class="technical-details">
+                    <summary>Show duplicate values</summary>
+                    @if ($summary['duplicates']['skus'] !== [])
+                        <p><strong>Duplicate SKUs:</strong> {{ implode(', ', $summary['duplicates']['skus']) }}</p>
+                    @endif
+                    @if ($summary['duplicates']['gtins'] !== [])
+                        <p><strong>Duplicate EAN/GTIN:</strong> {{ implode(', ', $summary['duplicates']['gtins']) }}</p>
+                    @endif
+                </details>
+            @endif
+        </section>
+
         <section class="grid">
             <div class="panel">
-                <h2>Catalog shape</h2>
+                <h2>Product shape</h2>
                 <div class="summary-list">
                     <div class="summary-item"><span>Sampled items</span><strong>{{ $counts['total'] }}</strong></div>
                     <div class="summary-item"><span>Products</span><strong>{{ $counts['products'] }}</strong></div>
@@ -80,60 +123,30 @@
             </div>
 
             <div class="panel">
-                <h2>Fix first</h2>
-                @foreach ($summary['fixes'] as $fix)
-                    <p>
-                        <strong>{{ $fix['label'] }}: {{ $fix['count'] }}</strong><br>
-                        <span class="muted">{{ $fix['help'] }}</span>
-                    </p>
-                @endforeach
+                <h2>Recommended next step</h2>
+                @if ($counts['blocked'] > 0)
+                    <div class="next-step">
+                        <strong>Fix blocked products first.</strong>
+                        <p class="muted">Missing SKU, missing price, or duplicates can create wrong Front products.</p>
+                    </div>
+                @else
+                    <div class="next-step">
+                        <strong>Create a staging batch.</strong>
+                        <p class="muted">The sample looks usable. Go to Product Sync and select a small set.</p>
+                    </div>
+                @endif
+                <div class="action-row" style="margin-top: 12px">
+                    <a class="button" href="{{ route('product-sync.index') }}">Open Product Sync</a>
+                    <a class="button secondary" href="{{ route('testing-log.index') }}">Open Testing Log</a>
+                </div>
             </div>
         </section>
 
-        <section class="panel">
-            <h2>Product identifiers</h2>
-            <div class="metric-grid">
-                <div class="metric">
-                    <span class="muted">Missing SKU</span>
-                    <strong>{{ $counts['missing_sku'] }}</strong>
-                    <span class="muted">Must be fixed</span>
-                </div>
-                <div class="metric">
-                    <span class="muted">Missing EAN/GTIN</span>
-                    <strong>{{ $counts['missing_gtin'] }}</strong>
-                    <span class="muted">Warning if SKU exists</span>
-                </div>
-                <div class="metric">
-                    <span class="muted">Duplicate SKUs</span>
-                    <strong>{{ count($summary['duplicates']['skus']) }}</strong>
-                    <span class="muted">Unsafe for matching</span>
-                </div>
-                <div class="metric">
-                    <span class="muted">Duplicate EAN/GTIN</span>
-                    <strong>{{ count($summary['duplicates']['gtins']) }}</strong>
-                    <span class="muted">Check barcode data</span>
-                </div>
-            </div>
-
-            @if ($summary['duplicates']['skus'] !== [] || $summary['duplicates']['gtins'] !== [])
-                <div class="warning">
-                    @if ($summary['duplicates']['skus'] !== [])
-                        <p><strong>Duplicate SKUs:</strong> {{ implode(', ', $summary['duplicates']['skus']) }}</p>
-                    @endif
-                    @if ($summary['duplicates']['gtins'] !== [])
-                        <p><strong>Duplicate EAN/GTIN:</strong> {{ implode(', ', $summary['duplicates']['gtins']) }}</p>
-                    @endif
-                </div>
-            @endif
-        </section>
-
-        <section class="panel">
-            <h2>Sample items</h2>
-            <p class="muted">
-                This table shows the latest sampled WooCommerce products and variations only. It is not the full 70,000-product catalog.
-            </p>
+        <details class="panel">
+            <summary><strong>Show detailed sampled items</strong></summary>
+            <p class="muted">This table shows only the latest sampled WooCommerce products and variations. It is not the full 70,000-product catalog.</p>
             <div class="table-wrap">
-                <table>
+                <table class="simple-table">
                     <thead>
                     <tr>
                         <th>Status</th>
@@ -172,10 +185,10 @@
                             <td>{{ $item['price'] ?: 'n/a' }}</td>
                             <td>
                                 @foreach ($item['blocks'] as $block)
-                                    <div class="danger">{{ $block }}</div>
+                                    <div>{{ $block }}</div>
                                 @endforeach
                                 @foreach ($item['warnings'] as $warning)
-                                    <div class="warning">{{ $warning }}</div>
+                                    <div>{{ $warning }}</div>
                                 @endforeach
                                 @if ($item['blocks'] === [] && $item['warnings'] === [])
                                     <span class="muted">Looks good in this sample.</span>
@@ -190,6 +203,6 @@
                     </tbody>
                 </table>
             </div>
-        </section>
+        </details>
     @endif
 @endsection

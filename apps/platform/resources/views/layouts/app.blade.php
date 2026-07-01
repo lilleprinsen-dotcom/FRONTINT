@@ -6,7 +6,7 @@
     <title>{{ $title ?? 'OmniBridge' }}</title>
     <style>
         :root { color-scheme: light; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-        body { margin: 0; background: radial-gradient(circle at top left, #eef7ff 0, #f7f7f8 34%, #f6f9f6 100%); color: #1f2933; }
+        body { margin: 0; background: #f4f7fb; color: #1f2933; }
         header { background: rgba(255, 255, 255, .9); border-bottom: 1px solid #d9dee5; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; position: sticky; top: 0; z-index: 2; backdrop-filter: blur(12px); }
         main { max-width: 1180px; margin: 0 auto; padding: 24px; }
         h1, h2, h3 { margin: 0 0 12px; letter-spacing: 0; }
@@ -28,7 +28,7 @@
         input[type="checkbox"] { width: auto; max-width: none; }
         button, .button { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 12px; border: 1px solid #0b5cad; border-radius: 6px; background: #0b5cad; color: #fff; font-weight: 650; cursor: pointer; text-decoration: none; }
         button.secondary, .button.secondary { background: #fff; color: #0b5cad; }
-        .panel { background: rgba(255, 255, 255, .94); border: 1px solid #d9dee5; border-radius: 8px; padding: 18px; margin-bottom: 18px; box-shadow: 0 14px 40px rgba(15, 23, 42, .04); }
+        .panel { background: rgba(255, 255, 255, .96); border: 1px solid #d9dee5; border-radius: 8px; padding: 18px; margin-bottom: 18px; box-shadow: 0 14px 40px rgba(15, 23, 42, .04); }
         .page-header { padding: 24px; }
         .page-header p { max-width: 760px; font-size: 17px; }
         .kicker { display: inline-flex; margin-bottom: 10px; color: #486174; font-weight: 760; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
@@ -40,6 +40,12 @@
         .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
         .metric { border: 1px solid #d9dee5; border-radius: 8px; padding: 14px; background: linear-gradient(180deg, #fff, #f8fbff); }
         .metric strong { display: block; font-size: 28px; line-height: 1.1; }
+        .status-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+        .status-card { border: 1px solid #d9dee5; border-radius: 8px; padding: 16px; background: #fff; }
+        .status-card strong { display: block; font-size: 24px; margin: 4px 0; }
+        .status-card.ready { border-color: #9fd8b7; background: #f2fbf5; }
+        .status-card.warning { border-color: #e7ca77; background: #fff9df; }
+        .status-card.blocked { border-color: #e5a1a1; background: #fff3f3; }
         .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 750; background: #e8f2ff; color: #0b5cad; }
         .badge.ready { background: #e8f7ee; color: #17633a; }
         .badge.warning-badge { background: #fff3c4; color: #684a00; }
@@ -60,6 +66,15 @@
         details.technical-details summary { cursor: pointer; font-weight: 650; }
         .progress { height: 10px; background: #e7ebf0; border-radius: 999px; overflow: hidden; }
         .progress > span { display: block; height: 100%; background: linear-gradient(90deg, #0b5cad, #23a36f); }
+        .progress.large { height: 18px; }
+        .progress-segments { display: flex; height: 18px; overflow: hidden; background: #e7ebf0; border-radius: 999px; }
+        .progress-segments span { display: block; min-width: 0; }
+        .progress-segments .ready-part { background: #23a36f; }
+        .progress-segments .warning-part { background: #d99700; }
+        .progress-segments .blocked-part { background: #d14b4b; }
+        .next-step { border-left: 5px solid #0b5cad; background: #f7fbff; padding: 14px 16px; border-radius: 8px; }
+        .simple-table th, .simple-table td { font-size: 14px; }
+        .copy-box { width: 100%; max-width: none; min-height: 240px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 12px; border: 1px solid #b8c2cc; border-radius: 8px; box-sizing: border-box; background: #fbfdff; color: #1f2933; }
         .muted { color: #5d6978; font-size: 14px; }
         .notice { border: 1px solid #b7d7b7; background: #edf8ed; color: #234c23; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; }
         .warning { border: 1px solid #e0c36e; background: #fff8dc; color: #624a00; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; }
@@ -86,6 +101,7 @@
                 <a href="{{ route('connections.index') }}">Connections</a>
                 <a href="{{ route('woo-readiness.index') }}">Woo Readiness</a>
                 <a href="{{ route('product-sync.index') }}">Product Sync</a>
+                <a href="{{ route('testing-log.index') }}">Testing Log</a>
                 <a href="{{ route('advanced.index') }}">Advanced</a>
             </div>
             <form class="inline-form" method="post" action="{{ route('logout') }}">

@@ -4,8 +4,8 @@
     <section class="panel page-header">
         <span class="kicker">Setup</span>
         <h1>Connections</h1>
-        <p>Add WooCommerce now. Add Front when the account is ready. Connection tests are read-only and secrets are never shown again.</p>
-        <div class="notice">Stored secrets are encrypted and never shown again. Live connection tests are read-only and controlled by the staging/local environment.</div>
+        <p>Add WooCommerce now. Add Front when the account is ready. Use the test buttons to confirm each system can be reached.</p>
+        <div class="notice">Secrets are encrypted and never shown again. Test results appear here and in Testing Log.</div>
         @unless ($connectionHttpTestsEnabled)
             <div class="warning">Safe mode is on. Normal WooCommerce REST and Front API tests will skip external HTTP calls. The Woo plugin adapter test is a separate signed read-only check against the installed WordPress plugin.</div>
         @endunless
@@ -22,7 +22,7 @@
             </div>
 
             <div class="table-wrap">
-                <table>
+                <table class="simple-table">
                     <thead>
                     <tr>
                         <th>System</th>
@@ -37,7 +37,10 @@
                             <td>
                                 <strong>{{ $connectionTypes[$connection->type] ?? $connection->type }}</strong>
                                 <div class="muted">{{ $connection->name }}</div>
-                                <div class="muted">{{ $connection->base_url ?: 'URL not set' }}</div>
+                                <details class="technical-details">
+                                    <summary>Show URL</summary>
+                                    <div>{{ $connection->base_url ?: 'URL not set' }}</div>
+                                </details>
                             </td>
                             <td>
                                 @php($isReady = in_array($connection->status, ['success', 'connected', 'active'], true))
@@ -68,7 +71,7 @@
                                     <a class="button secondary" href="{{ route('connections.edit', $connection) }}">Edit</a>
                                     <form class="inline-form" method="post" action="{{ route('connections.test', $connection) }}">
                                         @csrf
-                                        <button type="submit">{{ $connection->type === 'woocommerce' ? 'Test WooCommerce' : 'Test connection' }}</button>
+                                        <button type="submit">{{ $connection->type === 'woocommerce' ? 'Test WooCommerce' : 'Test' }}</button>
                                     </form>
                                     @if ($connection->type === 'woocommerce')
                                         <form class="inline-form" method="post" action="{{ route('connections.test-woocommerce-plugin', $connection) }}">
@@ -76,6 +79,7 @@
                                             <button class="secondary" type="submit">Test plugin</button>
                                         </form>
                                     @endif
+                                    <a class="button secondary" href="{{ route('testing-log.index') }}">View log</a>
                                 </div>
                             </td>
                         </tr>

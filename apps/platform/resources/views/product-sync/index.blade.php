@@ -19,10 +19,12 @@
     <section class="panel page-header">
         <span class="kicker">Preview only</span>
         <h1>Product Sync</h1>
-        <p>This page prepares and runs staging batches from WooCommerce to Front. Full catalog sync is still disabled.</p>
-        <div class="notice">Staging batches can write selected products to Front. Sale prices and stock have separate actions after products are synced. WooCommerce, orders, refunds, and gift cards are not written.</div>
-        <div class="notice">Stable matching uses the WooCommerce product or variation ID. SKU and EAN/GTIN are sent to Front as product fields and may change later without breaking the Woo to Front link.</div>
-        <p class="muted">Use up to 100 selected products or variations from the latest WooCommerce discovery sample.</p>
+        <p>Prepare a small staging batch from WooCommerce and send it to Front when ready. WooCommerce stays the master.</p>
+        <div class="notice">Product sync can write selected products to Front. It does not write WooCommerce, orders, refunds, or gift cards.</div>
+        <details class="technical-details">
+            <summary>How matching works</summary>
+            Stable matching uses the WooCommerce product or variation ID. SKU and EAN/GTIN are sent to Front as product fields and may change later without breaking the link.
+        </details>
     </section>
 
     @unless ($organization)
@@ -32,45 +34,36 @@
             <a class="button" href="{{ route('organizations.create') }}">Create organization</a>
         </section>
     @else
-        <section class="metric-grid">
-            <div class="metric">
+        <section class="status-board">
+            <div class="status-card {{ in_array($profile?->mode, ['limited_write_test', 'staging_batch'], true) ? 'warning' : 'ready' }}">
                 <span class="muted">Current mode</span>
                 <strong>{{ $modeLabel }}</strong>
-                <span class="badge {{ $profile?->mode === 'preview_only' ? 'ready' : 'warning-badge' }}">{{ $productionWritesEnabled ? 'Writes allowed by env' : 'Writes disabled' }}</span>
+                <span>{{ $productionWritesEnabled ? 'Writes allowed by env' : 'Production writes disabled' }}</span>
             </div>
-            <div class="metric">
+            <div class="status-card">
                 <span class="muted">Sampled items</span>
                 <strong>{{ $candidates }}</strong>
-                <span class="muted">From latest preview data</span>
+                <span>From latest Woo sample</span>
             </div>
-            <div class="metric">
-                <span class="muted">Ready products</span>
+            <div class="status-card ready">
+                <span class="muted">Ready</span>
                 <strong>{{ $ready }}</strong>
-                <span class="badge ready">Ready</span>
+                <span>Can be selected</span>
             </div>
-            <div class="metric">
+            <div class="status-card {{ $blocked > 0 ? 'blocked' : 'ready' }}">
                 <span class="muted">Needs attention</span>
                 <strong>{{ $blocked }}</strong>
-                <span class="badge blocked">Blocked</span>
+                <span>Fix before syncing</span>
             </div>
-            <div class="metric">
+            <div class="status-card {{ ($stats['failed'] ?? 0) > 0 ? 'blocked' : 'ready' }}">
                 <span class="muted">Failed</span>
                 <strong>{{ $stats['failed'] ?? 0 }}</strong>
-                <span class="muted">Can be retried from run detail</span>
+                <span>Can be retried from run detail</span>
             </div>
-            <div class="metric">
+            <div class="status-card">
                 <span class="muted">Variations</span>
                 <strong>{{ $stats['variations'] ?? 0 }}</strong>
-                <span class="muted">Variation rows are first-class candidates</span>
-            </div>
-            <div class="metric">
-                <span class="muted">Waiting updates</span>
-                <strong>{{ $pendingIncrementalEvents }}</strong>
-                <span class="muted">Incremental sync comes later</span>
-            </div>
-            <div class="metric">
-                <span class="muted">Last successful sync</span>
-                <strong style="font-size:18px">{{ $stats['last_successful_sync'] ?: 'None yet' }}</strong>
+                <span>Sellable size/color rows</span>
             </div>
         </section>
 
@@ -108,13 +101,19 @@
 
         <section class="panel">
             <h2>Create staging batch</h2>
-            <p class="muted">Select up to 100 WooCommerce products or variations from the latest discovery sample. Variation rows are treated as sellable candidates.</p>
-            <p class="muted">Regular price is sent as the Front product price. Sale price can be sent afterward from the run page using the configured Front sale price list.</p>
+            <p class="muted">Select up to 100 products or variations. Start small: choose a few ready variation rows first.</p>
+            <details class="technical-details">
+                <summary>Price behavior</summary>
+                Regular price is sent as the Front product price. Sale price can be sent afterward from the run page using the configured Front sale price list.
+            </details>
             @if ($wooBatchCandidates->isEmpty())
                 <div class="warning">No WooCommerce discovery sample is available. Run Woo product discovery first.</div>
             @else
                 <form method="post" action="{{ route('product-sync.staging-batch-run') }}">
                     @csrf
+                    <div class="next-step" style="margin-bottom: 12px">
+                        <strong>Tip:</strong> select a few green/ready variation rows first. Avoid blocked rows until the Woo data is fixed.
+                    </div>
                     <div class="table-wrap">
                         <table>
                             <thead>
@@ -158,7 +157,7 @@
                 @if ($latestRun)
                     <a class="button secondary" href="{{ route('product-sync.runs.show', $latestRun) }}">Prepare Front dry-run</a>
                 @endif
-                <a class="button secondary" href="{{ route('lab.index') }}">Open Testing Lab</a>
+                <a class="button secondary" href="{{ route('testing-log.index') }}">Open Testing Log</a>
                 <a class="button secondary" href="{{ route('product-sync.runs.index') }}">View preview runs</a>
             </div>
             @if ($latestRun)
