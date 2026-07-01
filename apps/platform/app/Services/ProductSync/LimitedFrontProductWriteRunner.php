@@ -310,6 +310,7 @@ class LimitedFrontProductWriteRunner
     private function requestSummary(ProductSyncRunItem $item, array $decision = ['method' => 'create', 'source' => 'not_checked', 'target' => null]): array
     {
         $payload = $this->frontPayload($item);
+        $sourcePayload = $item->proposed_front_payload_json ?? [];
 
         return [
             'endpoint' => $decision['method'] === 'update' ? 'PUT /api/products/{productId}' : 'POST /api/products',
@@ -324,6 +325,9 @@ class LimitedFrontProductWriteRunner
             'gtin' => $payload['productSizes'][0]['gtin'] ?? null,
             'externalSKU' => $payload['productSizes'][0]['externalSKU'] ?? null,
             'includes_sale_price' => false,
+            'regular_price' => $payload['price'] ?? null,
+            'sale_price_candidate' => $sourcePayload['sale_price_candidate'] ?? null,
+            'sale_price_destination' => 'future PriceListV2 candidate',
             'includes_stock' => false,
         ];
     }
@@ -355,6 +359,8 @@ class LimitedFrontProductWriteRunner
 
     private function frontExtId(ProductSyncRunItem $item): string
     {
+        // WooCommerce IDs are immutable in Woo. SKU and GTIN/EAN are mutable sale identifiers,
+        // so they must not be the primary cross-system mapping key.
         return str_replace(':', '-', 'woo-' . $item->woo_item_key);
     }
 

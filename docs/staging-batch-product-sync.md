@@ -45,6 +45,16 @@ The generated Front external id uses the Woo item key:
 - `product:123` -> `woo-product-123`
 - `variation:456` -> `woo-variation-456`
 
+WooCommerce product and variation IDs are the stable mapping identity. SKU and GTIN/EAN are sent to Front as product fields and can change later. If SKU or GTIN/EAN changes in WooCommerce, the next staging batch/update should still find the same Front product by mapping or generated `extId` and update those fields.
+
+## Price Behavior
+
+Staging batch v1 sends WooCommerce regular price as the Front product `price`.
+
+WooCommerce sale price is not written yet. It is shown and stored as a future `POST /api/PricelistV2` candidate because Front sale prices belong in a price list, not in the base product price field.
+
+Do not overwrite regular price with sale price.
+
 ## How To Test
 
 1. Start the local portal.

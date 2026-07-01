@@ -78,7 +78,7 @@ Important fields used by OmniBridge for the first limited test:
 
 For the first limited write test:
 
-- Woo item key remains the internal source identity.
+- Woo item key is the stable source identity because WooCommerce product and variation IDs do not change.
 - Front `extId` is generated from Woo item key:
   - `product:123` -> `woo-product-123`
   - `variation:456` -> `woo-variation-456`
@@ -86,6 +86,7 @@ For the first limited write test:
 - Variation size label maps to Front `variant` and `productSizes[].label`.
 - Woo SKU maps to `productSizes[].externalSKU`.
 - Woo GTIN/EAN maps to `productSizes[].gtin` when available.
+- SKU and GTIN/EAN are mutable product fields. Changing SKU or GTIN/EAN in WooCommerce must update the existing Front product, not create a new mapping.
 
 Create/update decision order:
 
@@ -117,6 +118,33 @@ NEEDS_FRONT_CONFIRMATION:
 - Whether nullable-but-required fields may be sent as `null`.
 - Whether Front auto-creates `brand`, `groupName`, `subgroupName`, `season`, and `color`.
 - Whether missing brand/category should block the first write test for Lilleprinsen.
+
+## Regular Price And Sale Price
+
+The product CRUD endpoint has one product `price` field. OmniBridge maps WooCommerce regular price to this Front product price.
+
+WooCommerce sale price must not replace the regular product price. Sale price should be sent later through Front `POST /api/PricelistV2` as a separate sale price list entry.
+
+The OpenAPI request body for `POST /api/PricelistV2` supports price rows with:
+
+- `productExtId`
+- `gtin`
+- `price`
+- `validFrom`
+- `validTo`
+
+Current staging batch behavior:
+
+- Regular price is written to Front product `price`.
+- Sale price is stored and displayed as a future PriceListV2 candidate.
+- PriceListV2 writes are not performed yet.
+
+NEEDS_FRONT_CONFIRMATION:
+
+- Which Front price list should hold WooCommerce sale prices.
+- Whether sale prices should be keyed by `productExtId`, GTIN, or Front product id for Lilleprinsen.
+- How Front POS displays regular price versus sale price and discount amount/percentage.
+- How Woo sale start/end dates should map to `validFrom` and `validTo`.
 
 ## Response Shape
 

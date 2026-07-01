@@ -21,6 +21,7 @@
         <h1>Product Sync</h1>
         <p>This page prepares and runs staging batches from WooCommerce to Front. Full catalog sync is still disabled.</p>
         <div class="notice">Staging batches can write selected products to Front. WooCommerce, stock, price lists, orders, refunds, and gift cards are not written.</div>
+        <div class="notice">Stable matching uses the WooCommerce product or variation ID. SKU and EAN/GTIN are sent to Front as product fields and may change later without breaking the Woo to Front link.</div>
         <p class="muted">Use up to 100 selected products or variations from the latest WooCommerce discovery sample.</p>
     </section>
 
@@ -108,6 +109,7 @@
         <section class="panel">
             <h2>Create staging batch</h2>
             <p class="muted">Select up to 100 WooCommerce products or variations from the latest discovery sample. Variation rows are treated as sellable candidates.</p>
+            <p class="muted">Regular price is sent as the Front product price. Sale price is kept as a future PriceListV2 candidate until the Front sale price list is configured.</p>
             @if ($wooBatchCandidates->isEmpty())
                 <div class="warning">No WooCommerce discovery sample is available. Run Woo product discovery first.</div>
             @else

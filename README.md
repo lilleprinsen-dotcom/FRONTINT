@@ -71,6 +71,8 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 - The Woo Readiness and Product Sync pages show owner-friendly status: Ready, Needs attention, Preview only, Safe mode, and Last checked.
 - Advanced technical settings are separated from normal store-owner pages.
 - A staging batch write flow now exists for selected products/variations only. It can create or update up to 100 selected items in Front from the latest WooCommerce discovery snapshot when the profile mode is `staging_batch` or `limited_write_test`.
+- WooCommerce product/variation ID is used as the stable identity. SKU and EAN/GTIN are synced as mutable fields, so changing them in WooCommerce should update the existing Front product instead of breaking the mapping.
+- Regular price is sent as the Front product price. Sale price is kept as a future Front PriceListV2 candidate until the sale price list configuration is implemented.
 - The staging batch flow does not write to WooCommerce, stock, price lists, orders, refunds, gift cards, or omnichannel records.
 - Full catalog sync is still not implemented.
 

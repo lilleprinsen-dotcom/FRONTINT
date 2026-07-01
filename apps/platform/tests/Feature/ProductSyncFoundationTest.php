@@ -681,6 +681,52 @@ class ProductSyncFoundationTest extends TestCase
         ]);
     }
 
+    public function test_staging_batch_sends_regular_price_and_keeps_sale_price_as_future_pricelist_candidate(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/products/woo-product-1000' => Http::response([], 404),
+            'https://front.example.test/restapi/V2/api/Product/gtin/7040000002001' => Http::response([], 404),
+            'https://front.example.test/restapi/V2/api/products' => Http::response([
+                'productid' => 222,
+                'extId' => 'woo-product-1000',
+                'price' => 599,
+                'productSizes' => [
+                    ['identity' => 'identity-222', 'externalSKU' => 'READY-1'],
+                ],
+            ]),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'staging_batch']);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'READY-1', 'gtin' => '7040000002001', 'validation_status' => 'ready', 'sale_price' => '499'],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/staging-batch-sync')
+            ->assertRedirect();
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return $request->method() === 'POST'
+                && (string) $request->url() === 'https://front.example.test/restapi/V2/api/products'
+                && ($payload['price'] ?? null) === 599
+                && ! array_key_exists('sale_price', $payload)
+                && ! array_key_exists('salePrice', $payload)
+                && ! array_key_exists('pricelists', $payload);
+        });
+
+        $summary = $run->fresh()->items()->firstOrFail()->last_request_summary_json;
+
+        $this->assertFalse($summary['includes_sale_price']);
+        $this->assertSame(599, $summary['regular_price']);
+        $this->assertSame('499', $summary['sale_price_candidate']);
+        $this->assertSame('future PriceListV2 candidate', $summary['sale_price_destination']);
+    }
+
     public function test_staging_batch_sync_updates_when_existing_product_mapping_exists(): void
     {
         Http::fake([
@@ -721,6 +767,62 @@ class ProductSyncFoundationTest extends TestCase
         $this->assertSame('synced', $item->sync_status);
         $this->assertSame('PUT /api/products/{productId}', $item->last_request_summary_json['endpoint']);
         $this->assertSame('product_mapping', $item->last_request_summary_json['decision_source']);
+    }
+
+    public function test_staging_batch_sync_uses_stable_woo_id_mapping_when_sku_and_gtin_change(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/products/front-existing-extid' => Http::response([
+                'productid' => 333,
+                'extId' => 'front-existing-extid',
+                'productSizes' => [
+                    [
+                        'identity' => 'identity-333',
+                        'gtin' => '7040000009999',
+                        'externalSKU' => 'NEW-SKU',
+                    ],
+                ],
+            ]),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'staging_batch']);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'NEW-SKU', 'gtin' => '7040000009999', 'validation_status' => 'ready'],
+        ]);
+        ProductMapping::query()->create([
+            'organization_id' => $organization->id,
+            'woo_item_key' => 'product:1000',
+            'woo_product_id' => 1000,
+            'front_product_ext_id' => 'front-existing-extid',
+            'sku' => 'OLD-SKU',
+            'gtin' => '7040000000001',
+            'sync_status' => 'synced',
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/staging-batch-sync')
+            ->assertRedirect();
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return $request->method() === 'PUT'
+                && (string) $request->url() === 'https://front.example.test/restapi/V2/api/products/front-existing-extid'
+                && ($payload['number'] ?? null) === 'NEW-SKU'
+                && ($payload['productSizes'][0]['externalSKU'] ?? null) === 'NEW-SKU'
+                && ($payload['productSizes'][0]['gtin'] ?? null) === '7040000009999';
+        });
+        Http::assertSentCount(1);
+
+        $mapping = ProductMapping::query()->where('woo_item_key', 'product:1000')->firstOrFail();
+
+        $this->assertSame('front-existing-extid', $mapping->front_product_ext_id);
+        $this->assertSame('NEW-SKU', $mapping->sku);
+        $this->assertSame('7040000009999', $mapping->gtin);
+        $this->assertSame('product_mapping', $run->items()->firstOrFail()->last_request_summary_json['decision_source']);
     }
 
     public function test_staging_batch_sync_updates_when_gtin_lookup_finds_existing_product(): void
