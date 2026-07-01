@@ -109,11 +109,14 @@
             <p class="muted">For now, use Woo Readiness to clean up product data. The Testing Lab keeps preview experiments separate from daily owner pages.</p>
             <div class="action-row">
                 <a class="button" href="{{ route('woo-readiness.index') }}">Review Woo readiness</a>
+                @if ($latestRun)
+                    <a class="button secondary" href="{{ route('product-sync.runs.show', $latestRun) }}">Prepare Front dry-run</a>
+                @endif
                 <a class="button secondary" href="{{ route('lab.index') }}">Open Testing Lab</a>
                 <a class="button secondary" href="{{ route('product-sync.runs.index') }}">View preview runs</a>
             </div>
             @if ($latestRun)
-                <a class="button secondary" href="{{ route('product-sync.runs.show', $latestRun) }}">View latest run</a>
+                <p class="muted">Open the latest run to select up to 10 ready or warning items and preview the exact Front payload. No Front API calls are made.</p>
             @endif
             <details class="technical-details">
                 <summary>Technical actions</summary>
