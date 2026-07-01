@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessIntegrationEvent;
+use App\Jobs\RunFrontSaleStockAdjustment;
 use App\Models\Connection;
 use App\Models\Event;
 use App\Models\FrontSaleImport;
@@ -11,9 +12,11 @@ use App\Models\ProductMapping;
 use App\Models\User;
 use App\Services\Sales\FrontSaleImportRecorder;
 use App\Services\Sales\FrontSaleImportRunner;
+use App\Services\Sales\FrontSaleStockAdjustmentRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class FrontSaleImportTest extends TestCase
@@ -28,6 +31,7 @@ class FrontSaleImportTest extends TestCase
 
     public function test_front_sale_event_creates_staged_import_with_matched_lines(): void
     {
+        Queue::fake();
         [$user, $organization] = $this->userWithOrganization();
         $this->productMapping($organization);
 
@@ -37,10 +41,14 @@ class FrontSaleImportTest extends TestCase
 
         $import = FrontSaleImport::query()->firstOrFail();
         $this->assertSame('pending', $import->status);
+        $this->assertSame('stock_only', $import->handling_mode);
+        $this->assertSame('pending', $import->stock_status);
+        $this->assertSame('not_imported', $import->order_import_status);
         $this->assertSame('SALE-1', $import->front_sale_id);
         $this->assertSame('RECEIPT-1', $import->front_receipt_id);
         $this->assertSame('matched', $import->line_items_json[0]['mapping_status']);
         $this->assertSame(123, $import->woo_order_payload_json['line_items'][0]['product_id']);
+        Queue::assertPushed(RunFrontSaleStockAdjustment::class);
 
         $this->actingAs($user)
             ->get('/front-sales')
@@ -56,8 +64,66 @@ class FrontSaleImportTest extends TestCase
         $import = app(FrontSaleImportRecorder::class)->record($organization, $this->salePayload());
 
         $this->assertSame('blocked', $import->status);
+        $this->assertSame('blocked', $import->stock_status);
         $this->assertStringContainsString('could not be matched', $import->error_message);
         $this->assertSame('missing_product_mapping', $import->line_items_json[0]['mapping_status']);
+    }
+
+    public function test_front_sale_stock_adjustment_reduces_woo_stock_without_creating_order(): void
+    {
+        Http::fake([
+            'woo.example.test/wp-json/wc/v3/products/123/variations/456' => Http::sequence()
+                ->push(['id' => 456, 'stock_quantity' => 10], 200)
+                ->push(['id' => 456, 'stock_quantity' => 8], 200),
+            '*' => Http::response(['unexpected' => true], 500),
+        ]);
+
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->productMapping($organization);
+        $import = app(FrontSaleImportRecorder::class)->record($organization, $this->salePayload(quantity: 2, total: 998));
+
+        $result = app(FrontSaleStockAdjustmentRunner::class)->run($import, $user);
+
+        $this->assertSame('adjusted', $result['status']);
+        $import->refresh();
+        $this->assertSame('stock_adjusted', $import->status);
+        $this->assertSame('adjusted', $import->stock_status);
+        $this->assertSame('not_imported', $import->order_import_status);
+
+        Http::assertSent(function ($request): bool {
+            return $request->method() === 'GET'
+                && (string) $request->url() === 'https://woo.example.test/wp-json/wc/v3/products/123/variations/456';
+        });
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return $request->method() === 'PUT'
+                && (string) $request->url() === 'https://woo.example.test/wp-json/wc/v3/products/123/variations/456'
+                && ($payload['stock_quantity'] ?? null) === 8;
+        });
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/wp-json/wc/v3/orders'));
+    }
+
+    public function test_front_sale_stock_adjustment_is_not_processed_twice(): void
+    {
+        Http::fake([
+            'woo.example.test/wp-json/wc/v3/products/123/variations/456' => Http::sequence()
+                ->push(['id' => 456, 'stock_quantity' => 10], 200)
+                ->push(['id' => 456, 'stock_quantity' => 9], 200),
+        ]);
+
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->productMapping($organization);
+        $import = app(FrontSaleImportRecorder::class)->record($organization, $this->salePayload());
+
+        app(FrontSaleStockAdjustmentRunner::class)->run($import, $user);
+        $result = app(FrontSaleStockAdjustmentRunner::class)->run($import->fresh(), $user);
+
+        $this->assertSame('blocked', $result['status']);
+        $this->assertStringContainsString('already been adjusted', implode(' ', $result['gate_errors']));
+        Http::assertSentCount(2);
     }
 
     public function test_front_sale_import_posts_paid_woocommerce_order_and_creates_order_mapping(): void
@@ -80,7 +146,7 @@ class FrontSaleImportTest extends TestCase
 
         $this->assertSame('imported', $result['status']);
         $import->refresh();
-        $this->assertSame('imported', $import->status);
+        $this->assertSame('imported', $import->order_import_status);
         $this->assertSame(9001, $import->orderMapping->woo_order_id);
         $this->assertSame('front_pos', $import->orderMapping->source);
 
@@ -92,7 +158,11 @@ class FrontSaleImportTest extends TestCase
                 && ($payload['payment_method'] ?? null) === 'paid_in_front'
                 && ($payload['set_paid'] ?? null) === true
                 && ($payload['line_items'][0]['product_id'] ?? null) === 123
-                && ($payload['line_items'][0]['variation_id'] ?? null) === 456;
+                && ($payload['line_items'][0]['variation_id'] ?? null) === 456
+                && ($payload['billing']['email'] ?? null) === 'customer@example.test'
+                && ($payload['billing']['phone'] ?? null) === '+4712345678'
+                && collect($payload['meta_data'] ?? [])->contains(fn (array $meta): bool => ($meta['key'] ?? null) === '_omnibridge_front_stock_already_adjusted' && ($meta['value'] ?? null) === 'yes')
+                && collect($payload['meta_data'] ?? [])->contains(fn (array $meta): bool => ($meta['key'] ?? null) === '_order_stock_reduced' && ($meta['value'] ?? null) === 'yes');
         });
 
         Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), 'frontsystems'));
@@ -129,14 +199,14 @@ class FrontSaleImportTest extends TestCase
         app(FrontSaleImportRunner::class)->run($import, $user);
 
         $import->refresh();
-        $this->assertSame('failed', $import->status);
+        $this->assertSame('failed', $import->order_import_status);
         $this->assertSame('HTTP 400', $import->error_message);
         $this->assertStringNotContainsString('should-not-show', json_encode($import->last_response_summary_json));
 
         app(FrontSaleImportRunner::class)->run($import, $user);
 
         $import->refresh();
-        $this->assertSame('imported', $import->status);
+        $this->assertSame('imported', $import->order_import_status);
         $this->assertSame(9002, $import->orderMapping->woo_order_id);
     }
 
@@ -231,19 +301,25 @@ class FrontSaleImportTest extends TestCase
         ]);
     }
 
-    private function salePayload(): array
+    private function salePayload(int $quantity = 1, int $total = 499): array
     {
         return [
             'saleId' => 'SALE-1',
             'receiptId' => 'RECEIPT-1',
             'currency' => 'NOK',
-            'totalAmount' => 499,
+            'totalAmount' => $total,
+            'customer' => [
+                'firstName' => 'Test',
+                'lastName' => 'Customer',
+                'email' => 'customer@example.test',
+                'phone' => '+4712345678',
+            ],
             'lines' => [
                 [
                     'name' => 'Test product',
-                    'quantity' => 1,
+                    'quantity' => $quantity,
                     'unitPrice' => 499,
-                    'total' => 499,
+                    'total' => $total,
                     'gtin' => '7040000000456',
                     'externalSKU' => 'SKU-456',
                     'identity' => 'IDENTITY-456',

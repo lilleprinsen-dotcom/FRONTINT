@@ -219,8 +219,9 @@ Audit these actions:
 - Staging batch v1 may call Front product CRUD for selected items only: lookup with `GET /api/products/{productId}`, lookup with `GET /api/Product/gtin/{gtin}`, create with `POST /api/products`, and update with `PUT /api/products/{productId}`.
 - Sale price sync may call `POST /api/PricelistV2` for already-synced items only.
 - Stock sync may call `POST /api/Stock/adjust` for already-synced items only as a partial stock count.
-- Front sale import may call WooCommerce `POST /wp-json/wc/v3/orders` for explicitly selected staged Front POS sales only.
-- Front sale import must be idempotent, must reject unmatched sale lines, must not write to Front, and must not create refunds, gift cards, or omnichannel records.
+- Front sale handling may call WooCommerce product/variation stock endpoints to reduce Woo stock for matched Front POS sale lines.
+- Front sale handling may call WooCommerce `POST /wp-json/wc/v3/orders` only when an admin manually requests optional order creation.
+- Front sale handling must be idempotent, must reject unmatched sale lines, must not write to Front, must not double-deduct stock, and must not create refunds, gift cards, or omnichannel records.
 
 ## Health Checks
 

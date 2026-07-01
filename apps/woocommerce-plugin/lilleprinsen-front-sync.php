@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OmniBridge WooCommerce Adapter
  * Description: Thin WooCommerce adapter for the OmniBridge WooCommerce and Front Systems integration.
- * Version: 0.2.0
+ * Version: 0.3.0
  * Author: OmniBridge
  * Text Domain: omnibridge
  * Requires PHP: 8.1
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('OMNIBRIDGE_PLUGIN_VERSION', '0.2.0');
+define('OMNIBRIDGE_PLUGIN_VERSION', '0.3.0');
 define('OMNIBRIDGE_PLUGIN_FILE', __FILE__);
 define('OMNIBRIDGE_PLUGIN_OPTION', 'omnibridge_adapter_settings');
 
@@ -38,6 +38,8 @@ if (! class_exists('OmniBridge_WooCommerce_Adapter')) {
                 add_action('woocommerce_admin_process_product_object', [$this, 'save_product_fields']);
                 add_filter('bulk_actions-edit-product', [$this, 'register_product_bulk_actions']);
                 add_filter('handle_bulk_actions-edit-product', [$this, 'handle_product_bulk_action'], 10, 3);
+                add_action('woocommerce_checkout_create_order', [$this, 'mark_front_order_stock_as_handled'], 20, 1);
+                add_action('woocommerce_rest_insert_shop_order_object', [$this, 'mark_front_order_stock_as_handled'], 20, 1);
             }
         }
 
@@ -51,6 +53,15 @@ if (! class_exists('OmniBridge_WooCommerce_Adapter')) {
                     'manage_woocommerce',
                     'omnibridge-adapter',
                     [$this, 'render_settings_page'],
+                );
+
+                add_submenu_page(
+                    'woocommerce',
+                    __('OmniBridge POS Sales', 'omnibridge'),
+                    __('OmniBridge POS Sales', 'omnibridge'),
+                    'manage_woocommerce',
+                    'omnibridge-pos-sales',
+                    [$this, 'render_pos_sales_page'],
                 );
 
                 return;
@@ -411,6 +422,93 @@ if (! class_exists('OmniBridge_WooCommerce_Adapter')) {
             }
 
             return add_query_arg('omnibridge_bulk_action', rawurlencode($action), $redirect_to);
+        }
+
+        public function mark_front_order_stock_as_handled($order): void
+        {
+            if (! is_object($order) || ! method_exists($order, 'get_meta') || ! method_exists($order, 'update_meta_data')) {
+                return;
+            }
+
+            if ($order->get_meta('_omnibridge_front_stock_already_adjusted') !== 'yes') {
+                return;
+            }
+
+            $order->update_meta_data('_order_stock_reduced', 'yes');
+            $order->update_meta_data('_omnibridge_stock_reduction_prevented', gmdate('c'));
+        }
+
+        public function render_pos_sales_page(): void
+        {
+            if (! current_user_can('manage_woocommerce')) {
+                return;
+            }
+
+            $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash((string) $_GET['s'])) : '';
+            $recent_orders = $this->recent_omnibridge_front_orders($search);
+            ?>
+            <div class="wrap">
+                <h1><?php esc_html_e('OmniBridge POS Sales', 'omnibridge'); ?></h1>
+                <p><?php esc_html_e('This page is the lightweight WooCommerce-side overview for Front POS sales. Stock changes are handled by the OmniBridge platform first. Woo orders are only shown here when an admin manually imports a POS sale as an order.', 'omnibridge'); ?></p>
+
+                <form method="get" style="margin: 16px 0">
+                    <input type="hidden" name="page" value="omnibridge-pos-sales">
+                    <input type="search" name="s" value="<?php echo esc_attr($search); ?>" placeholder="<?php esc_attr_e('Search receipt, sale ID, or Woo order ID', 'omnibridge'); ?>">
+                    <?php submit_button(__('Search', 'omnibridge'), 'secondary', '', false); ?>
+                </form>
+
+                <table class="widefat striped">
+                    <thead>
+                    <tr>
+                        <th><?php esc_html_e('Woo order', 'omnibridge'); ?></th>
+                        <th><?php esc_html_e('Front receipt', 'omnibridge'); ?></th>
+                        <th><?php esc_html_e('Front sale', 'omnibridge'); ?></th>
+                        <th><?php esc_html_e('Stock handling', 'omnibridge'); ?></th>
+                        <th><?php esc_html_e('Date', 'omnibridge'); ?></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php if ($recent_orders === []) : ?>
+                        <tr>
+                            <td colspan="5"><?php esc_html_e('No manually imported Front POS Woo orders found. Normal Front sales should appear in the OmniBridge portal without flooding WooCommerce orders.', 'omnibridge'); ?></td>
+                        </tr>
+                    <?php else : ?>
+                        <?php foreach ($recent_orders as $order) : ?>
+                            <tr>
+                                <td><a href="<?php echo esc_url(get_edit_post_link($order->get_id())); ?>">#<?php echo esc_html($order->get_order_number()); ?></a></td>
+                                <td><?php echo esc_html((string) $order->get_meta('_omnibridge_front_receipt_id')); ?></td>
+                                <td><?php echo esc_html((string) $order->get_meta('_omnibridge_front_sale_id')); ?></td>
+                                <td><?php echo esc_html($order->get_meta('_omnibridge_front_stock_already_adjusted') === 'yes' ? 'Stock already adjusted before order import' : 'Unknown'); ?></td>
+                                <td><?php echo esc_html($order->get_date_created() ? $order->get_date_created()->date_i18n('Y-m-d H:i') : ''); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php
+        }
+
+        private function recent_omnibridge_front_orders(string $search): array
+        {
+            if (! function_exists('wc_get_orders')) {
+                return [];
+            }
+
+            $args = [
+                'limit' => 50,
+                'orderby' => 'date',
+                'order' => 'DESC',
+                'meta_key' => '_omnibridge_source',
+                'meta_value' => 'front_pos',
+                'return' => 'objects',
+            ];
+
+            if ($search !== '') {
+                $args['search'] = '*' . $search . '*';
+            }
+
+            return wc_get_orders($args);
         }
 
         private function settings(): array

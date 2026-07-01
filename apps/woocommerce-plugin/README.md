@@ -11,6 +11,8 @@ The plugin is no longer only a placeholder. It now provides a production-oriente
 - Expose a signed read-only connection test endpoint.
 - Add lightweight product sync eligibility/status fields.
 - Add simple product bulk actions for future sync readiness.
+- Add a lightweight **WooCommerce > OmniBridge POS Sales** overview for manually imported Front POS orders.
+- Mark manually imported Front POS Woo orders as stock already handled when OmniBridge metadata is present.
 - Keep WooCommerce-specific behavior close to WooCommerce.
 
 ## Non-Responsibilities
@@ -22,6 +24,7 @@ The plugin is no longer only a placeholder. It now provides a production-oriente
 - Do not store platform secrets in code.
 - Do not assume undocumented Front Systems behavior.
 - Do not directly replace WooCommerce or payment gateway business logic.
+- Do not store or process the full Front POS sales history inside WordPress.
 
 ## Install Locally in WordPress
 
@@ -133,12 +136,37 @@ These fields and actions only store local metadata for later platform-driven syn
 
 Product edit saves use the normal WooCommerce save nonce and per-product edit permission checks. Bulk actions also check edit permission for each product before changing OmniBridge metadata.
 
+## POS Sales Overview
+
+The plugin adds:
+
+```text
+WooCommerce > OmniBridge POS Sales
+```
+
+This page is intentionally lightweight. It shows only manually imported Front POS Woo orders that contain OmniBridge metadata. Normal Front POS sales should remain in the OmniBridge platform sales overview and should not flood the WooCommerce order list.
+
+The page supports a simple search field and shows:
+
+- Woo order number
+- Front receipt ID
+- Front sale ID
+- Stock handling status
+- Date
+
+## Double Stock Protection
+
+When OmniBridge manually creates a Woo order from a Front POS sale after stock has already been adjusted, it sends `_omnibridge_front_stock_already_adjusted=yes`.
+
+The plugin detects that metadata and marks `_order_stock_reduced=yes` on the Woo order object. This is a defensive guard to prevent WooCommerce from reducing stock a second time for the optional manual order import.
+
 ## Safety Rules
 
 - The plugin does not call Front Systems.
 - The plugin does not call the Laravel platform yet.
 - The plugin does not import/export products.
-- The plugin does not modify prices, stock, orders, refunds, gift cards, or customers.
+- The plugin does not modify prices, stock, refunds, gift cards, or customers.
+- The plugin only touches order stock-reduction metadata for manually imported OmniBridge Front POS orders to prevent duplicate stock reduction.
 - The plugin does not run heavy queries such as full catalog scans.
 - The platform remains the integration brain.
 

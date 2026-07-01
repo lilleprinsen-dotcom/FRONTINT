@@ -34,7 +34,7 @@ class FrontSaleImportRunner
 
         if ($gateErrors !== []) {
             $import->update([
-                'status' => 'blocked',
+                'order_import_status' => 'blocked',
                 'error_message' => implode(' ', $gateErrors),
             ]);
 
@@ -42,7 +42,7 @@ class FrontSaleImportRunner
         }
 
         $import->update([
-            'status' => 'running',
+            'order_import_status' => 'running',
             'attempt_count' => $import->attempt_count + 1,
             'error_message' => null,
             'last_request_summary_json' => $this->requestSummary($import),
@@ -93,8 +93,8 @@ class FrontSaleImportRunner
             $errors[] = 'This Front sale is already linked to a WooCommerce order.';
         }
 
-        if (! in_array($import->status, ['pending', 'failed', 'needs_retry'], true)) {
-            $errors[] = 'Only pending or failed Front sale imports can be imported.';
+        if (! in_array($import->order_import_status, ['not_imported', 'failed', 'needs_retry', 'blocked'], true)) {
+            $errors[] = 'Only not imported or failed Front sale imports can be imported as Woo orders.';
         }
 
         if (! $wooConnection) {
@@ -146,7 +146,7 @@ class FrontSaleImportRunner
 
             $import->update([
                 'order_mapping_id' => $mapping->id,
-                'status' => 'imported',
+                'order_import_status' => 'imported',
                 'imported_at' => now(),
                 'last_response_summary_json' => $summary,
                 'error_message' => null,
@@ -157,7 +157,7 @@ class FrontSaleImportRunner
     private function markFailed(FrontSaleImport $import, string $error, ?Response $response): void
     {
         $import->update([
-            'status' => 'failed',
+            'order_import_status' => 'failed',
             'error_message' => $error,
             'last_response_summary_json' => $response ? $this->responseSummary($response) : ['error' => $error],
         ]);

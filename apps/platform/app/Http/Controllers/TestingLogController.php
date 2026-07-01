@@ -128,14 +128,16 @@ class TestingLogController extends Controller
                 'at' => $import->updated_at,
                 'type' => 'Front sale import',
                 'system' => 'Front to WooCommerce',
-                'status' => $this->plainStatus($import->status),
+                'status' => $this->plainStatus($import->stock_status),
                 'title' => $import->front_receipt_id ?: $import->front_sale_id ?: 'Front sale',
-                'summary' => $import->error_message
-                    ?: 'Woo order: ' . ($import->orderMapping?->woo_order_id ?: 'not created yet'),
+                'summary' => $import->stock_error_message
+                    ?: 'Stock: ' . $import->stock_status . ', optional order: ' . $import->order_import_status,
                 'details' => [
                     'Organization' => $import->organization?->name,
                     'Import ID' => $import->id,
                     'Line count' => count($import->line_items_json ?? []),
+                    'Stock status' => $import->stock_status,
+                    'Order status' => $import->order_import_status,
                     'Woo order ID' => $import->orderMapping?->woo_order_id ?: 'n/a',
                 ],
             ]);
@@ -215,6 +217,7 @@ class TestingLogController extends Controller
         return match ($status) {
             'success', 'connected', 'active', 'completed', 'synced', 'ready' => 'Worked',
             'imported' => 'Worked',
+            'adjusted' => 'Worked',
             'failed', 'error', 'blocked', 'completed_with_errors' => 'Needs attention',
             'skipped', 'safe_mode' => 'Skipped safely',
             'queued', 'running', 'pending' => 'Running or waiting',

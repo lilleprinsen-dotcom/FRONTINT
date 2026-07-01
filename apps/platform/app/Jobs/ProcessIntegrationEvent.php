@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Event;
+use App\Jobs\RunFrontSaleStockAdjustment;
 use App\Services\Sales\FrontSaleImportRecorder;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,7 +26,11 @@ class ProcessIntegrationEvent implements ShouldQueue
         $event = Event::query()->findOrFail($this->eventId);
 
         if ($event->source_system === 'front') {
-            $frontSales->recordFromEvent($event);
+            $import = $frontSales->recordFromEvent($event);
+
+            if ($import && $import->stock_status === 'pending') {
+                RunFrontSaleStockAdjustment::dispatch($import->id);
+            }
         }
 
         $event->update([

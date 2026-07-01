@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
 @php
-    $worked = $imports->getCollection()->where('status', 'imported')->count();
-    $attention = $imports->getCollection()->whereIn('status', ['blocked', 'failed'])->count();
-    $waiting = $imports->getCollection()->whereIn('status', ['pending', 'running'])->count();
+    $stockDone = $imports->getCollection()->where('stock_status', 'adjusted')->count();
+    $attention = $imports->getCollection()->whereIn('stock_status', ['blocked', 'failed'])->count();
+    $waiting = $imports->getCollection()->whereIn('stock_status', ['pending', 'running'])->count();
 @endphp
 
 @section('content')
     <section class="panel page-header">
         <span class="kicker">Front to WooCommerce</span>
         <h1>Front Sales</h1>
-        <p>Import paid Front POS sales into WooCommerce so the customer history and Woo stock stay updated.</p>
-        <div class="notice">This staging flow only writes WooCommerce orders when you start an import. It does not write Front, refunds, gift cards, or omnichannel records.</div>
+        <p>Front POS sales update WooCommerce stock first. Woo orders are optional and only created when an admin clicks the manual button.</p>
+        <div class="notice">Default mode is stock-only. This keeps the normal WooCommerce order list clean while keeping Woo stock correct.</div>
         @if ($productionWritesEnabled)
             <div class="danger">Production writes are enabled. Do not import sales until the production launch checklist is complete.</div>
         @endif
@@ -20,8 +20,8 @@
     <section class="status-board">
         <div class="status-card ready">
             <span class="muted">Imported</span>
-            <strong>{{ $worked }}</strong>
-            <span>Woo orders created</span>
+            <strong>{{ $stockDone }}</strong>
+            <span>Stock adjusted in Woo</span>
         </div>
         <div class="status-card warning">
             <span class="muted">Waiting</span>
@@ -50,8 +50,8 @@
             </div>
             <div class="flow-step">
                 <span class="step-number">3</span>
-                <strong>Woo order is created</strong>
-                <p class="muted">You start the import. WooCommerce creates a paid Front POS order.</p>
+                <strong>Woo stock is adjusted</strong>
+                <p class="muted">Stock changes immediately. A Woo order is optional and manual.</p>
             </div>
         </div>
     </section>
@@ -68,11 +68,11 @@
             <table class="simple-table">
                 <thead>
                 <tr>
-                    <th>Status</th>
+                    <th>Stock</th>
                     <th>Front sale</th>
                     <th>Total</th>
                     <th>Lines</th>
-                    <th>Woo order</th>
+                    <th>Optional order</th>
                     <th>Action</th>
                 </tr>
                 </thead>
@@ -81,11 +81,11 @@
                     @php($unmatched = collect($import->line_items_json ?? [])->where('mapping_status', 'missing_product_mapping')->count())
                     <tr>
                         <td>
-                            <span class="badge {{ $import->status === 'imported' ? 'ready' : (in_array($import->status, ['blocked', 'failed'], true) ? 'blocked' : 'warning-badge') }}">
-                                {{ $import->status === 'imported' ? 'Imported' : (in_array($import->status, ['blocked', 'failed'], true) ? 'Needs attention' : ucfirst($import->status)) }}
+                            <span class="badge {{ $import->stock_status === 'adjusted' ? 'ready' : (in_array($import->stock_status, ['blocked', 'failed'], true) ? 'blocked' : 'warning-badge') }}">
+                                {{ $import->stock_status === 'adjusted' ? 'Stock adjusted' : (in_array($import->stock_status, ['blocked', 'failed'], true) ? 'Needs attention' : ucfirst($import->stock_status)) }}
                             </span>
-                            @if ($import->error_message)
-                                <div class="muted">{{ $import->error_message }}</div>
+                            @if ($import->stock_error_message)
+                                <div class="muted">{{ $import->stock_error_message }}</div>
                             @endif
                         </td>
                         <td>
@@ -99,7 +99,7 @@
                                 <div class="muted">{{ $unmatched }} unmatched</div>
                             @endif
                         </td>
-                        <td>{{ $import->orderMapping?->woo_order_id ?: 'Not created yet' }}</td>
+                        <td>{{ $import->orderMapping?->woo_order_id ? 'Woo order '.$import->orderMapping->woo_order_id : ucfirst(str_replace('_', ' ', $import->order_import_status ?? 'not_imported')) }}</td>
                         <td><a class="button secondary" href="{{ route('front-sales.show', $import) }}">Open</a></td>
                     </tr>
                 @empty

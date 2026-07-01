@@ -39,6 +39,9 @@ class FrontSaleImportRecorder
                 [
                     'event_id' => $event?->id,
                     'status' => $lineCount === 0 || $unmatched > 0 ? 'blocked' : 'pending',
+                    'handling_mode' => 'stock_only',
+                    'stock_status' => $lineCount === 0 || $unmatched > 0 ? 'blocked' : 'pending',
+                    'order_import_status' => 'not_imported',
                     'front_sale_id' => $data['front_sale_id'],
                     'front_receipt_id' => $data['front_receipt_id'],
                     'sale_time' => $data['sale_time'],
@@ -48,6 +51,9 @@ class FrontSaleImportRecorder
                     'line_items_json' => $data['line_items_json'],
                     'woo_order_payload_json' => $data['woo_order_payload_json'],
                     'error_message' => $lineCount === 0
+                        ? 'Front sale payload did not contain sale lines.'
+                        : ($unmatched > 0 ? "{$unmatched} sale line(s) could not be matched to synced Woo products." : null),
+                    'stock_error_message' => $lineCount === 0
                         ? 'Front sale payload did not contain sale lines.'
                         : ($unmatched > 0 ? "{$unmatched} sale line(s) could not be matched to synced Woo products." : null),
                 ],

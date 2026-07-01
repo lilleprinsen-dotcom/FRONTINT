@@ -78,14 +78,16 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 - The staging batch flow does not write to WooCommerce, orders, refunds, gift cards, or omnichannel records.
 - Full catalog sync is still not implemented.
 
-### Front POS sales to WooCommerce staging
+### Front POS sales and WooCommerce stock
 
-The portal now has a `Front Sales` page for staged Front POS sale imports.
+The portal now has a `Front Sales` page for staged Front POS sales.
 
 - Front sale-like webhook events are captured as sale import records.
 - Sale lines are matched to existing synced product mappings.
-- Matched sales can create paid WooCommerce orders with payment method `Paid in Front POS`.
-- Imports are idempotent, so the same Front receipt/sale should not create duplicate Woo orders.
+- Matched sales adjust WooCommerce stock first.
+- WooCommerce orders are not created by default.
+- Admins can manually create a paid WooCommerce order with payment method `Paid in Front POS` when needed.
+- Stock adjustment and optional order import are idempotent, so the same Front receipt/sale should not double-deduct stock or create duplicate Woo orders.
 - This flow does not write to Front, does not handle refunds, gift cards, exchanges, or omnichannel orders yet.
 
 See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).
@@ -101,6 +103,7 @@ WooCommerce plugin foundation:
 - Woo REST testing uses WooCommerce consumer key/secret; Woo plugin adapter testing uses the OmniBridge plugin shared secret.
 - Signed adapter tests use `X-Omnibridge-Timestamp` and `X-Omnibridge-Signature` HMAC headers.
 - Product edit pages can show lightweight OmniBridge eligibility/status metadata.
+- WooCommerce has a lightweight `OmniBridge POS Sales` admin page foundation for manually imported Front POS orders.
 - The plugin still does not run sync logic, scan the catalog, call Front, or write prices/stock/orders.
 
 See [apps/woocommerce-plugin/README.md](apps/woocommerce-plugin/README.md).
