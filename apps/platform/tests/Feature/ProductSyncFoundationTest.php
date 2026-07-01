@@ -667,13 +667,25 @@ class ProductSyncFoundationTest extends TestCase
             ->assertRedirect();
 
         Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
             return $request->method() === 'POST'
-                && (string) $request->url() === 'https://front.example.test/restapi/V2/api/products';
+                && (string) $request->url() === 'https://front.example.test/restapi/V2/api/products'
+                && ($payload['description'] ?? null) === 'Full product description for store staff.'
+                && ($payload['internalDescription'] ?? null) === 'Short product note.'
+                && ($payload['tags'] ?? null) === 'summer, staff-pick'
+                && ($payload['images'] ?? null) === [
+                    'https://example.test/image-1.jpg',
+                    'https://example.test/image-1-back.jpg',
+                ];
         });
         Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/wp-json/'));
         Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/api/Stock'));
         Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/api/Pricelist'));
         $this->assertSame('synced', $run->items()->firstOrFail()->sync_status);
+        $this->assertTrue($run->items()->firstOrFail()->last_request_summary_json['description_included']);
+        $this->assertSame(2, $run->items()->firstOrFail()->last_request_summary_json['tag_count']);
+        $this->assertSame(2, $run->items()->firstOrFail()->last_request_summary_json['image_count']);
         $this->assertDatabaseHas('product_mappings', [
             'organization_id' => $organization->id,
             'woo_item_key' => 'product:1000',
@@ -1485,11 +1497,24 @@ class ProductSyncFoundationTest extends TestCase
                     'brand' => 'Brand candidate',
                     'groupName' => 'Shoes',
                     'subgroupName' => 'Boots',
+                    'description' => 'Full product description for store staff.',
+                    'internalDescription' => 'Short product note.',
+                    'tags' => 'summer, staff-pick',
                     'price_candidate' => '599',
                     'sale_price_candidate' => $item['sale_price'] ?? null,
                     'image_candidate' => [
                         'src' => 'https://example.test/image-' . ($index + 1) . '.jpg',
                         'alt' => 'Product image',
+                    ],
+                    'image_candidates' => [
+                        [
+                            'src' => 'https://example.test/image-' . ($index + 1) . '.jpg',
+                            'alt' => 'Product image',
+                        ],
+                        [
+                            'src' => 'https://example.test/image-' . ($index + 1) . '-back.jpg',
+                            'alt' => 'Product image back',
+                        ],
                     ],
                     'productSizes' => [
                         [

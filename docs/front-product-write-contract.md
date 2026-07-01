@@ -60,6 +60,9 @@ Important fields used by OmniBridge for the first limited test:
 - `color`
 - `season`
 - `brand`
+- `description`
+- `internalDescription`
+- `tags`
 - `price`
 - `isStockProduct`
 - `isWebAvailable`
@@ -86,6 +89,10 @@ For the first limited write test:
 - Variation size label maps to Front `variant` and `productSizes[].label`.
 - Woo SKU maps to `productSizes[].externalSKU`.
 - Woo GTIN/EAN maps to `productSizes[].gtin` when available.
+- Woo product description maps to Front `description`.
+- Woo short description and useful variation context map to Front `internalDescription`.
+- Woo tags map to Front `tags` as a comma-separated list.
+- Woo product image URLs map to Front `images`, capped at 10 image URLs.
 - SKU and GTIN/EAN are mutable product fields. Changing SKU or GTIN/EAN in WooCommerce must update the existing Front product, not create a new mapping.
 
 Create/update decision order:
@@ -196,3 +203,23 @@ The first limited product write test must not:
 - Trigger full catalog sync.
 
 Sale price sync is the only current PriceListV2 write path and must only run from already-synced product run items with sale price candidates.
+
+## Product Content For Store Staff
+
+Store employees need enough product information in Front to identify and sell items confidently.
+
+Current staging behavior:
+
+- WooCommerce product descriptions are sanitized and sent as Front `description`.
+- WooCommerce short descriptions are sent as Front `internalDescription` where available.
+- Variation payloads inherit parent product description, short description, tags, categories, brand, and images.
+- WooCommerce product tags are sent as Front `tags` as a comma-separated string.
+- WooCommerce image URLs are sent as Front `images`, capped at 10 URLs.
+- Dry-runs show whether descriptions, internal notes, tags, and image URLs are included before a write is run.
+
+NEEDS_FRONT_CONFIRMATION:
+
+- Where Front POS displays `description`.
+- Whether `internalDescription` is visible to store staff or ignored, because the OpenAPI marks it as “Not used”.
+- Whether Front downloads and stores image URLs or only references them.
+- Image size and hosting requirements beyond the OpenAPI note: max 10 images, max 10 MB per image.

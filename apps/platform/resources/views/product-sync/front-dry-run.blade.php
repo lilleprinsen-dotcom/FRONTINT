@@ -55,7 +55,8 @@
                     <th>External SKU</th>
                     <th>Brand</th>
                     <th>Group/subgroup</th>
-                    <th>Image</th>
+                    <th>Staff content</th>
+                    <th>Images</th>
                     <th>Prices</th>
                     <th>Warnings</th>
                 </tr>
@@ -83,11 +84,19 @@
                         <td>{{ $payload['brand'] ?: 'n/a' }}</td>
                         <td>{{ $payload['groupName'] ?: 'n/a' }} / {{ $payload['subgroupName'] ?: 'n/a' }}</td>
                         <td>
-                            @if (($payload['image_candidate']['src'] ?? null) !== null)
-                                <a href="{{ $payload['image_candidate']['src'] }}" target="_blank" rel="noreferrer">image</a>
-                            @else
+                            <div>Description: {{ ($payload['description'] ?? null) ? 'Yes' : 'No' }}</div>
+                            <div>Internal note: {{ ($payload['internalDescription'] ?? null) ? 'Yes' : 'No' }}</div>
+                            <div>Tags: {{ $payload['tags'] ?? 'n/a' }}</div>
+                        </td>
+                        <td>
+                            @php($images = $payload['image_candidates'] ?? [])
+                            @forelse ($images as $index => $image)
+                                @if (($image['src'] ?? null) !== null)
+                                    <div><a href="{{ $image['src'] }}" target="_blank" rel="noreferrer">image {{ $index + 1 }}</a></div>
+                                @endif
+                            @empty
                                 n/a
-                            @endif
+                            @endforelse
                         </td>
                         <td>
                             <div>Regular: {{ $row['price_candidates']['regular_price'] ?: 'n/a' }}</div>

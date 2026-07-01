@@ -17,6 +17,7 @@ This review compares the current OmniBridge implementation with the stored Front
 - Front product discovery through the documented read-only `POST /api/Product` endpoint.
 - Product mapping preview and staging batch product sync foundation.
 - Limited/staging Front product create/update flow.
+- Woo product descriptions, tags, and image URLs included in Front product payload previews and staging writes.
 - Sale price sync foundation through `POST /api/PricelistV2`.
 - Woo-to-Front stock sync foundation through `POST /api/Stock/adjust`.
 - Front POS sale capture.
@@ -69,6 +70,7 @@ Implemented now:
 - Which stock ID or external stock ID maps to the Lilleprinsen physical stock.
 - Whether sale price list behavior should use `productExtId`, GTIN, or another identifier.
 - Whether the POS displays regular price and sale price as desired.
+- Where Front POS displays product `description`, whether `internalDescription` is visible, and how image URLs appear for store staff.
 
 ## What You Should Review In The Portal
 

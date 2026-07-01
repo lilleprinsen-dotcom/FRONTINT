@@ -132,7 +132,11 @@ class FrontProductWriteDryRunBuilder
                 'brand' => $payload['brand'] ?? null,
                 'groupName' => $payload['groupName'] ?? null,
                 'subgroupName' => $payload['subgroupName'] ?? null,
+                'description' => $payload['description'] ?? null,
+                'internalDescription' => $payload['internalDescription'] ?? null,
+                'tags' => $payload['tags'] ?? null,
                 'image_candidate' => $payload['image_candidate'] ?? null,
+                'image_candidates' => $payload['image_candidates'] ?? [],
                 'productSizes' => [
                     [
                         'label' => $size['label'] ?? null,

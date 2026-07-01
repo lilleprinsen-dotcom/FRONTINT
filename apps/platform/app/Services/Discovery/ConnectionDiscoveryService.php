@@ -264,7 +264,11 @@ class ConnectionDiscoveryService
                     'manage_stock' => $product['manage_stock'] ?? null,
                     'categories' => $this->safeNames($product['categories'] ?? []),
                     'brands' => $this->safeNames($product['brands'] ?? []),
+                    'tags' => $this->safeNames($product['tags'] ?? []),
+                    'description' => $this->safeText($product['description'] ?? null),
+                    'short_description' => $this->safeText($product['short_description'] ?? null),
                     'image' => $this->safeFirstImage($product['images'] ?? []),
+                    'images' => $this->safeImages($product['images'] ?? []),
                     'variation_count' => is_array($variationIds) ? count($variationIds) : 0,
                     'gtin_candidate' => $this->gtinDetector->detect($product),
                 ];
@@ -364,7 +368,10 @@ class ConnectionDiscoveryService
                     'stock_quantity' => $variation['stock_quantity'] ?? null,
                     'stock_status' => $variation['stock_status'] ?? null,
                     'manage_stock' => $variation['manage_stock'] ?? null,
+                    'description' => $this->safeText($variation['description'] ?? null),
                     'attributes' => $this->safeAttributeNames($variation['attributes'] ?? []),
+                    'image' => $this->safeFirstImage($variation['image'] ?? $variation['images'] ?? []),
+                    'images' => $this->safeImages($variation['image'] ?? $variation['images'] ?? []),
                     'gtin_candidate' => $this->gtinDetector->detect($variation),
                     'discovery_status' => 'success',
                 ];
@@ -401,6 +408,10 @@ class ConnectionDiscoveryService
 
     private function safeFirstImage(mixed $payload): ?array
     {
+        if (is_array($payload) && isset($payload['src'])) {
+            $payload = [$payload];
+        }
+
         if (! is_array($payload)) {
             return null;
         }
@@ -421,6 +432,53 @@ class ConnectionDiscoveryService
             'src' => $src,
             'alt' => is_scalar($image['alt'] ?? null) ? trim((string) $image['alt']) : null,
         ];
+    }
+
+    private function safeImages(mixed $payload): array
+    {
+        if (is_array($payload) && isset($payload['src'])) {
+            $payload = [$payload];
+        }
+
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        return collect($payload)
+            ->filter(fn (mixed $item): bool => is_array($item))
+            ->take(10)
+            ->map(function (array $image): ?array {
+                $src = is_scalar($image['src'] ?? null) ? trim((string) $image['src']) : '';
+
+                if ($src === '') {
+                    return null;
+                }
+
+                return [
+                    'src' => $src,
+                    'alt' => is_scalar($image['alt'] ?? null) ? trim((string) $image['alt']) : null,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function safeText(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $text = html_entity_decode(strip_tags((string) $value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = trim((string) $text);
+
+        if ($text === '') {
+            return null;
+        }
+
+        return mb_substr($text, 0, 5000);
     }
 
     private function wooReadinessReport(array $products, array $variations): array

@@ -255,13 +255,16 @@ class ConnectionDiscoveryTest extends TestCase
                     'stock_status' => 'instock',
                     'manage_stock' => true,
                     'categories' => [['name' => 'Shoes']],
+                    'tags' => [['name' => 'summer'], ['name' => 'staff-pick']],
                     'images' => [
                         ['src' => 'https://woo.example.test/image.jpg', 'alt' => 'Woo Boot image'],
+                        ['src' => 'https://woo.example.test/image-2.jpg', 'alt' => 'Woo Boot second image'],
                     ],
                     'meta_data' => [
                         ['key' => 'Zettle_barcode', 'value' => '7040000000012'],
                         ['key' => 'private_api_key', 'value' => 'do-not-store'],
                     ],
+                    'short_description' => '<p>Short text for staff.</p>',
                     'description' => '<p>Do not store this HTML.</p>',
                 ],
             ]),
@@ -295,6 +298,10 @@ class ConnectionDiscoveryTest extends TestCase
         $this->assertSame('7040000000012', $product['gtin_candidate']['value']);
         $this->assertSame('exact_known_field', $product['gtin_candidate']['confidence']);
         $this->assertSame('https://woo.example.test/image.jpg', $product['image']['src']);
+        $this->assertSame('Do not store this HTML.', $product['description']);
+        $this->assertSame('Short text for staff.', $product['short_description']);
+        $this->assertSame(['summer', 'staff-pick'], $product['tags']);
+        $this->assertSame('https://woo.example.test/image-2.jpg', $product['images'][1]['src']);
         $this->assertStringNotContainsString('do-not-store', json_encode($snapshot->sample_json));
         $this->assertStringNotContainsString('cs_secret', json_encode($snapshot->toArray()));
     }
@@ -385,7 +392,8 @@ class ConnectionDiscoveryTest extends TestCase
         $this->assertSame('GET /wp-json/wc/v3/products/{productId}/variations', $snapshot->summary_json['variation_endpoint']);
         $this->assertSame(9001, $snapshot->sample_json['variations'][0]['id']);
         $this->assertSame('7040000000099', $snapshot->sample_json['variations'][0]['gtin_candidate']['value']);
-        $this->assertStringNotContainsString('Do not store variation HTML', json_encode($snapshot->sample_json));
+        $this->assertSame('Do not store variation HTML.', $snapshot->sample_json['variations'][0]['description']);
+        $this->assertStringNotContainsString('<p>', json_encode($snapshot->sample_json));
         $this->assertStringNotContainsString('cs_secret', json_encode($snapshot->toArray()));
 
         $readiness = $snapshot->sample_json['readiness'];

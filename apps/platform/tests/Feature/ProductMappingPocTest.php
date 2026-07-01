@@ -291,7 +291,12 @@ class ProductMappingPocTest extends TestCase
         $this->assertSame('Brand A', $row['proposed_front_payload']['brand']);
         $this->assertSame('Shoes', $row['proposed_front_payload']['groupName']);
         $this->assertSame('Boots', $row['proposed_front_payload']['subgroupName']);
+        $this->assertSame('Full staff product description.', $row['proposed_front_payload']['description']);
+        $this->assertStringContainsString('Short staff note.', $row['proposed_front_payload']['internalDescription']);
+        $this->assertStringContainsString('Size: Blue / 24', $row['proposed_front_payload']['internalDescription']);
+        $this->assertSame('summer, staff-pick', $row['proposed_front_payload']['tags']);
         $this->assertSame('https://woo.example.test/boot.jpg', $row['proposed_front_payload']['image_candidate']['src']);
+        $this->assertSame('https://woo.example.test/boot-back.jpg', $row['proposed_front_payload']['image_candidates'][1]['src']);
         $this->assertSame('matched_existing_front_product', $row['front_match']['status']);
         $this->assertSame('gtin', $row['front_match']['method']);
 
@@ -390,7 +395,14 @@ class ProductMappingPocTest extends TestCase
             'manage_stock' => true,
             'categories' => ['Shoes', 'Boots'],
             'brands' => ['Brand A'],
+            'tags' => ['summer', 'staff-pick'],
+            'description' => 'Full staff product description.',
+            'short_description' => 'Short staff note.',
             'image' => ['src' => 'https://woo.example.test/boot.jpg', 'alt' => 'Woo Boot'],
+            'images' => [
+                ['src' => 'https://woo.example.test/boot.jpg', 'alt' => 'Woo Boot'],
+                ['src' => 'https://woo.example.test/boot-back.jpg', 'alt' => 'Woo Boot back'],
+            ],
             'gtin_candidate' => [
                 'key' => $gtin === null || $gtin === '' ? null : 'Zettle_barcode',
                 'value' => $gtin,
