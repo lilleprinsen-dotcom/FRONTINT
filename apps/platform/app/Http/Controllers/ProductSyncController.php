@@ -13,6 +13,8 @@ use App\Jobs\RunLimitedFrontProductWriteTest;
 use App\Services\ProductSync\ProductSyncPreviewRunBuilder;
 use App\Services\ProductSync\ProductSyncProfileProvisioner;
 use App\Services\ProductSync\DryRun\FrontProductWriteDryRunBuilder;
+use App\Services\Mapping\ProductSyncPreviewPlanner;
+use App\Services\ProductSync\StagingBatchProductSyncRunBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -40,6 +42,7 @@ class ProductSyncController extends Controller
                 ->whereIn('status', ['pending', 'queued'])
                 ->count() : 0,
             'connectionStatuses' => $organization ? $this->connectionStatuses($organization) : [],
+            'wooBatchCandidates' => $organization ? $this->wooBatchCandidates($organization) : collect(),
         ]);
     }
 
@@ -67,8 +70,8 @@ class ProductSyncController extends Controller
 
         $validated = $request->validate([
             'mode' => ['required', Rule::in($productionWritesEnabled
-                ? ['preview_only', 'limited_write_test', 'initial_full_sync', 'incremental_sync', 'production']
-                : ['preview_only', 'limited_write_test', 'initial_full_sync', 'incremental_sync'])],
+                ? ['preview_only', 'limited_write_test', 'staging_batch', 'initial_full_sync', 'incremental_sync', 'production']
+                : ['preview_only', 'limited_write_test', 'staging_batch', 'initial_full_sync', 'incremental_sync'])],
             'sync_scope' => ['required', Rule::in(['all_active_products', 'selected_only', 'changed_since_last_sync', 'failed_only', 'category_filter', 'brand_filter'])],
             'max_products_per_run' => ['required', 'integer', 'min:1', 'max:50000'],
             'sync_only_opted_in_products' => ['nullable', 'boolean'],
@@ -152,6 +155,39 @@ class ProductSyncController extends Controller
         return redirect()
             ->route('product-sync.runs.show', $run)
             ->with('status', 'Preview run created. No products were synced.');
+    }
+
+    public function createStagingBatchRun(
+        Request $request,
+        ProductSyncProfileProvisioner $profiles,
+        StagingBatchProductSyncRunBuilder $builder,
+    ): RedirectResponse {
+        $organization = $this->currentOrganization($request);
+
+        abort_unless($organization, 404);
+
+        $validated = $request->validate([
+            'woo_item_keys' => ['required', 'array', 'min:1', 'max:' . StagingBatchProductSyncRunBuilder::MAX_ITEMS],
+            'woo_item_keys.*' => ['string'],
+        ]);
+        $snapshot = $this->lastWooDiscovery($organization);
+
+        if (! $snapshot) {
+            return redirect()
+                ->route('product-sync.index')
+                ->withErrors(['staging_batch' => 'Run WooCommerce product discovery before creating a staging batch.']);
+        }
+
+        $run = $builder->createFromWooDiscovery(
+            $request->user(),
+            $profiles->ensureDefault($organization),
+            $snapshot,
+            $validated['woo_item_keys'],
+        );
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Staging batch run created from WooCommerce discovery.');
     }
 
     public function showRun(Request $request, ProductSyncRun $run): View
@@ -281,6 +317,51 @@ class ProductSyncController extends Controller
             ->with('status', 'Limited Front write test started for selected items.');
     }
 
+    public function runStagingBatchSync(Request $request, ProductSyncRun $run): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $itemIds = $run->items()
+            ->whereIn('validation_status', ['ready', 'warning'])
+            ->whereIn('sync_status', ['not_started', 'failed', 'needs_retry'])
+            ->orderBy('id')
+            ->limit(StagingBatchProductSyncRunBuilder::MAX_ITEMS)
+            ->pluck('id')
+            ->all();
+
+        $run->update(['status' => 'queued']);
+
+        foreach ($itemIds as $itemId) {
+            RunLimitedFrontProductWriteTest::dispatch($run->id, $request->user()->id, [(int) $itemId]);
+        }
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Staging batch sync queued for ' . count($itemIds) . ' item(s).');
+    }
+
+    public function retryFailedItems(Request $request, ProductSyncRun $run): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $itemIds = $run->items()
+            ->where('sync_status', 'failed')
+            ->orderBy('id')
+            ->limit(StagingBatchProductSyncRunBuilder::MAX_ITEMS)
+            ->pluck('id')
+            ->all();
+
+        $run->update(['status' => 'queued']);
+
+        foreach ($itemIds as $itemId) {
+            RunLimitedFrontProductWriteTest::dispatch($run->id, $request->user()->id, [(int) $itemId]);
+        }
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Retry queued for ' . count($itemIds) . ' failed item(s).');
+    }
+
     public function runs(Request $request): View
     {
         $organizationIds = $request->user()->organizations()->pluck('organizations.id');
@@ -327,6 +408,29 @@ class ProductSyncController extends Controller
             ->where('discovery_type', 'products')
             ->latest('checked_at')
             ->first();
+    }
+
+    private function lastWooDiscovery(Organization $organization): ?ConnectionDiscoverySnapshot
+    {
+        return ConnectionDiscoverySnapshot::query()
+            ->where('organization_id', $organization->id)
+            ->where('source_system', 'woocommerce')
+            ->where('discovery_type', 'products')
+            ->latest('checked_at')
+            ->first();
+    }
+
+    private function wooBatchCandidates(Organization $organization)
+    {
+        $snapshot = $this->lastWooDiscovery($organization);
+
+        if (! $snapshot) {
+            return collect();
+        }
+
+        return app(ProductSyncPreviewPlanner::class)
+            ->wooItemsFromSnapshot($snapshot)
+            ->take(StagingBatchProductSyncRunBuilder::MAX_ITEMS);
     }
 
     private function connectionStatuses(Organization $organization): array

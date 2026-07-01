@@ -70,9 +70,12 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 - Sync runs and run items are paginated and searchable so the portal never loads a full catalog at once.
 - The Woo Readiness and Product Sync pages show owner-friendly status: Ready, Needs attention, Preview only, Safe mode, and Last checked.
 - Advanced technical settings are separated from normal store-owner pages.
-- No product writes exist yet.
+- A staging batch write flow now exists for selected products/variations only. It can create or update up to 100 selected items in Front from the latest WooCommerce discovery snapshot when the profile mode is `staging_batch` or `limited_write_test`.
+- The staging batch flow does not write to WooCommerce, stock, price lists, orders, refunds, gift cards, or omnichannel records.
+- Full catalog sync is still not implemented.
 
 See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).
+See [docs/staging-batch-product-sync.md](docs/staging-batch-product-sync.md) for the current staging batch test flow.
 
 WooCommerce plugin foundation:
 

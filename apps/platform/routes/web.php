@@ -57,6 +57,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('product-sync.index');
     Route::post('/product-sync/preview-run', [ProductSyncController::class, 'createPreviewRun'])
         ->name('product-sync.preview-run');
+    Route::post('/product-sync/staging-batch-run', [ProductSyncController::class, 'createStagingBatchRun'])
+        ->name('product-sync.staging-batch-run');
     Route::get('/product-sync/profile', [ProductSyncController::class, 'profile'])
         ->name('product-sync.profile');
     Route::post('/product-sync/profile', [ProductSyncController::class, 'updateProfile'])
@@ -71,4 +73,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('product-sync.runs.front-dry-run.show');
     Route::post('/product-sync/runs/{run}/limited-front-write-test', [ProductSyncController::class, 'runLimitedFrontWriteTest'])
         ->name('product-sync.runs.limited-front-write-test');
+    Route::post('/product-sync/runs/{run}/staging-batch-sync', [ProductSyncController::class, 'runStagingBatchSync'])
+        ->name('product-sync.runs.staging-batch-sync');
+    Route::post('/product-sync/runs/{run}/retry-failed', [ProductSyncController::class, 'retryFailedItems'])
+        ->name('product-sync.runs.retry-failed');
 });

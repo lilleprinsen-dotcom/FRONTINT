@@ -4,23 +4,31 @@ This contract is based on the local Front Systems OpenAPI file:
 
 `docs/vendor/front-systems/openapi/frontsystems.openapi.json`
 
-## Chosen Endpoint For First Limited Test
+## Chosen Endpoints
 
-Use the single-product create endpoint:
+The staging write flow uses single-product CRUD endpoints only:
 
 `POST /api/products`
+
+`PUT /api/products/{productId}`
+
+Lookup endpoints used before writing:
+
+`GET /api/products/{productId}`
+
+`GET /api/Product/gtin/{gtin}`
 
 Reasons:
 
 - It is the documented product CRUD create endpoint.
-- It accepts one product payload at a time, which is safer for the first real write test than bulk endpoints.
+- Single-product create/update is safer than bulk endpoints for staging validation.
 - It returns a product payload that can be used to capture Front product identifiers per selected item.
 - It supports `extId`, which can be used as the stable external identifier for future updates.
+- GTIN lookup allows OmniBridge to avoid creating obvious duplicates when a barcode already exists in Front.
 
-Do not use these endpoints in the first limited write test:
+Do not use these endpoints in staging batch v1:
 
 - `POST /api/Product`: read-only product listing/search in Front's OpenAPI.
-- `PUT /api/products/{productId}`: update path; use later after successful create/update identity behavior is confirmed.
 - `POST /api/v2/Products/bulk-insert`: bulk path; use later for controlled batch sync.
 - `PUT /api/v2/Products/bulk-upsert`: bulk path; use later after single-product behavior is proven.
 - `POST /api/PricelistV2`: price-list path; sale price handling comes later.
@@ -79,6 +87,13 @@ For the first limited write test:
 - Woo SKU maps to `productSizes[].externalSKU`.
 - Woo GTIN/EAN maps to `productSizes[].gtin` when available.
 
+Create/update decision order:
+
+1. Existing `product_mappings` row for the Woo item key.
+2. Front lookup by generated `extId` with `GET /api/products/{productId}`.
+3. Front lookup by GTIN with `GET /api/Product/gtin/{gtin}`.
+4. Create with `POST /api/products` if no existing Front product is found.
+
 NEEDS_FRONT_CONFIRMATION:
 
 - Whether `number` should be parent style number instead of variation SKU for variable products.
@@ -133,14 +148,14 @@ No secrets or full raw response bodies should be logged.
 
 ## Safety Gates
 
-The first limited write test must only run when:
+The limited/staging write flow must only run when:
 
-- Product sync profile mode is `limited_write_test`.
+- Product sync profile mode is `limited_write_test` or `staging_batch`.
 - `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false`.
 - A Front Systems connection exists.
 - Front API key is configured.
-- The selected items are from a preview run.
-- At most 10 items are selected.
+- The selected items are from a preview/staging batch run.
+- At most 100 items are selected for staging batch v1.
 - Selected items are `ready` or `warning`.
 - Blocked items are rejected.
 
