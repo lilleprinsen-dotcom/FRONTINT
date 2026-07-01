@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Connection;
 use App\Models\ConnectionDiscoverySnapshot;
+use App\Models\FrontWebhookRegistration;
+use App\Models\WebhookEndpoint;
 use App\Services\Audit\ReadOnlyActionAuditor;
 use App\Services\Discovery\ConnectionDiscoveryService;
 use App\Services\Discovery\ProductMappingPreview;
@@ -32,6 +34,9 @@ class ConnectionDiscoveryController extends Controller
             'latestFrontSetup' => $this->latestSnapshot($connection, 'front_setup'),
             'mappingPreview' => $this->mappingPreview($connection, $previewer),
             'connectionHttpTestsEnabled' => (bool) config('omnibridge.allow_connection_test_http'),
+            'productionWritesEnabled' => (bool) config('omnibridge.allow_production_writes'),
+            'frontWebhookEndpoint' => $this->frontWebhookEndpoint($connection),
+            'frontWebhookRegistrations' => $this->frontWebhookRegistrations($connection),
         ]);
     }
 
@@ -144,6 +149,31 @@ class ConnectionDiscoveryController extends Controller
             ->where('discovery_type', $type)
             ->latest()
             ->first();
+    }
+
+    private function frontWebhookEndpoint(Connection $connection): ?WebhookEndpoint
+    {
+        if (! in_array($connection->type, ['front', 'front_systems'], true)) {
+            return null;
+        }
+
+        return WebhookEndpoint::query()
+            ->where('organization_id', $connection->organization_id)
+            ->where('source_system', 'front')
+            ->where('status', 'active')
+            ->first();
+    }
+
+    private function frontWebhookRegistrations(Connection $connection)
+    {
+        if (! in_array($connection->type, ['front', 'front_systems'], true)) {
+            return collect();
+        }
+
+        return FrontWebhookRegistration::query()
+            ->where('connection_id', $connection->id)
+            ->latest()
+            ->get();
     }
 
     private function mappingPreview(Connection $connection, ProductMappingPreview $previewer): array

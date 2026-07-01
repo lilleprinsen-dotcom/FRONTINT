@@ -58,8 +58,13 @@ Use this checklist before starting real integration implementation.
 - [x] Static plugin guard tests exist.
 - [x] Connection form shows only the selected connection type fields.
 - [x] Duplicate `/api/connections/{connection}/test` route is not present.
+- [x] Front setup discovery reads webhook types and stock setup from documented Front endpoints.
+- [x] Front webhook registration setup exists for selected Front webhook types.
+- [x] Front webhook registration reads existing webhooks before creating/updating callbacks.
+- [x] Front webhook registration uses the tokenized `/webhooks/front/{pathToken}` callback URL.
+- [x] Front webhook setup stores sanitized status only and does not log API keys.
 - [x] No real credentials are committed.
-- [x] No real WooCommerce or Front Systems API writes are implemented yet.
+- [x] Front and WooCommerce writes remain explicit staging actions behind portal controls and safety checks.
 
 Notes:
 

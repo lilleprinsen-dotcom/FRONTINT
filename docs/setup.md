@@ -117,6 +117,48 @@ GET /wp-json/omnibridge/v1/connection-test
 
 This is separate from **Test Woo REST**, which uses WooCommerce consumer key/secret and `GET /wp-json/wc/v3/system_status`.
 
+## Front Webhook Setup
+
+Use this after the Front staging connection is working.
+
+1. In `apps/platform/.env`, keep:
+
+```text
+OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false
+```
+
+2. Enable staging live HTTP calls:
+
+```text
+OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true
+```
+
+3. Restart `php artisan serve`.
+4. Open **Connections**.
+5. Open the Front connection discovery page.
+6. Click **Check Front setup**.
+7. Review the webhook types returned by Front.
+8. Select sale, return, and stock-related webhook types.
+9. Click **Register selected Front webhooks**.
+
+OmniBridge will register callbacks to:
+
+```text
+/webhooks/front/{pathToken}
+```
+
+The setup uses documented Front endpoints:
+
+```text
+GET /api/Webhooks
+POST /api/Webhooks
+PUT /api/Webhooks/{webhookId}
+```
+
+No WooCommerce writes, product sync, price sync, stock sync, order import, refunds, gift cards, or omnichannel actions are triggered by this setup action.
+
+See `docs/front-webhook-setup.md` for details and open questions.
+
 ## 1. Clone the Repo
 
 ```bash
