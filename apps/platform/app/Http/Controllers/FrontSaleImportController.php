@@ -45,7 +45,7 @@ class FrontSaleImportController extends Controller
 
         return redirect()
             ->route('front-sales.show', $frontSaleImport)
-            ->with('status', 'Front sale import queued. Refresh this page or open Testing Log to see the result.');
+            ->with('status', 'Manual WooCommerce order import queued. Refresh this page or open Testing Log to see the result.');
     }
 
     public function adjustStock(Request $request, FrontSaleImport $frontSaleImport): RedirectResponse
@@ -56,6 +56,6 @@ class FrontSaleImportController extends Controller
 
         return redirect()
             ->route('front-sales.show', $frontSaleImport)
-            ->with('status', 'WooCommerce stock adjustment queued for this Front sale.');
+            ->with('status', 'WooCommerce stock adjustment queued for this Front transaction.');
     }
 }

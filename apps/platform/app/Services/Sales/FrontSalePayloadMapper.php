@@ -9,10 +9,11 @@ use Illuminate\Support\Collection;
 
 class FrontSalePayloadMapper
 {
-    public function buildImportData(Organization $organization, array $payload): array
+    public function buildImportData(Organization $organization, array $payload, ?string $eventType = null): array
     {
         $lines = $this->extractLines($payload);
         $mappedLines = $this->mappedLines($organization, $lines);
+        $transactionType = $this->transactionType($payload, $eventType, $lines);
         $frontSaleId = $this->stringValue(
             data_get($payload, 'saleId')
             ?? data_get($payload, 'sale_id')
@@ -44,16 +45,20 @@ class FrontSalePayloadMapper
                 ?? data_get($payload, 'total')
                 ?? data_get($payload, 'amount')
             ) ?? $mappedLines->sum(fn (array $line): float => (float) ($line['total'] ?? 0)),
+            'transaction_type' => $transactionType,
             'payload_summary_json' => [
                 'front_sale_id' => $frontSaleId,
                 'front_receipt_id' => $frontReceiptId,
+                'transaction_type' => $transactionType,
                 'line_count' => $mappedLines->count(),
                 'unmatched_line_count' => $mappedLines->where('mapping_status', 'missing_product_mapping')->count(),
-                'source' => 'front_pos_sale',
+                'source' => 'front_pos_' . $transactionType,
                 'writes_woocommerce' => false,
             ],
             'line_items_json' => $mappedLines->values()->all(),
-            'woo_order_payload_json' => $this->wooOrderPayload($frontSaleId, $frontReceiptId, $mappedLines, $this->customerData($payload)),
+            'woo_order_payload_json' => $transactionType === 'sale'
+                ? $this->wooOrderPayload($frontSaleId, $frontReceiptId, $mappedLines, $this->customerData($payload))
+                : null,
         ];
     }
 
@@ -61,7 +66,15 @@ class FrontSalePayloadMapper
     {
         $type = strtolower($eventType);
 
-        if (str_contains($type, 'sale') || str_contains($type, 'receipt') || str_contains($type, 'transaction')) {
+        if (
+            str_contains($type, 'sale')
+            || str_contains($type, 'receipt')
+            || str_contains($type, 'transaction')
+            || str_contains($type, 'return')
+            || str_contains($type, 'refund')
+            || str_contains($type, 'void')
+            || str_contains($type, 'cancel')
+        ) {
             return true;
         }
 
@@ -179,7 +192,7 @@ class FrontSalePayloadMapper
             ->filter(fn (mixed $line): bool => is_array($line))
             ->map(fn (array $line): array => [
                 'name' => $this->stringValue(data_get($line, 'name') ?? data_get($line, 'productName') ?? data_get($line, 'description')),
-                'quantity' => $this->numberValue(data_get($line, 'quantity') ?? data_get($line, 'qty')) ?: 1,
+                'quantity' => abs($this->numberValue(data_get($line, 'quantity') ?? data_get($line, 'qty')) ?: 1),
                 'unit_price' => $this->numberValue(data_get($line, 'unitPrice') ?? data_get($line, 'price')),
                 'total' => $this->numberValue(data_get($line, 'total') ?? data_get($line, 'lineTotal') ?? data_get($line, 'amount')),
                 'gtin' => $this->stringValue(data_get($line, 'gtin') ?? data_get($line, 'ean') ?? data_get($line, 'barcode')),
@@ -189,6 +202,54 @@ class FrontSalePayloadMapper
                 'front_product_id' => $this->stringValue(data_get($line, 'productid') ?? data_get($line, 'productId') ?? data_get($line, 'frontProductId')),
             ])
             ->values();
+    }
+
+    private function transactionType(array $payload, ?string $eventType, Collection $lines): string
+    {
+        $signals = strtolower(implode(' ', array_filter([
+            $eventType,
+            $this->stringValue(data_get($payload, 'type')),
+            $this->stringValue(data_get($payload, 'eventType')),
+            $this->stringValue(data_get($payload, 'status')),
+            $this->stringValue(data_get($payload, 'reason')),
+        ])));
+
+        if (
+            str_contains($signals, 'return')
+            || str_contains($signals, 'refund')
+            || str_contains($signals, 'void')
+            || str_contains($signals, 'cancel')
+        ) {
+            return 'return';
+        }
+
+        $rawLines = data_get($payload, 'lines')
+            ?? data_get($payload, 'items')
+            ?? data_get($payload, 'saleLines')
+            ?? data_get($payload, 'productLines')
+            ?? data_get($payload, 'receipt.lines')
+            ?? [];
+
+        $hasNegativeLine = collect(is_array($rawLines) ? $rawLines : [])
+            ->filter(fn (mixed $line): bool => is_array($line))
+            ->contains(function (array $line): bool {
+                $quantity = $this->numberValue(data_get($line, 'quantity') ?? data_get($line, 'qty'));
+                $total = $this->numberValue(data_get($line, 'total') ?? data_get($line, 'lineTotal') ?? data_get($line, 'amount'));
+
+                return ($quantity !== null && $quantity < 0) || ($total !== null && $total < 0);
+            });
+
+        $total = $this->numberValue(
+            data_get($payload, 'totalAmount')
+            ?? data_get($payload, 'total')
+            ?? data_get($payload, 'amount')
+        );
+
+        if ($hasNegativeLine || ($total !== null && $total < 0)) {
+            return 'return';
+        }
+
+        return 'sale';
     }
 
     private function stringValue(mixed $value): ?string

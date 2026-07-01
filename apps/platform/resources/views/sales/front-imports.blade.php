@@ -9,8 +9,8 @@
 @section('content')
     <section class="panel page-header">
         <span class="kicker">Front to WooCommerce</span>
-        <h1>Front Sales</h1>
-        <p>Front POS sales update WooCommerce stock first. Woo orders are optional and only created when an admin clicks the manual button.</p>
+        <h1>Front Sales and Returns</h1>
+        <p>Front POS sales reduce WooCommerce stock. Front returns increase WooCommerce stock. Woo orders are optional and only created when an admin clicks the manual button for a sale.</p>
         <div class="notice">Default mode is stock-only. This keeps the normal WooCommerce order list clean while keeping Woo stock correct.</div>
         @if ($productionWritesEnabled)
             <div class="danger">Production writes are enabled. Do not import sales until the production launch checklist is complete.</div>
@@ -40,8 +40,8 @@
         <div class="owner-flow">
             <div class="flow-step">
                 <span class="step-number">1</span>
-                <strong>Front sale arrives</strong>
-                <p class="muted">A Front webhook or event is captured as a staged sale import.</p>
+                <strong>Front transaction arrives</strong>
+                <p class="muted">A Front sale or return webhook is captured as a stock transaction.</p>
             </div>
             <div class="flow-step">
                 <span class="step-number">2</span>
@@ -51,7 +51,7 @@
             <div class="flow-step">
                 <span class="step-number">3</span>
                 <strong>Woo stock is adjusted</strong>
-                <p class="muted">Stock changes immediately. A Woo order is optional and manual.</p>
+                <p class="muted">Sales reduce stock. Returns add stock back. A Woo order is optional and manual for sales only.</p>
             </div>
         </div>
     </section>
@@ -59,8 +59,8 @@
     <section class="panel">
         <div class="split-row">
             <div>
-                <h2>Sale imports</h2>
-                <p class="muted">If a sale is blocked, open it to see which product line needs a mapping.</p>
+                <h2>Captured POS transactions</h2>
+                <p class="muted">If a transaction is blocked, open it to see which product line needs a mapping.</p>
             </div>
             <a class="button secondary" href="{{ route('testing-log.index') }}">Open Testing Log</a>
         </div>
@@ -69,7 +69,8 @@
                 <thead>
                 <tr>
                     <th>Stock</th>
-                    <th>Front sale</th>
+                    <th>Front transaction</th>
+                    <th>Type</th>
                     <th>Total</th>
                     <th>Lines</th>
                     <th>Optional order</th>
@@ -92,6 +93,7 @@
                             <strong>{{ $import->front_receipt_id ?: $import->front_sale_id ?: 'Unknown sale' }}</strong>
                             <div class="muted">{{ $import->created_at->diffForHumans() }}</div>
                         </td>
+                        <td>{{ $import->transaction_type === 'return' ? 'Return' : 'Sale' }}</td>
                         <td>{{ $import->currency }} {{ $import->total_amount ?: 'n/a' }}</td>
                         <td>
                             {{ count($import->line_items_json ?? []) }} line(s)
@@ -104,7 +106,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6">No Front sales captured yet. Send a Front sale webhook to the Front webhook URL when Front is ready.</td>
+                        <td colspan="7">No Front sales or returns captured yet. Send a Front webhook to the Front webhook URL when Front is ready.</td>
                     </tr>
                 @endforelse
                 </tbody>

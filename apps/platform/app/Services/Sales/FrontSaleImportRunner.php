@@ -93,6 +93,10 @@ class FrontSaleImportRunner
             $errors[] = 'This Front sale is already linked to a WooCommerce order.';
         }
 
+        if ($import->transaction_type !== 'sale') {
+            $errors[] = 'Only Front sales can be manually imported as WooCommerce orders. Returns only adjust WooCommerce stock.';
+        }
+
         if (! in_array($import->order_import_status, ['not_imported', 'failed', 'needs_retry', 'blocked'], true)) {
             $errors[] = 'Only not imported or failed Front sale imports can be imported as Woo orders.';
         }
