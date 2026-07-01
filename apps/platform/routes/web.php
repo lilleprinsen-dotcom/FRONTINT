@@ -69,4 +69,6 @@ Route::middleware('auth')->group(function (): void {
         ->name('product-sync.runs.front-dry-run.prepare');
     Route::get('/product-sync/runs/{run}/front-dry-run', [ProductSyncController::class, 'showFrontDryRun'])
         ->name('product-sync.runs.front-dry-run.show');
+    Route::post('/product-sync/runs/{run}/limited-front-write-test', [ProductSyncController::class, 'runLimitedFrontWriteTest'])
+        ->name('product-sync.runs.limited-front-write-test');
 });

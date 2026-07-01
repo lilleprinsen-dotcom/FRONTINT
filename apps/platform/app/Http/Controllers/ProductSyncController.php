@@ -9,6 +9,7 @@ use App\Models\ProductSyncPreviewPlan;
 use App\Models\ProductSyncProfile;
 use App\Models\ProductSyncEvent;
 use App\Models\ProductSyncRun;
+use App\Jobs\RunLimitedFrontProductWriteTest;
 use App\Services\ProductSync\ProductSyncPreviewRunBuilder;
 use App\Services\ProductSync\ProductSyncProfileProvisioner;
 use App\Services\ProductSync\DryRun\FrontProductWriteDryRunBuilder;
@@ -258,6 +259,26 @@ class ProductSyncController extends Controller
             'dryRun' => $dryRun,
             'productionWritesEnabled' => (bool) config('omnibridge.allow_production_writes'),
         ]);
+    }
+
+    public function runLimitedFrontWriteTest(Request $request, ProductSyncRun $run): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $validated = $request->validate([
+            'item_ids' => ['required', 'array', 'min:1', 'max:' . FrontProductWriteDryRunBuilder::MAX_ITEMS],
+            'item_ids.*' => ['integer'],
+        ]);
+
+        RunLimitedFrontProductWriteTest::dispatch(
+            $run->id,
+            $request->user()->id,
+            array_map('intval', $validated['item_ids']),
+        );
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Limited Front write test started for selected items.');
     }
 
     public function runs(Request $request): View

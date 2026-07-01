@@ -40,6 +40,10 @@
             Select up to 10 ready or warning items to preview the exact Front product payload.
             This does not call Front and does not write anything.
         </p>
+        <div class="warning">
+            The limited write test button will call Front <code>POST /api/products</code> for the selected items only.
+            It does not write WooCommerce, prices, stock, orders, or the full catalog.
+        </div>
         @if ($run->profile?->mode !== 'limited_write_test')
             <div class="warning">Set the product sync profile mode to Limited write test before preparing a Front write dry-run.</div>
         @endif
@@ -64,6 +68,12 @@
             </div>
             <p>
                 <button type="submit" @disabled($eligibleDryRunItems->isEmpty())>Prepare Front dry-run</button>
+                <button
+                    class="secondary"
+                    type="submit"
+                    formaction="{{ route('product-sync.runs.limited-front-write-test', $run) }}"
+                    @disabled($eligibleDryRunItems->isEmpty())
+                >Run limited Front write test</button>
             </p>
         </form>
     </section>

@@ -12,6 +12,7 @@ use App\Models\ProductSyncProfile;
 use App\Models\ProductSyncRun;
 use App\Models\ProductSyncRunItem;
 use App\Models\User;
+use App\Services\Credentials\CredentialVault;
 use App\Services\ProductSync\ProductSyncEventRecorder;
 use App\Services\ProductSync\ProductSyncProfileProvisioner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -416,6 +417,191 @@ class ProductSyncFoundationTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_limited_front_write_test_calls_documented_product_endpoint_and_creates_mapping(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/products' => Http::response([
+                'id' => 'front-uuid-1',
+                'extId' => 'woo-product-1000',
+                'productid' => 9876,
+                'number' => 'READY-1',
+                'variant' => 'READY-1',
+                'productSizes' => [
+                    [
+                        'identity' => 'front-size-identity-1',
+                        'gtin' => '7040000002001',
+                        'externalSKU' => 'READY-1',
+                    ],
+                ],
+            ]),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'READY-1', 'gtin' => '7040000002001', 'validation_status' => 'ready'],
+        ]);
+        $item = $run->items()->firstOrFail();
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/limited-front-write-test', [
+                'item_ids' => [$item->id],
+            ])
+            ->assertRedirect();
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return $request->method() === 'POST'
+                && (string) $request->url() === 'https://front.example.test/restapi/V2/api/products'
+                && $request->hasHeader('x-api-key', 'front-secret-key')
+                && ($payload['extId'] ?? null) === 'woo-product-1000'
+                && ($payload['number'] ?? null) === 'READY-1'
+                && ($payload['productSizes'][0]['gtin'] ?? null) === '7040000002001';
+        });
+        Http::assertSentCount(1);
+
+        $item->refresh();
+        $this->assertSame('synced', $item->sync_status);
+        $this->assertSame('9876', $item->front_product_id);
+        $this->assertSame('woo-product-1000', $item->front_product_ext_id);
+        $this->assertSame('front-size-identity-1', $item->front_identity);
+        $this->assertSame('READY-1', $item->front_external_sku);
+        $this->assertNotNull($item->synced_at);
+        $this->assertSame('POST /api/products', $item->last_request_summary_json['endpoint']);
+        $this->assertArrayNotHasKey('x-api-key', $item->last_request_summary_json);
+        $this->assertDatabaseHas('product_mappings', [
+            'organization_id' => $organization->id,
+            'woo_item_key' => 'product:1000',
+            'front_product_id' => '9876',
+            'front_product_ext_id' => 'woo-product-1000',
+            'front_identity' => 'front-size-identity-1',
+            'external_sku' => 'READY-1',
+            'sync_status' => 'synced',
+        ]);
+        $auditJson = AuditLog::query()->where('action', 'limited_front_product_write_test')->get()->toJson();
+        $this->assertStringNotContainsString('front-secret-key', $auditJson);
+    }
+
+    public function test_limited_front_write_test_does_not_call_http_when_safety_gates_fail(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'READY-1', 'gtin' => '7040000002001', 'validation_status' => 'ready'],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/limited-front-write-test', [
+                'item_ids' => [$run->items()->firstOrFail()->id],
+            ])
+            ->assertRedirect();
+
+        Http::assertNothingSent();
+        $this->assertSame('not_started', $run->items()->firstOrFail()->sync_status);
+        $this->assertSame(0, ProductMapping::query()->count());
+    }
+
+    public function test_limited_front_write_test_rejects_blocked_items_before_http(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'BLOCKED-1', 'gtin' => null, 'validation_status' => 'blocked'],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/limited-front-write-test', [
+                'item_ids' => [$run->items()->firstOrFail()->id],
+            ])
+            ->assertRedirect();
+
+        Http::assertNothingSent();
+        $this->assertSame('not_started', $run->items()->firstOrFail()->sync_status);
+    }
+
+    public function test_limited_front_write_test_requires_front_api_key_before_http(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        Connection::query()->create([
+            'organization_id' => $organization->id,
+            'type' => 'front_systems',
+            'name' => 'Front staging',
+            'base_url' => 'https://front.example.test/restapi/V2',
+            'status' => 'success',
+        ]);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'READY-1', 'gtin' => '7040000002001', 'validation_status' => 'ready'],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/limited-front-write-test', [
+                'item_ids' => [$run->items()->firstOrFail()->id],
+            ])
+            ->assertRedirect();
+
+        Http::assertNothingSent();
+        $this->assertSame('not_started', $run->items()->firstOrFail()->sync_status);
+    }
+
+    public function test_limited_front_write_test_caps_selection_at_ten_before_http(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, collect(range(1, 11))
+            ->map(fn (int $index): array => [
+                'sku' => 'READY-' . $index,
+                'gtin' => '70400000040' . str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+                'validation_status' => 'ready',
+            ])
+            ->all());
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/limited-front-write-test', [
+                'item_ids' => $run->items()->pluck('id')->all(),
+            ])
+            ->assertSessionHasErrors('item_ids');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_limited_front_write_test_marks_failed_front_response_without_mapping(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/products' => Http::response(['message' => 'Bad request'], 422),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'READY-1', 'gtin' => '7040000002001', 'validation_status' => 'ready'],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/limited-front-write-test', [
+                'item_ids' => [$run->items()->firstOrFail()->id],
+            ])
+            ->assertRedirect();
+
+        $item = $run->items()->firstOrFail();
+        $this->assertSame('failed', $item->sync_status);
+        $this->assertSame('HTTP 422', $item->last_error);
+        $this->assertSame(422, $item->last_response_summary_json['http_status']);
+        $this->assertSame(0, ProductMapping::query()->count());
+    }
+
     public function test_product_sync_event_deduplication_works(): void
     {
         [, $organization] = $this->userWithOrganization();
@@ -511,13 +697,19 @@ class ProductSyncFoundationTest extends TestCase
 
     private function frontConnection(Organization $organization): Connection
     {
-        return Connection::query()->create([
+        $connection = Connection::query()->create([
             'organization_id' => $organization->id,
             'type' => 'front_systems',
             'name' => 'Front staging',
             'base_url' => 'https://front.example.test/restapi/V2',
             'status' => 'success',
         ]);
+
+        app(CredentialVault::class)->store($connection, 'api_key', [
+            'value' => 'front-secret-key',
+        ]);
+
+        return $connection->fresh('credentials');
     }
 
     private function previewPlan(Organization $organization, ?array $rows = null): ProductSyncPreviewPlan
