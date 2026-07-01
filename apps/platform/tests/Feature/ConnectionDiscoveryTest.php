@@ -255,6 +255,8 @@ class ConnectionDiscoveryTest extends TestCase
                     'stock_status' => 'instock',
                     'manage_stock' => true,
                     'categories' => [['name' => 'Shoes']],
+                    'Product_brand' => [['name' => 'Uppercase Brand']],
+                    'product_brands' => ['Lowercase Brand'],
                     'tags' => [['name' => 'summer'], ['name' => 'staff-pick']],
                     'images' => [
                         ['src' => 'https://woo.example.test/image.jpg', 'alt' => 'Woo Boot image'],
@@ -301,6 +303,7 @@ class ConnectionDiscoveryTest extends TestCase
         $this->assertSame('Do not store this HTML.', $product['description']);
         $this->assertSame('Short text for staff.', $product['short_description']);
         $this->assertSame(['summer', 'staff-pick'], $product['tags']);
+        $this->assertSame(['Uppercase Brand', 'Lowercase Brand'], $product['brands']);
         $this->assertSame('https://woo.example.test/image-2.jpg', $product['images'][1]['src']);
         $this->assertStringNotContainsString('do-not-store', json_encode($snapshot->sample_json));
         $this->assertStringNotContainsString('cs_secret', json_encode($snapshot->toArray()));

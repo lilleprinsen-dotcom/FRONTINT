@@ -263,7 +263,7 @@ class ConnectionDiscoveryService
                     'stock_status' => $product['stock_status'] ?? null,
                     'manage_stock' => $product['manage_stock'] ?? null,
                     'categories' => $this->safeNames($product['categories'] ?? []),
-                    'brands' => $this->safeNames($product['brands'] ?? []),
+                    'brands' => $this->safeBrandNames($product),
                     'tags' => $this->safeNames($product['tags'] ?? []),
                     'description' => $this->safeText($product['description'] ?? null),
                     'short_description' => $this->safeText($product['short_description'] ?? null),
@@ -676,12 +676,49 @@ class ConnectionDiscoveryService
         }
 
         return collect($payload)
-            ->filter(fn ($item): bool => is_array($item))
+            ->filter(fn ($item): bool => is_array($item) || is_scalar($item))
             ->take(10)
-            ->map(fn (array $item): ?string => $item['name'] ?? null)
+            ->map(fn (mixed $item): ?string => is_array($item) ? ($item['name'] ?? null) : (string) $item)
             ->filter()
+            ->unique()
             ->values()
             ->all();
+    }
+
+    private function safeBrandNames(array $product): array
+    {
+        return collect([
+            $product['brands'] ?? [],
+            $product['Product_brand'] ?? [],
+            $product['product_brands'] ?? [],
+        ])
+            ->flatMap(fn (mixed $payload): array => $this->safeNames($this->normalizeNamePayload($payload)))
+            ->filter()
+            ->unique()
+            ->take(10)
+            ->values()
+            ->all();
+    }
+
+    private function normalizeNamePayload(mixed $payload): array
+    {
+        if ($payload === null || $payload === '') {
+            return [];
+        }
+
+        if (is_scalar($payload)) {
+            return [(string) $payload];
+        }
+
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        if (isset($payload['name']) || isset($payload['id'])) {
+            return [$payload];
+        }
+
+        return $payload;
     }
 
     private function safeScalarMap(mixed $payload): array
