@@ -306,7 +306,7 @@ class ProductSyncFoundationTest extends TestCase
         $this->actingAs($user)
             ->get('/dashboard')
             ->assertOk()
-            ->assertSee('Ready')
+            ->assertSee('Review product readiness')
             ->assertDontSee('Webhook URLs')
             ->assertDontSee('payload')
             ->assertDontSee('idempotency')

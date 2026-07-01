@@ -1,10 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Account setup</span>
         <h1>{{ $organization->exists ? 'Edit organization' : 'Create organization' }}</h1>
-        <p class="muted">Use staging first. Production writes remain disabled unless explicitly enabled in environment configuration.</p>
+        <p>Use staging first. Production writes remain disabled unless explicitly enabled in environment configuration.</p>
+    </section>
 
+    <section class="panel">
         <form method="post" action="{{ $organization->exists ? route('organizations.update', $organization) : route('organizations.store') }}">
             @csrf
             @if ($organization->exists)

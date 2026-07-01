@@ -1,9 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Technical settings</span>
         <h1>Product Sync Settings</h1>
-        <p>These settings control how products are prepared before any future sync to Front.</p>
+        <p>These settings control how products are prepared before any future sync to Front. Most store owners should not need to change these during normal use.</p>
         <div class="notice">Preview only is the safest mode. Production mode is disabled unless production writes are explicitly enabled.</div>
     </section>
 

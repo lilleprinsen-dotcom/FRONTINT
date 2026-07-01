@@ -28,11 +28,13 @@
 @endphp
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
         <h1>{{ $connection->exists ? 'Edit connection' : 'Add connection' }}</h1>
-        <p class="muted">Credentials are encrypted at rest and never shown again after saving. Leave credential fields empty to keep existing values.</p>
-        <p class="muted">WooCommerce and Front connection tests are read-only. They do not sync products, stock, orders, refunds, or gift cards.</p>
+        <p>Add only the system you want to test now. Credentials are encrypted and never shown again after saving.</p>
+        <div class="notice">Connection tests are read-only. They do not sync products, stock, orders, refunds, or gift cards.</div>
+    </section>
 
+    <section class="panel">
         <form method="post" action="{{ $connection->exists ? route('connections.update', $connection) : route('connections.store') }}">
             @csrf
             @if ($connection->exists)
@@ -77,10 +79,10 @@
             </p>
 
             <h2>Credentials</h2>
-            <p class="muted">Only fill the fields for the selected connection type. Existing saved credentials are shown as redacted hints on the dashboard.</p>
+            <p class="muted">Only the fields for the selected system are shown. Leave them empty to keep existing saved credentials.</p>
 
             @foreach ($credentialFields as $type => $fields)
-                <div class="panel" data-credential-panel="{{ $type }}" @hidden($selectedType !== $type)>
+                <div class="flow-step" data-credential-panel="{{ $type }}" @hidden($selectedType !== $type)>
                     <h3>{{ $connectionTypes[$type] ?? $type }}</h3>
                     @foreach ($fields as $field => $label)
                         <label for="credential_{{ $type }}_{{ $field }}">{{ $label }}</label>

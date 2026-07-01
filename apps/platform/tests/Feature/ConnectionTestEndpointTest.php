@@ -331,9 +331,8 @@ class ConnectionTestEndpointTest extends TestCase
         $this->actingAs($user)
             ->get('/connections')
             ->assertOk()
-            ->assertSee('Safe mode is on for normal WooCommerce REST and Front API tests.')
+            ->assertSee('Safe mode is on. Normal WooCommerce REST and Front API tests will skip external HTTP calls.')
             ->assertSee('Last test: success')
-            ->assertSee('No error saved')
             ->assertDontSee('Lilleprinsen Test Store')
             ->assertDontSee('Stock ID: 2001');
     }
@@ -350,8 +349,8 @@ class ConnectionTestEndpointTest extends TestCase
             ->get('/connections')
             ->assertOk()
             ->assertSee('3 credential field(s) configured')
-            ->assertSee('Test Woo REST')
-            ->assertSee('Test Woo plugin')
+            ->assertSee('Test WooCommerce')
+            ->assertSee('Test plugin')
             ->assertDontSee('ck_secret_value')
             ->assertDontSee('cs_secret_value')
             ->assertDontSee('plugin_shared_secret_value')

@@ -1,13 +1,15 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Account setup</span>
         <h1>Organizations</h1>
-        <p class="muted">Each organization is one merchant/account. Start with Lilleprinsen in staging.</p>
+        <p>Each organization is one merchant account. Start with Lilleprinsen in staging.</p>
         <p><a class="button" href="{{ route('organizations.create') }}">Add organization</a></p>
     </section>
 
     <section class="panel">
+        <div class="table-wrap">
         <table>
             <thead>
             <tr>
@@ -34,5 +36,6 @@
             @endforelse
             </tbody>
         </table>
+        </div>
     </section>
 @endsection

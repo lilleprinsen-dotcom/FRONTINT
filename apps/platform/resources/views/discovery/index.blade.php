@@ -1,7 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="panel">
+    <section class="panel page-header">
+        <span class="kicker">Testing Lab</span>
         <h1>Read-Only Discovery Lab</h1>
         <p>Discovery reads small samples from connected systems so you can understand products and stores before syncing.</p>
         <div class="notice">Discovery is read-only and capped. It does not sync products, prices, stock, or orders.</div>
@@ -11,6 +12,7 @@
     @foreach ($organizations as $organization)
         <section class="panel">
             <h2>{{ $organization->name }}</h2>
+            <div class="table-wrap">
             <table>
                 <thead>
                 <tr>
@@ -38,6 +40,7 @@
                 @endforelse
                 </tbody>
             </table>
+            </div>
         </section>
     @endforeach
 @endsection
