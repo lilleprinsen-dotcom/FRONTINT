@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Organization;
+use App\Models\AuditLog;
+use App\Models\Connection;
 use App\Models\ProductMapping;
 use App\Models\ProductSyncEvent;
 use App\Models\ProductSyncPreviewPlan;
@@ -281,6 +283,139 @@ class ProductSyncFoundationTest extends TestCase
             ->assertDontSee('FIND-ME');
     }
 
+    public function test_front_write_dry_run_requires_limited_write_mode(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'READY-1', 'gtin' => '7040000002001', 'validation_status' => 'ready'],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/front-dry-run', [
+                'item_ids' => [$run->items()->firstOrFail()->id],
+            ])
+            ->assertSessionHasErrors('front_dry_run');
+
+        $this->assertDatabaseHas('audit_logs', [
+            'organization_id' => $organization->id,
+            'action' => 'front_product_write_dry_run_prepared',
+        ]);
+        Http::assertNothingSent();
+    }
+
+    public function test_front_write_dry_run_requires_front_connection(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $profile = app(ProductSyncProfileProvisioner::class)->ensureDefault($organization);
+        $profile->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'READY-1', 'gtin' => '7040000002001', 'validation_status' => 'ready'],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/front-dry-run', [
+                'item_ids' => [$run->items()->firstOrFail()->id],
+            ])
+            ->assertSessionHasErrors('front_dry_run');
+
+        $this->assertSame(1, AuditLog::query()->where('action', 'front_product_write_dry_run_prepared')->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_front_write_dry_run_rejects_blocked_items(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        $profile = app(ProductSyncProfileProvisioner::class)->ensureDefault($organization);
+        $profile->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, [
+            ['sku' => 'BLOCKED-1', 'gtin' => null, 'validation_status' => 'blocked'],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/front-dry-run', [
+                'item_ids' => [$run->items()->firstOrFail()->id],
+            ])
+            ->assertSessionHasErrors('front_dry_run');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_front_write_dry_run_caps_selection_at_ten(): void
+    {
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, collect(range(1, 11))
+            ->map(fn (int $index): array => [
+                'sku' => 'READY-' . $index,
+                'gtin' => '70400000030' . str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+                'validation_status' => 'ready',
+            ])
+            ->all());
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/front-dry-run', [
+                'item_ids' => $run->items()->pluck('id')->all(),
+            ])
+            ->assertSessionHasErrors('item_ids');
+    }
+
+    public function test_front_write_dry_run_shows_exact_payload_and_audits_without_http_calls(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update(['mode' => 'limited_write_test']);
+        $run = $this->runWithItems($organization, [
+            [
+                'sku' => 'READY-1',
+                'gtin' => '7040000002001',
+                'validation_status' => 'ready',
+                'sale_price' => '499',
+            ],
+            [
+                'sku' => 'WARN-1',
+                'gtin' => null,
+                'validation_status' => 'warning',
+            ],
+        ]);
+        $itemIds = $run->items()->pluck('id')->all();
+
+        $response = $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/front-dry-run', [
+                'item_ids' => $itemIds,
+            ])
+            ->assertRedirect();
+
+        $location = $response->headers->get('Location');
+        $this->assertIsString($location);
+
+        $this->actingAs($user)
+            ->get($location)
+            ->assertOk()
+            ->assertSee('Front Product Dry-Run')
+            ->assertSee('READY-1')
+            ->assertSee('7040000002001')
+            ->assertSee('Regular: 599')
+            ->assertSee('Sale: 499')
+            ->assertSee('future PriceListV2 candidate')
+            ->assertSee('No Front API calls are made');
+
+        $audit = AuditLog::query()->where('action', 'front_product_write_dry_run_prepared')->firstOrFail();
+        $this->assertSame('ready', $audit->metadata_json['status']);
+        $this->assertFalse($audit->metadata_json['external_api_calls']);
+        $this->assertFalse($audit->metadata_json['writes_performed']);
+        $this->assertStringNotContainsString('api_key', json_encode($audit->metadata_json));
+        Http::assertNothingSent();
+    }
+
     public function test_product_sync_event_deduplication_works(): void
     {
         [, $organization] = $this->userWithOrganization();
@@ -372,6 +507,17 @@ class ProductSyncFoundationTest extends TestCase
         $organization->users()->attach($user->id, ['role' => 'owner']);
 
         return [$user, $organization];
+    }
+
+    private function frontConnection(Organization $organization): Connection
+    {
+        return Connection::query()->create([
+            'organization_id' => $organization->id,
+            'type' => 'front_systems',
+            'name' => 'Front staging',
+            'base_url' => 'https://front.example.test/restapi/V2',
+            'status' => 'success',
+        ]);
     }
 
     private function previewPlan(Organization $organization, ?array $rows = null): ProductSyncPreviewPlan
@@ -481,6 +627,27 @@ class ProductSyncFoundationTest extends TestCase
                 'woo_sku' => $item['sku'],
                 'detected_gtin' => $item['gtin'],
                 'front_match_status' => 'no_match',
+                'proposed_front_payload_json' => [
+                    'name' => 'Product ' . ($index + 1),
+                    'number' => $item['sku'],
+                    'variant' => $item['sku'],
+                    'brand' => 'Brand candidate',
+                    'groupName' => 'Shoes',
+                    'subgroupName' => 'Boots',
+                    'price_candidate' => '599',
+                    'sale_price_candidate' => $item['sale_price'] ?? null,
+                    'image_candidate' => [
+                        'src' => 'https://example.test/image-' . ($index + 1) . '.jpg',
+                        'alt' => 'Product image',
+                    ],
+                    'productSizes' => [
+                        [
+                            'label' => '24',
+                            'gtin' => $item['gtin'],
+                            'externalSKU' => $item['sku'],
+                        ],
+                    ],
+                ],
                 'validation_status' => $item['validation_status'] ?? 'warning',
                 'sync_status' => $item['sync_status'] ?? 'not_started',
                 'validation_errors_json' => [],

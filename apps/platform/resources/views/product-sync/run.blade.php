@@ -35,6 +35,40 @@
     </section>
 
     <section class="panel">
+        <h2>Next step: Front write dry-run</h2>
+        <p class="muted">
+            Select up to 10 ready or warning items to preview the exact Front product payload.
+            This does not call Front and does not write anything.
+        </p>
+        @if ($run->profile?->mode !== 'limited_write_test')
+            <div class="warning">Set the product sync profile mode to Limited write test before preparing a Front write dry-run.</div>
+        @endif
+        @if ($productionWritesEnabled)
+            <div class="danger">Production writes are enabled. This dry-run milestone requires production writes to remain disabled.</div>
+        @endif
+        <form method="post" action="{{ route('product-sync.runs.front-dry-run.prepare', $run) }}">
+            @csrf
+            <div class="summary-list">
+                @forelse ($eligibleDryRunItems as $dryRunItem)
+                    <label class="summary-item" style="font-weight: 500">
+                        <span>
+                            <input type="checkbox" name="item_ids[]" value="{{ $dryRunItem->id }}">
+                            <strong>{{ $dryRunItem->woo_name ?: $dryRunItem->woo_item_key }}</strong>
+                            <span class="muted">{{ $dryRunItem->woo_item_key }} | {{ $dryRunItem->woo_sku ?: 'no SKU' }} | {{ $dryRunItem->validation_status }}</span>
+                        </span>
+                        <span class="badge {{ $dryRunItem->validation_status === 'ready' ? 'ready' : 'warning-badge' }}">{{ $dryRunItem->validation_status }}</span>
+                    </label>
+                @empty
+                    <p>No ready or warning items are available for dry-run.</p>
+                @endforelse
+            </div>
+            <p>
+                <button type="submit" @disabled($eligibleDryRunItems->isEmpty())>Prepare Front dry-run</button>
+            </p>
+        </form>
+    </section>
+
+    <section class="panel">
         <h2>Products</h2>
         <form method="get" action="{{ route('product-sync.runs.show', $run) }}">
             <div class="grid">

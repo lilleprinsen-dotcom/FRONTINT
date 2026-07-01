@@ -65,4 +65,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('product-sync.runs.index');
     Route::get('/product-sync/runs/{run}', [ProductSyncController::class, 'showRun'])
         ->name('product-sync.runs.show');
+    Route::post('/product-sync/runs/{run}/front-dry-run', [ProductSyncController::class, 'prepareFrontDryRun'])
+        ->name('product-sync.runs.front-dry-run.prepare');
+    Route::get('/product-sync/runs/{run}/front-dry-run', [ProductSyncController::class, 'showFrontDryRun'])
+        ->name('product-sync.runs.front-dry-run.show');
 });

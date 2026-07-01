@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ConnectionDiscoverySnapshot;
+use App\Models\AuditLog;
 use App\Models\Organization;
 use App\Models\ProductSyncPreviewPlan;
 use App\Models\ProductSyncProfile;
@@ -10,6 +11,7 @@ use App\Models\ProductSyncEvent;
 use App\Models\ProductSyncRun;
 use App\Services\ProductSync\ProductSyncPreviewRunBuilder;
 use App\Services\ProductSync\ProductSyncProfileProvisioner;
+use App\Services\ProductSync\DryRun\FrontProductWriteDryRunBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -180,6 +182,80 @@ class ProductSyncController extends Controller
         return view('product-sync.run', [
             'run' => $run,
             'items' => $itemsQuery->paginate(25)->withQueryString(),
+            'productionWritesEnabled' => (bool) config('omnibridge.allow_production_writes'),
+            'eligibleDryRunItems' => (clone $itemsQuery)
+                ->whereIn('validation_status', ['ready', 'warning'])
+                ->where('sync_status', 'not_started')
+                ->limit(FrontProductWriteDryRunBuilder::MAX_ITEMS)
+                ->get(),
+        ]);
+    }
+
+    public function prepareFrontDryRun(
+        Request $request,
+        ProductSyncRun $run,
+        FrontProductWriteDryRunBuilder $builder,
+    ): RedirectResponse {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $validated = $request->validate([
+            'item_ids' => ['required', 'array', 'min:1', 'max:' . FrontProductWriteDryRunBuilder::MAX_ITEMS],
+            'item_ids.*' => ['integer'],
+        ]);
+
+        $itemIds = array_map('intval', $validated['item_ids']);
+        $dryRun = $builder->build($run, $itemIds);
+
+        AuditLog::query()->create([
+            'organization_id' => $run->organization_id,
+            'user_id' => $request->user()->id,
+            'action' => 'front_product_write_dry_run_prepared',
+            'subject_type' => ProductSyncRun::class,
+            'subject_id' => $run->id,
+            'metadata_json' => [
+                'status' => $dryRun['status'],
+                'selected_count' => $dryRun['summary']['selected_count'],
+                'item_ids' => $itemIds,
+                'profile_mode' => $dryRun['summary']['profile_mode'],
+                'production_writes_enabled' => $dryRun['summary']['production_writes_enabled'],
+                'front_connection_id' => $dryRun['summary']['front_connection_id'],
+                'external_api_calls' => false,
+                'writes_performed' => false,
+                'gate_errors' => $dryRun['gate_errors'],
+            ],
+        ]);
+
+        if ($dryRun['status'] !== 'ready') {
+            return redirect()
+                ->route('product-sync.runs.show', $run)
+                ->withErrors(['front_dry_run' => implode(' ', $dryRun['gate_errors'])]);
+        }
+
+        return redirect()
+            ->route('product-sync.runs.front-dry-run.show', [
+                'run' => $run,
+                'items' => implode(',', $itemIds),
+            ])
+            ->with('status', 'Front write dry-run prepared. No external API calls were made.');
+    }
+
+    public function showFrontDryRun(
+        Request $request,
+        ProductSyncRun $run,
+        FrontProductWriteDryRunBuilder $builder,
+    ): View {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $itemIds = collect(explode(',', (string) $request->query('items')))
+            ->map(fn (string $id): int => (int) trim($id))
+            ->filter(fn (int $id): bool => $id > 0)
+            ->values()
+            ->all();
+        $dryRun = $builder->build($run, $itemIds);
+
+        return view('product-sync.front-dry-run', [
+            'run' => $run->load(['profile', 'organization']),
+            'dryRun' => $dryRun,
             'productionWritesEnabled' => (bool) config('omnibridge.allow_production_writes'),
         ]);
     }
