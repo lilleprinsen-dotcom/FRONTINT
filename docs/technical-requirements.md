@@ -47,6 +47,12 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 ## Webhook Verification
 
 - Public webhook URLs use opaque path tokens from `webhook_endpoints.path_token`, not organization slugs.
+- Front webhook setup may register selected Front event types to `/webhooks/front/{pathToken}` after `GET /api/WebhooksTypes` discovery.
+- Front webhook registration must read existing webhooks with `GET /api/Webhooks` before creating/updating callbacks to reduce duplicate registrations.
+- Front webhook registration may use only documented setup endpoints: `POST /api/Webhooks` and `PUT /api/Webhooks/{webhookId}`.
+- Front webhook registration must be explicit, audited, and available only when live staging HTTP calls are enabled.
+- Front webhook registration must keep `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false` in the current staging setup flow.
+- Store only sanitized Front webhook setup summaries. Do not store API keys, raw webhook responses, customer data, order data, or full payload bodies.
 - Verify WooCommerce webhooks when signatures/secrets are configured.
 - Verify Front webhooks if Front supports signing/secrets.
 - If Front cannot sign webhooks, use secret callback URLs or token headers and document the limitation.

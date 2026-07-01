@@ -119,6 +119,10 @@
         <div class="notice">{{ session('status') }}</div>
     @endif
 
+    @if (session('error_status'))
+        <div class="danger">{{ session('error_status') }}</div>
+    @endif
+
     @if ($errors->any())
         <div class="danger">
             <strong>Please check the form.</strong>

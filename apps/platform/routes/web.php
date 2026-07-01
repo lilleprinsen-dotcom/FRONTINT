@@ -7,6 +7,7 @@ use App\Http\Controllers\ConnectionDiscoveryController;
 use App\Http\Controllers\ConnectionTestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiscoveryIndexController;
+use App\Http\Controllers\FrontWebhookSetupController;
 use App\Http\Controllers\FrontSaleImportController;
 use App\Http\Controllers\LabController;
 use App\Http\Controllers\OrganizationController;
@@ -52,6 +53,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('connections.discover.products');
     Route::post('/connections/{connection}/discover/front-setup', [ConnectionDiscoveryController::class, 'discoverFrontSetup'])
         ->name('connections.discover.front-setup');
+    Route::post('/connections/{connection}/front-webhooks/register', [FrontWebhookSetupController::class, 'register'])
+        ->name('connections.front-webhooks.register');
 
     Route::get('/mapping/product-poc', [ProductMappingPocController::class, 'show'])
         ->name('mapping.product-poc');

@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Connection;
 use App\Models\ConnectionDiscoverySnapshot;
 use App\Models\AuditLog;
+use App\Models\FrontWebhookRegistration;
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\WebhookEndpoint;
 use App\Services\Credentials\CredentialVault;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -233,6 +235,152 @@ class ConnectionDiscoveryTest extends TestCase
 
         $auditLog = AuditLog::query()->where('action', 'live_readonly_discovery_front_setup')->firstOrFail();
         $this->assertSame('GET /api/WebhooksTypes + GET /api/Stock/settings + GET /api/Stock/list', $auditLog->metadata_json['endpoint_group']);
+    }
+
+    public function test_front_webhook_setup_registers_selected_webhook_type_with_callback_url(): void
+    {
+        config([
+            'app.url' => 'http://127.0.0.1:8000',
+            'omnibridge.allow_connection_test_http' => true,
+            'omnibridge.allow_production_writes' => false,
+        ]);
+
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/Webhooks' => Http::sequence()
+                ->push([])
+                ->push([
+                    'id' => 'front-webhook-1',
+                    'event' => 'SaleCreated',
+                    'url' => 'http://127.0.0.1:8000/webhooks/front/front-token',
+                ]),
+        ]);
+
+        [$user, $connection] = $this->connectionWithCredentials('front_systems', [
+            'api_key' => 'front-secret-key',
+        ], 'https://front.example.test/restapi/V2');
+
+        WebhookEndpoint::query()->create([
+            'organization_id' => $connection->organization_id,
+            'source_system' => 'front',
+            'path_token' => 'front-token',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->post("/connections/{$connection->id}/front-webhooks/register", [
+                'webhook_types' => ['SaleCreated'],
+            ])
+            ->assertRedirect("/connections/{$connection->id}/discovery")
+            ->assertSessionHas('status', 'Front webhook setup completed.');
+
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && $request->url() === 'https://front.example.test/restapi/V2/api/Webhooks');
+        Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://front.example.test/restapi/V2/api/Webhooks'
+            && $request->hasHeader('x-api-key', 'front-secret-key'));
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/api/products')
+            || str_contains($request->url(), '/api/Stock/adjust')
+            || str_contains($request->url(), '/api/PricelistV2'));
+
+        $registration = FrontWebhookRegistration::query()->firstOrFail();
+
+        $this->assertSame('registered', $registration->status);
+        $this->assertSame('SaleCreated', $registration->webhook_type);
+        $this->assertSame('front-webhook-1', $registration->front_webhook_id);
+        $this->assertSame('POST', $registration->request_summary_json['method']);
+        $this->assertSame('/api/Webhooks', $registration->request_summary_json['endpoint']);
+        $this->assertSame('SaleCreated', $registration->request_summary_json['event']);
+        $this->assertStringEndsWith('/webhooks/front/front-token', $registration->request_summary_json['callback_url']);
+        $this->assertStringNotContainsString('front-secret-key', json_encode($registration->toArray()));
+
+        $auditLog = AuditLog::query()->where('action', 'front_webhook_registration_success')->firstOrFail();
+        $this->assertSame('/api/Webhooks', $auditLog->metadata_json['endpoint_group']);
+        $this->assertSame('SaleCreated', $auditLog->metadata_json['webhook_type']);
+        $this->assertTrue($auditLog->metadata_json['production_writes_disabled']);
+        $this->assertStringNotContainsString('front-secret-key', json_encode($auditLog->metadata_json));
+    }
+
+    public function test_front_webhook_setup_updates_existing_front_webhook(): void
+    {
+        config([
+            'app.url' => 'http://127.0.0.1:8000',
+            'omnibridge.allow_connection_test_http' => true,
+            'omnibridge.allow_production_writes' => false,
+        ]);
+
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/Webhooks' => Http::response([
+                [
+                    'id' => 'existing-webhook-1',
+                    'event' => 'StockChanged',
+                    'url' => 'https://old.example.test/front',
+                ],
+            ]),
+            'https://front.example.test/restapi/V2/api/Webhooks/existing-webhook-1' => Http::response([
+                'id' => 'existing-webhook-1',
+                'event' => 'StockChanged',
+                'url' => 'http://127.0.0.1:8000/webhooks/front/front-token',
+            ]),
+        ]);
+
+        [$user, $connection] = $this->connectionWithCredentials('front_systems', [
+            'api_key' => 'front-secret-key',
+        ], 'https://front.example.test/restapi/V2');
+
+        WebhookEndpoint::query()->create([
+            'organization_id' => $connection->organization_id,
+            'source_system' => 'front',
+            'path_token' => 'front-token',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->post("/connections/{$connection->id}/front-webhooks/register", [
+                'webhook_types' => ['StockChanged'],
+            ])
+            ->assertRedirect("/connections/{$connection->id}/discovery");
+
+        Http::assertSent(fn ($request): bool => $request->method() === 'PUT'
+            && $request->url() === 'https://front.example.test/restapi/V2/api/Webhooks/existing-webhook-1');
+
+        $registration = FrontWebhookRegistration::query()->firstOrFail();
+
+        $this->assertSame('registered', $registration->status);
+        $this->assertSame('existing-webhook-1', $registration->front_webhook_id);
+        $this->assertSame('PUT', $registration->request_summary_json['method']);
+        $this->assertSame('/api/Webhooks/{webhookId}', $registration->request_summary_json['endpoint']);
+        $this->assertSame('StockChanged', $registration->request_summary_json['event']);
+        $this->assertStringEndsWith('/webhooks/front/front-token', $registration->request_summary_json['callback_url']);
+    }
+
+    public function test_front_webhook_setup_is_blocked_when_live_http_is_disabled(): void
+    {
+        config([
+            'omnibridge.allow_connection_test_http' => false,
+            'omnibridge.allow_production_writes' => false,
+        ]);
+        Http::fake();
+
+        [$user, $connection] = $this->connectionWithCredentials('front_systems', [
+            'api_key' => 'front-secret-key',
+        ], 'https://front.example.test/restapi/V2');
+
+        WebhookEndpoint::query()->create([
+            'organization_id' => $connection->organization_id,
+            'source_system' => 'front',
+            'path_token' => 'front-token',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->post("/connections/{$connection->id}/front-webhooks/register", [
+                'webhook_types' => ['SaleCreated'],
+            ])
+            ->assertRedirect("/connections/{$connection->id}/discovery")
+            ->assertSessionHas('error_status');
+
+        Http::assertNothingSent();
+        $this->assertSame(0, FrontWebhookRegistration::query()->count());
     }
 
     public function test_woocommerce_products_discovery_uses_read_only_product_endpoint_and_detects_gtin(): void

@@ -9,6 +9,20 @@
     $frontStockLocations = $frontSetup['stock_locations'] ?? [];
     $frontStockSettings = $frontSetup['stock_settings'] ?? [];
     $frontReviewNotes = $frontSetup['review_notes'] ?? [];
+    $frontRegistrationRows = $frontWebhookRegistrations ?? collect();
+    $frontRecommendedWebhookTypes = collect($frontWebhookTypes)
+        ->filter(function ($type) {
+            $text = strtolower(($type['type'] ?? '').' '.($type['description'] ?? ''));
+            return str_contains($text, 'sale')
+                || str_contains($text, 'return')
+                || str_contains($text, 'stock')
+                || str_contains($text, 'transaction')
+                || str_contains($text, 'count');
+        })
+        ->values();
+    $frontSelectableWebhookTypes = $frontRecommendedWebhookTypes->isNotEmpty()
+        ? $frontRecommendedWebhookTypes
+        : collect($frontWebhookTypes)->take(10);
     $readiness = $latestProducts?->sample_json['readiness'] ?? [];
     $readinessRows = $readiness['rows'] ?? [];
     $readinessSummary = $readiness['summary'] ?? [];
@@ -180,6 +194,86 @@
                     <pre>{{ json_encode($frontStockSettings, JSON_PRETTY_PRINT) }}</pre>
                 </details>
             @endif
+        </section>
+
+        <section class="panel">
+            <div class="split-row">
+                <div>
+                    <h2>Front Webhook Setup</h2>
+                    <p class="muted">
+                        Register Front events so POS sales, returns, and stock-related events can be sent to OmniBridge later.
+                        This setup uses documented Front webhook endpoints only: <code>GET /api/Webhooks</code>,
+                        <code>POST /api/Webhooks</code>, and <code>PUT /api/Webhooks/{webhookId}</code>.
+                    </p>
+                </div>
+                <span class="badge warning-badge">Staging setup</span>
+            </div>
+
+            @if (! $connectionHttpTestsEnabled)
+                <div class="warning">Live HTTP is disabled. Set <code>OMNIBRIDGE_ALLOW_CONNECTION_TEST_HTTP=true</code> locally or in staging before registering Front webhooks.</div>
+            @endif
+
+            @if ($productionWritesEnabled)
+                <div class="danger">Production writes are enabled. Keep <code>OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=false</code> for this staging webhook setup flow.</div>
+            @endif
+
+            @if ($frontWebhookEndpoint)
+                <p class="muted">Front callback URL:</p>
+                <p><code>{{ url("/webhooks/front/{$frontWebhookEndpoint->path_token}") }}</code></p>
+            @else
+                <div class="danger">No active OmniBridge Front webhook endpoint exists for this organization.</div>
+            @endif
+
+            <form method="post" action="{{ route('connections.front-webhooks.register', $connection) }}">
+                @csrf
+                <div class="grid">
+                    @forelse ($frontSelectableWebhookTypes as $type)
+                        @php($typeName = $type['type'] ?? '')
+                        <label class="flow-step">
+                            <input type="checkbox" name="webhook_types[]" value="{{ $typeName }}">
+                            <strong>{{ $typeName }}</strong>
+                            <span class="muted">{{ $type['description'] ?? 'No description from Front.' }}</span>
+                        </label>
+                    @empty
+                        <div class="warning">Run “Check Front setup” first so OmniBridge can list webhook types supported by this Front account.</div>
+                    @endforelse
+                </div>
+
+                <p class="muted">
+                    Recommended first choices are sale, return, and stock-related events. Exact event meaning must still be confirmed against Front test payloads.
+                </p>
+                <button type="submit" @disabled($frontSelectableWebhookTypes->isEmpty() || ! $frontWebhookEndpoint || ! $connectionHttpTestsEnabled || $productionWritesEnabled)>
+                    Register selected Front webhooks
+                </button>
+            </form>
+
+            <h3>Registration Status</h3>
+            <table>
+                <thead>
+                <tr>
+                    <th>Webhook type</th>
+                    <th>Status</th>
+                    <th>Front webhook ID</th>
+                    <th>Last registered</th>
+                    <th>Last error</th>
+                </tr>
+                </thead>
+                <tbody>
+                @forelse ($frontRegistrationRows as $registration)
+                    <tr>
+                        <td>{{ $registration->webhook_type }}</td>
+                        <td>{{ $registration->status }}</td>
+                        <td>{{ $registration->front_webhook_id ?: 'n/a' }}</td>
+                        <td>{{ $registration->registered_at ?: 'n/a' }}</td>
+                        <td>{{ $registration->last_error ?: 'None' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5">No Front webhooks registered from OmniBridge yet.</td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
         </section>
 
         <section class="panel">

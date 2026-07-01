@@ -82,6 +82,10 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 
 The portal now has a `Front Sales` page for staged Front POS sales and returns.
 
+- Front webhook setup can now register selected Front webhook types to OmniBridge from the Front connection discovery page.
+- Setup reads existing Front webhooks first, then creates or updates callbacks with `POST /api/Webhooks` or `PUT /api/Webhooks/{webhookId}`.
+- The callback URL is the existing tokenized OmniBridge endpoint: `/webhooks/front/{pathToken}`.
+- Exact sale, return, and stock webhook type names still need confirmation from Front staging payloads.
 - Front sale-like and return-like webhook events are captured as stock transaction records.
 - Transaction lines are matched to existing synced product mappings.
 - Matched sales reduce WooCommerce stock first.
@@ -94,6 +98,7 @@ The portal now has a `Front Sales` page for staged Front POS sales and returns.
 
 See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).
 See [docs/staging-batch-product-sync.md](docs/staging-batch-product-sync.md) for the current staging batch test flow.
+See [docs/front-webhook-setup.md](docs/front-webhook-setup.md) for Front webhook registration setup.
 See [docs/current-progress-review.md](docs/current-progress-review.md) for the latest implementation review and Front API gaps.
 
 WooCommerce plugin foundation:
@@ -191,6 +196,8 @@ Discovery actions use:
 ```text
 POST /connections/{connection}/discover/stores
 POST /connections/{connection}/discover/products
+POST /connections/{connection}/discover/front-setup
+POST /connections/{connection}/front-webhooks/register
 GET /connections/{connection}/discovery
 ```
 
