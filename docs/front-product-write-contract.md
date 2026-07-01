@@ -123,7 +123,7 @@ NEEDS_FRONT_CONFIRMATION:
 
 The product CRUD endpoint has one product `price` field. OmniBridge maps WooCommerce regular price to this Front product price.
 
-WooCommerce sale price must not replace the regular product price. Sale price should be sent later through Front `POST /api/PricelistV2` as a separate sale price list entry.
+WooCommerce sale price must not replace the regular product price. Sale price is sent through Front `POST /api/PricelistV2` as a separate sale price list entry after the base product has synced.
 
 The OpenAPI request body for `POST /api/PricelistV2` supports price rows with:
 
@@ -133,16 +133,17 @@ The OpenAPI request body for `POST /api/PricelistV2` supports price rows with:
 - `validFrom`
 - `validTo`
 
-Current staging batch behavior:
+Current staging behavior:
 
 - Regular price is written to Front product `price`.
-- Sale price is stored and displayed as a future PriceListV2 candidate.
-- PriceListV2 writes are not performed yet.
+- Sale price can be written through `POST /api/PricelistV2` for already-synced products.
+- Sale price sync is explicit, retryable, audited, and shown separately from product sync status.
+- Sale price sync prefers `productExtId` and falls back to GTIN when the Front ext id is missing.
 
 NEEDS_FRONT_CONFIRMATION:
 
 - Which Front price list should hold WooCommerce sale prices.
-- Whether sale prices should be keyed by `productExtId`, GTIN, or Front product id for Lilleprinsen.
+- Whether Front prefers sale prices keyed by `productExtId`, GTIN, or Front product id for Lilleprinsen. Current staging behavior prefers `productExtId`, then GTIN.
 - How Front POS displays regular price versus sale price and discount amount/percentage.
 - How Woo sale start/end dates should map to `validFrom` and `validTo`.
 
@@ -187,10 +188,11 @@ The limited/staging write flow must only run when:
 - Selected items are `ready` or `warning`.
 - Blocked items are rejected.
 
-The first limited write test must not:
+The first limited product write test must not:
 
 - Write to WooCommerce.
-- Write prices through `PricelistV2`.
 - Write stock.
 - Import orders.
 - Trigger full catalog sync.
+
+Sale price sync is the only current PriceListV2 write path and must only run from already-synced product run items with sale price candidates.

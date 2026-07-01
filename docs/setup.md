@@ -388,13 +388,14 @@ Current behavior:
 - Creates local preview runs only from the Testing Lab.
 - Can create a staging batch run from the latest WooCommerce discovery snapshot.
 - Can write up to 100 selected ready/warning products or variations to Front when the profile mode is `staging_batch` or `limited_write_test`.
+- Can write WooCommerce sale prices to Front PriceListV2 for already-synced products when the price strategy allows it.
 - Stores per-product status in `product_sync_run_items`.
 - Stores product and variation-level run structure for future batched full catalog sync.
 - Tracks future incremental product update events in `product_sync_events`.
 - Provides paginated sync run views with filters/search so the portal never loads all products at once.
 - Shows Ready, Needs attention, Failed, Preview only, and Last checked status in plain language.
 - Does not write to WooCommerce.
-- Does not write stock, price lists, orders, refunds, gift cards, or omnichannel data.
+- Does not write stock, orders, refunds, gift cards, or omnichannel data.
 - Does not sync the full catalog.
 
 For the current staging batch flow, see [staging-batch-product-sync.md](staging-batch-product-sync.md).
