@@ -7,6 +7,7 @@ use App\Http\Controllers\ConnectionDiscoveryController;
 use App\Http\Controllers\ConnectionTestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiscoveryIndexController;
+use App\Http\Controllers\FrontSaleImportController;
 use App\Http\Controllers\LabController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProductMappingPocController;
@@ -87,4 +88,11 @@ Route::middleware('auth')->group(function (): void {
         ->name('product-sync.runs.stock');
     Route::post('/product-sync/runs/{run}/retry-stock', [ProductSyncController::class, 'retryStock'])
         ->name('product-sync.runs.retry-stock');
+
+    Route::get('/front-sales', [FrontSaleImportController::class, 'index'])
+        ->name('front-sales.index');
+    Route::get('/front-sales/{frontSaleImport}', [FrontSaleImportController::class, 'show'])
+        ->name('front-sales.show');
+    Route::post('/front-sales/{frontSaleImport}/import', [FrontSaleImportController::class, 'import'])
+        ->name('front-sales.import');
 });

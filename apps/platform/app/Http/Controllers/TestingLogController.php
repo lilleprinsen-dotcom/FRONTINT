@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Connection;
 use App\Models\ConnectionDiscoverySnapshot;
 use App\Models\Event;
+use App\Models\FrontSaleImport;
 use App\Models\ProductSyncRun;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -25,6 +26,7 @@ class TestingLogController extends Controller
             ->merge($this->connectionEntries($organizationIds))
             ->merge($this->discoveryEntries($organizationIds))
             ->merge($this->syncRunEntries($organizationIds))
+            ->merge($this->frontSaleImportEntries($organizationIds))
             ->merge($this->eventEntries($organizationIds))
             ->merge($this->auditEntries($organizationIds))
             ->sortByDesc('at')
@@ -114,6 +116,31 @@ class TestingLogController extends Controller
             ]);
     }
 
+    private function frontSaleImportEntries(Collection $organizationIds): Collection
+    {
+        return FrontSaleImport::query()
+            ->whereIn('organization_id', $organizationIds)
+            ->with(['organization', 'orderMapping'])
+            ->latest()
+            ->limit(30)
+            ->get()
+            ->map(fn (FrontSaleImport $import): array => [
+                'at' => $import->updated_at,
+                'type' => 'Front sale import',
+                'system' => 'Front to WooCommerce',
+                'status' => $this->plainStatus($import->status),
+                'title' => $import->front_receipt_id ?: $import->front_sale_id ?: 'Front sale',
+                'summary' => $import->error_message
+                    ?: 'Woo order: ' . ($import->orderMapping?->woo_order_id ?: 'not created yet'),
+                'details' => [
+                    'Organization' => $import->organization?->name,
+                    'Import ID' => $import->id,
+                    'Line count' => count($import->line_items_json ?? []),
+                    'Woo order ID' => $import->orderMapping?->woo_order_id ?: 'n/a',
+                ],
+            ]);
+    }
+
     private function eventEntries(Collection $organizationIds): Collection
     {
         return Event::query()
@@ -187,6 +214,7 @@ class TestingLogController extends Controller
     {
         return match ($status) {
             'success', 'connected', 'active', 'completed', 'synced', 'ready' => 'Worked',
+            'imported' => 'Worked',
             'failed', 'error', 'blocked', 'completed_with_errors' => 'Needs attention',
             'skipped', 'safe_mode' => 'Skipped safely',
             'queued', 'running', 'pending' => 'Running or waiting',

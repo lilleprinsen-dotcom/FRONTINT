@@ -101,6 +101,7 @@
                 <a href="{{ route('connections.index') }}">Connections</a>
                 <a href="{{ route('woo-readiness.index') }}">Woo Readiness</a>
                 <a href="{{ route('product-sync.index') }}">Product Sync</a>
+                <a href="{{ route('front-sales.index') }}">Front Sales</a>
                 <a href="{{ route('testing-log.index') }}">Testing Log</a>
                 <a href="{{ route('advanced.index') }}">Advanced</a>
             </div>

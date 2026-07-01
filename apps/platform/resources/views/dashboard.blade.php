@@ -76,6 +76,12 @@
                 <p class="muted">Preview what will be synced later. Product writes are still disabled.</p>
                 <a class="button secondary" href="{{ route('product-sync.index') }}">Open product sync</a>
             </div>
+            <div class="flow-step">
+                <span class="step-number">4</span>
+                <strong>Import Front sales</strong>
+                <p class="muted">When Front sends POS sales, create matching paid WooCommerce orders.</p>
+                <a class="button secondary" href="{{ route('front-sales.index') }}">Open Front Sales</a>
+            </div>
         </div>
     </section>
 

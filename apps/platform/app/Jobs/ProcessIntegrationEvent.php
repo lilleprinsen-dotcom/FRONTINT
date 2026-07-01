@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Event;
+use App\Services\Sales\FrontSaleImportRecorder;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -19,11 +20,14 @@ class ProcessIntegrationEvent implements ShouldQueue
         $this->onQueue(config('omnibridge.queues.events', 'events'));
     }
 
-    public function handle(): void
+    public function handle(FrontSaleImportRecorder $frontSales): void
     {
         $event = Event::query()->findOrFail($this->eventId);
 
-        // TODO: Route to source-specific processors after vendor API behavior is confirmed.
+        if ($event->source_system === 'front') {
+            $frontSales->recordFromEvent($event);
+        }
+
         $event->update([
             'status' => 'queued',
         ]);
