@@ -35,6 +35,24 @@
     </section>
 
     <section class="panel">
+        <h2>Staging batch controls</h2>
+        <p class="muted">
+            This processes up to 100 ready or warning items in this run. It writes only products to Front.
+            It does not write WooCommerce, price lists, stock, orders, refunds, or gift cards.
+        </p>
+        <div class="action-row">
+            <form class="inline-form" method="post" action="{{ route('product-sync.runs.staging-batch-sync', $run) }}">
+                @csrf
+                <button type="submit">Run staging batch sync</button>
+            </form>
+            <form class="inline-form" method="post" action="{{ route('product-sync.runs.retry-failed', $run) }}">
+                @csrf
+                <button class="secondary" type="submit">Retry failed items</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="panel">
         <h2>Next step: Front write dry-run</h2>
         <p class="muted">
             Select up to 10 ready or warning items to preview the exact Front product payload.
@@ -120,6 +138,7 @@
                 <th>Front match</th>
                 <th>Validation</th>
                 <th>Sync status</th>
+                <th>Front result</th>
                 <th>Needs attention</th>
                 <th>Proposed Front fields</th>
             </tr>
@@ -134,6 +153,14 @@
                     <td>{{ $item->front_match_status ?: 'no match' }}</td>
                     <td><span class="badge {{ $item->validation_status === 'ready' ? 'ready' : ($item->validation_status === 'blocked' ? 'blocked' : 'warning-badge') }}">{{ $item->validation_status }}</span></td>
                     <td>{{ $item->sync_status }}<div class="muted">Attempts: {{ $item->attempt_count }}</div></td>
+                    <td>
+                        <div>Product ID: {{ $item->front_product_id ?: 'n/a' }}</div>
+                        <div>Ext ID: {{ $item->front_product_ext_id ?: 'n/a' }}</div>
+                        <div>External SKU: {{ $item->front_external_sku ?: 'n/a' }}</div>
+                        @if ($item->last_request_summary_json)
+                            <div class="muted">{{ $item->last_request_summary_json['endpoint'] ?? 'n/a' }}</div>
+                        @endif
+                    </td>
                     <td>
                         @forelse (($item->validation_errors_json ?? []) as $error)
                             <div class="danger">{{ $error }}</div>
@@ -155,7 +182,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9">No run items match this view.</td>
+                    <td colspan="10">No run items match this view.</td>
                 </tr>
             @endforelse
             </tbody>

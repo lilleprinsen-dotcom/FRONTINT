@@ -3,6 +3,7 @@
 @php
     $modeLabel = match($profile?->mode) {
         'limited_write_test' => 'Limited write test',
+        'staging_batch' => 'Staging batch',
         'initial_full_sync' => 'Initial full sync planning',
         'incremental_sync' => 'Incremental sync planning',
         'production' => 'Production',
@@ -18,9 +19,9 @@
     <section class="panel page-header">
         <span class="kicker">Preview only</span>
         <h1>Product Sync</h1>
-        <p>This page shows whether products are prepared for a future WooCommerce to Front sync. Nothing is sent to Front yet.</p>
-        <div class="notice">No products are written to Front yet. This page prepares and monitors sync readiness.</div>
-        <p class="muted">Later, the full catalog will be handled in small queued batches. For now this page is a status overview.</p>
+        <p>This page prepares and runs staging batches from WooCommerce to Front. Full catalog sync is still disabled.</p>
+        <div class="notice">Staging batches can write selected products to Front. WooCommerce, stock, price lists, orders, refunds, and gift cards are not written.</div>
+        <p class="muted">Use up to 100 selected products or variations from the latest WooCommerce discovery sample.</p>
     </section>
 
     @unless ($organization)
@@ -54,7 +55,7 @@
             <div class="metric">
                 <span class="muted">Failed</span>
                 <strong>{{ $stats['failed'] ?? 0 }}</strong>
-                <span class="muted">No write sync exists yet</span>
+                <span class="muted">Can be retried from run detail</span>
             </div>
             <div class="metric">
                 <span class="muted">Variations</span>
@@ -105,8 +106,51 @@
         </section>
 
         <section class="panel">
+            <h2>Create staging batch</h2>
+            <p class="muted">Select up to 100 WooCommerce products or variations from the latest discovery sample. Variation rows are treated as sellable candidates.</p>
+            @if ($wooBatchCandidates->isEmpty())
+                <div class="warning">No WooCommerce discovery sample is available. Run Woo product discovery first.</div>
+            @else
+                <form method="post" action="{{ route('product-sync.staging-batch-run') }}">
+                    @csrf
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Select</th>
+                                <th>Item</th>
+                                <th>Name</th>
+                                <th>SKU</th>
+                                <th>GTIN/EAN</th>
+                                <th>Price</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach ($wooBatchCandidates as $candidate)
+                                @php($itemKey = $candidate['item_key'] ?? (($candidate['type'] ?? null) === 'variation' ? 'variation:'.($candidate['id'] ?? '') : 'product:'.($candidate['id'] ?? '')))
+                                <tr>
+                                    <td><input type="checkbox" name="woo_item_keys[]" value="{{ $itemKey }}"></td>
+                                    <td>
+                                        {{ $itemKey }}
+                                        <div class="muted">{{ $candidate['type'] ?? 'product' }}</div>
+                                    </td>
+                                    <td>{{ $candidate['name'] ?? 'n/a' }}</td>
+                                    <td>{{ $candidate['sku'] ?? 'n/a' }}</td>
+                                    <td>{{ $candidate['gtin_candidate']['value'] ?? 'n/a' }}</td>
+                                    <td>{{ $candidate['regular_price'] ?? $candidate['price'] ?? 'n/a' }}</td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <p><button type="submit">Create staging batch run</button></p>
+                </form>
+            @endif
+        </section>
+
+        <section class="panel">
             <h2>What to do next</h2>
-            <p class="muted">For now, use Woo Readiness to clean up product data. The Testing Lab keeps preview experiments separate from daily owner pages.</p>
+            <p class="muted">Create a staging batch, open the run, then start or retry sync from the run detail page.</p>
             <div class="action-row">
                 <a class="button" href="{{ route('woo-readiness.index') }}">Review Woo readiness</a>
                 @if ($latestRun)

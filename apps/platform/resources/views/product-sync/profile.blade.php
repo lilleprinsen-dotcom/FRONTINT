@@ -18,6 +18,7 @@
                 <select id="mode" name="mode">
                     <option value="preview_only" @selected($profile->mode === 'preview_only')>Preview only</option>
                     <option value="limited_write_test" @selected($profile->mode === 'limited_write_test')>Limited write test</option>
+                    <option value="staging_batch" @selected($profile->mode === 'staging_batch')>Staging batch</option>
                     <option value="initial_full_sync" @selected($profile->mode === 'initial_full_sync')>Initial full sync planning</option>
                     <option value="incremental_sync" @selected($profile->mode === 'incremental_sync')>Incremental sync planning</option>
                     <option value="production" @selected($profile->mode === 'production') @disabled(!$productionWritesEnabled)>Production</option>

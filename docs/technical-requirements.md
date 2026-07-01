@@ -162,11 +162,13 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 
 ## Product Sync Foundation
 
-- Product sync must be selected/opt-in first. Do not blindly sync the full 70,000-product catalog.
+- Product sync must begin with selected staging batches. Do not blindly sync the full 70,000-product catalog.
 - Product sync profiles define mode, limits, inclusion rules, required fields, price strategy, and stock strategy.
 - Default mode is `preview_only`.
 - Production mode must not be selectable unless `OMNIBRIDGE_ALLOW_PRODUCTION_WRITES=true`.
 - Preview runs are local planning records only and must not call external APIs.
+- Staging batch runs may write selected ready/warning products or variations to Front only when profile mode is `staging_batch` or `limited_write_test`.
+- Staging batch v1 is capped at 100 items and must not write to WooCommerce, stock, PriceListV2, orders, refunds, gift cards, or omnichannel endpoints.
 - Sync run items store selected products or variations only, not the whole catalog.
 - Future large-catalog scanning must be background-job based, paginated, and incremental.
 - Owner pages should use plain-language status. Testing workflows belong in the Testing Lab. Technical details belong in Advanced.
@@ -209,8 +211,9 @@ Audit these actions:
 - Failed items must be retryable without rerunning a whole catalog.
 - Reconciliation runs should later detect missing, outdated, or failed products.
 - Product sync profiles must stay `preview_only` by default.
-- Production mode and actual writes remain disabled until a separate launch checklist and write implementation exist.
-- This phase must not call Front product CRUD, price list, stock adjust, or WooCommerce write endpoints.
+- Production mode remains disabled until a separate launch checklist exists.
+- Staging batch v1 may call Front product CRUD for selected items only: lookup with `GET /api/products/{productId}`, lookup with `GET /api/Product/gtin/{gtin}`, create with `POST /api/products`, and update with `PUT /api/products/{productId}`.
+- This phase must not call price list, stock adjust, or WooCommerce write endpoints.
 
 ## Health Checks
 

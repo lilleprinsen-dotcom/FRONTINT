@@ -9,7 +9,6 @@ use App\Models\ProductSyncRun;
 use App\Models\ProductSyncRunItem;
 use App\Models\User;
 use App\Services\FrontSystems\FrontSystemsProductWriteClient;
-use App\Services\ProductSync\DryRun\FrontProductWriteDryRunBuilder;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +40,7 @@ class LimitedFrontProductWriteRunner
             'selected_count' => $items->count(),
             'item_ids' => $selectedIds->all(),
             'gate_errors' => $gateErrors,
-            'endpoint' => 'POST /api/products',
+            'endpoint' => 'POST /api/products or PUT /api/products/{productId}',
             'writes_performed' => false,
         ]);
 
@@ -68,7 +67,13 @@ class LimitedFrontProductWriteRunner
             ]);
 
             try {
-                $response = $this->client->createProduct($frontConnection, $this->frontPayload($item));
+                $decision = $this->writeDecision($frontConnection, $item);
+                $item->update([
+                    'last_request_summary_json' => $this->requestSummary($item, $decision),
+                ]);
+                $response = $decision['method'] === 'update'
+                    ? $this->client->updateProduct($frontConnection, (string) $decision['target'], $this->frontPayload($item))
+                    : $this->client->createProduct($frontConnection, $this->frontPayload($item));
 
                 if ($response->successful()) {
                     $this->markSucceeded($item->fresh(), $response);
@@ -85,26 +90,31 @@ class LimitedFrontProductWriteRunner
         }
 
         $run->refresh();
+        $failedTotal = $run->items()->where('sync_status', 'failed')->count();
+        $pendingTotal = $run->items()->whereIn('sync_status', ['not_started', 'queued', 'running', 'needs_retry'])->count();
+        $completedStatus = $pendingTotal > 0
+            ? 'running'
+            : ($failedTotal > 0 ? 'completed_with_errors' : 'completed');
         $run->update([
             'total_synced' => $run->items()->where('sync_status', 'synced')->count(),
-            'total_failed' => $run->items()->where('sync_status', 'failed')->count(),
-            'total_pending' => $run->items()->whereIn('sync_status', ['not_started', 'queued', 'running'])->count(),
-            'status' => $failed > 0 ? 'completed_with_errors' : 'completed',
-            'finished_at' => now(),
+            'total_failed' => $failedTotal,
+            'total_pending' => $pendingTotal,
+            'status' => $completedStatus,
+            'finished_at' => $pendingTotal > 0 ? null : now(),
         ]);
 
         $this->audit($run, $user, [
-            'action_status' => $failed > 0 ? 'completed_with_errors' : 'completed',
+            'action_status' => $completedStatus,
             'selected_count' => $items->count(),
             'processed' => $items->count(),
             'succeeded' => $succeeded,
             'failed' => $failed,
-            'endpoint' => 'POST /api/products',
+            'endpoint' => 'POST /api/products or PUT /api/products/{productId}',
             'writes_performed' => $succeeded > 0,
         ]);
 
         return [
-            'status' => $failed > 0 ? 'completed_with_errors' : 'completed',
+            'status' => $completedStatus,
             'gate_errors' => [],
             'processed' => $items->count(),
             'succeeded' => $succeeded,
@@ -120,20 +130,24 @@ class LimitedFrontProductWriteRunner
             $errors[] = 'Production writes must remain disabled for the first limited Front write test.';
         }
 
-        if (($run->profile?->mode) !== 'limited_write_test') {
-            $errors[] = 'Product sync profile mode must be limited_write_test.';
+        if (! in_array(($run->profile?->mode), ['limited_write_test', 'staging_batch'], true)) {
+            $errors[] = 'Product sync profile mode must be limited_write_test or staging_batch.';
         }
 
         if ($selectedIds->isEmpty()) {
             $errors[] = 'Select at least one product or variation.';
         }
 
-        if ($selectedIds->count() > FrontProductWriteDryRunBuilder::MAX_ITEMS) {
-            $errors[] = 'Select no more than ' . FrontProductWriteDryRunBuilder::MAX_ITEMS . ' items.';
+        if ($selectedIds->count() > StagingBatchProductSyncRunBuilder::MAX_ITEMS) {
+            $errors[] = 'Select no more than ' . StagingBatchProductSyncRunBuilder::MAX_ITEMS . ' items.';
         }
 
         if ($items->count() !== $selectedIds->count()) {
             $errors[] = 'One or more selected items were not found in this sync run.';
+        }
+
+        if (! $this->wooConnection($run)) {
+            $errors[] = 'A WooCommerce staging connection is required.';
         }
 
         if (! $frontConnection) {
@@ -158,6 +172,13 @@ class LimitedFrontProductWriteRunner
         return $run->organization
             ?->connections
             ->first(fn (Connection $connection): bool => in_array($connection->type, ['front_systems', 'front'], true));
+    }
+
+    private function wooConnection(ProductSyncRun $run): ?Connection
+    {
+        return $run->organization
+            ?->connections
+            ->first(fn (Connection $connection): bool => $connection->type === 'woocommerce');
     }
 
     private function frontPayload(ProductSyncRunItem $item): array
@@ -239,12 +260,62 @@ class LimitedFrontProductWriteRunner
         ]);
     }
 
-    private function requestSummary(ProductSyncRunItem $item): array
+    private function writeDecision(Connection $connection, ProductSyncRunItem $item): array
+    {
+        $mapping = ProductMapping::query()
+            ->where('organization_id', $item->organization_id)
+            ->where('woo_item_key', $item->woo_item_key)
+            ->first();
+
+        if ($mapping && ($mapping->front_product_ext_id || $mapping->front_product_id)) {
+            return [
+                'method' => 'update',
+                'target' => $mapping->front_product_ext_id ?: $mapping->front_product_id,
+                'source' => 'product_mapping',
+            ];
+        }
+
+        $extId = $this->frontExtId($item);
+        $extResponse = $this->client->getProduct($connection, $extId);
+
+        if ($extResponse->successful()) {
+            return [
+                'method' => 'update',
+                'target' => $extId,
+                'source' => 'front_extid_lookup',
+            ];
+        }
+
+        if ($item->detected_gtin) {
+            $gtinResponse = $this->client->getProductByGtin($connection, $item->detected_gtin);
+
+            if ($gtinResponse->successful()) {
+                $summary = $this->responseSummary($gtinResponse);
+
+                return [
+                    'method' => 'update',
+                    'target' => (string) ($summary['productid'] ?? $summary['extId'] ?? $extId),
+                    'source' => 'front_gtin_lookup',
+                ];
+            }
+        }
+
+        return [
+            'method' => 'create',
+            'target' => null,
+            'source' => 'no_existing_front_match',
+        ];
+    }
+
+    private function requestSummary(ProductSyncRunItem $item, array $decision = ['method' => 'create', 'source' => 'not_checked', 'target' => null]): array
     {
         $payload = $this->frontPayload($item);
 
         return [
-            'endpoint' => 'POST /api/products',
+            'endpoint' => $decision['method'] === 'update' ? 'PUT /api/products/{productId}' : 'POST /api/products',
+            'decision' => $decision['method'],
+            'decision_source' => $decision['source'],
+            'target' => $decision['target'],
             'payload_hash' => hash('sha256', json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
             'extId' => $payload['extId'] ?? null,
             'name' => $payload['name'] ?? null,
