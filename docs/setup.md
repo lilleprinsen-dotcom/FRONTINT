@@ -390,15 +390,16 @@ Current behavior:
 - Can write up to 100 selected ready/warning products or variations to Front when the profile mode is `staging_batch` or `limited_write_test`.
 - Can write WooCommerce sale prices to Front PriceListV2 for already-synced products when the price strategy allows it.
 - Can write WooCommerce stock quantities to Front Stock adjust for already-synced products when the stock strategy and Front stock location are configured.
-- Can capture Front sale-like events, adjust WooCommerce stock for matched POS sales, and optionally create paid WooCommerce orders manually from the `Front Sales` page.
+- Can capture Front sale-like and return-like events, reduce or increase WooCommerce stock for matched POS transactions, and optionally create paid WooCommerce orders manually for sales from the `Front Sales` page.
 - Stores per-product status in `product_sync_run_items`.
 - Stores product and variation-level run structure for future batched full catalog sync.
 - Tracks future incremental product update events in `product_sync_events`.
 - Provides paginated sync run views with filters/search so the portal never loads all products at once.
 - Shows Ready, Needs attention, Failed, Preview only, and Last checked status in plain language.
 - Does not write WooCommerce refunds, gift cards, or omnichannel data.
-- Front sale handling writes WooCommerce stock first for matched POS sales.
-- Front sale handling creates WooCommerce orders only when explicitly started from the portal.
+- Front sale handling reduces WooCommerce stock first for matched POS sales.
+- Front return handling increases WooCommerce stock first for matched POS returns.
+- Front sale handling creates WooCommerce orders only when explicitly started from the portal; returns do not create Woo orders in this flow.
 - Does not sync the full catalog.
 
 For the current staging batch flow, see [staging-batch-product-sync.md](staging-batch-product-sync.md).

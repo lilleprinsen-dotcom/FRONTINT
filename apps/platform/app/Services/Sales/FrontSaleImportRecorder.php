@@ -26,7 +26,7 @@ class FrontSaleImportRecorder
 
     public function record(Organization $organization, array $payload, ?Event $event = null): FrontSaleImport
     {
-        $data = $this->mapper->buildImportData($organization, $payload);
+        $data = $this->mapper->buildImportData($organization, $payload, $event?->event_type);
         $unmatched = collect($data['line_items_json'])->where('mapping_status', 'missing_product_mapping')->count();
         $lineCount = count($data['line_items_json']);
 
@@ -40,6 +40,7 @@ class FrontSaleImportRecorder
                     'event_id' => $event?->id,
                     'status' => $lineCount === 0 || $unmatched > 0 ? 'blocked' : 'pending',
                     'handling_mode' => 'stock_only',
+                    'transaction_type' => $data['transaction_type'],
                     'stock_status' => $lineCount === 0 || $unmatched > 0 ? 'blocked' : 'pending',
                     'order_import_status' => 'not_imported',
                     'front_sale_id' => $data['front_sale_id'],

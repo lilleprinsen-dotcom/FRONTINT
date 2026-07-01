@@ -9,6 +9,7 @@ use App\Models\Event;
 use App\Models\FrontSaleImport;
 use App\Models\Organization;
 use App\Models\ProductMapping;
+use App\Models\StockLedger;
 use App\Models\User;
 use App\Services\Sales\FrontSaleImportRecorder;
 use App\Services\Sales\FrontSaleImportRunner;
@@ -42,6 +43,7 @@ class FrontSaleImportTest extends TestCase
         $import = FrontSaleImport::query()->firstOrFail();
         $this->assertSame('pending', $import->status);
         $this->assertSame('stock_only', $import->handling_mode);
+        $this->assertSame('sale', $import->transaction_type);
         $this->assertSame('pending', $import->stock_status);
         $this->assertSame('not_imported', $import->order_import_status);
         $this->assertSame('SALE-1', $import->front_sale_id);
@@ -101,6 +103,53 @@ class FrontSaleImportTest extends TestCase
             return $request->method() === 'PUT'
                 && (string) $request->url() === 'https://woo.example.test/wp-json/wc/v3/products/123/variations/456'
                 && ($payload['stock_quantity'] ?? null) === 8;
+        });
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/wp-json/wc/v3/orders'));
+    }
+
+    public function test_front_return_stock_adjustment_increases_woo_stock_without_creating_order(): void
+    {
+        Http::fake([
+            'woo.example.test/wp-json/wc/v3/products/123/variations/456' => Http::sequence()
+                ->push(['id' => 456, 'stock_quantity' => 8], 200)
+                ->push(['id' => 456, 'stock_quantity' => 10], 200),
+            '*' => Http::response(['unexpected' => true], 500),
+        ]);
+
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->productMapping($organization);
+        $event = Event::query()->create([
+            'organization_id' => $organization->id,
+            'source_system' => 'front',
+            'event_type' => 'return_created',
+            'source_event_id' => 'RETURN-1',
+            'idempotency_key' => 'front-return-created-return-1',
+            'payload_json' => $this->returnPayload(quantity: 2, total: -998),
+            'metadata_json' => ['source' => 'test'],
+            'status' => 'received',
+            'received_at' => now(),
+        ]);
+        $import = app(FrontSaleImportRecorder::class)->recordFromEvent($event);
+
+        $this->assertSame('return', $import->transaction_type);
+        $this->assertNull($import->woo_order_payload_json);
+
+        $result = app(FrontSaleStockAdjustmentRunner::class)->run($import, $user);
+
+        $this->assertSame('adjusted', $result['status']);
+        $import->refresh();
+        $this->assertSame('stock_adjusted', $import->status);
+        $this->assertSame('adjusted', $import->stock_status);
+        $this->assertSame('not_imported', $import->order_import_status);
+        $this->assertSame(1, StockLedger::query()->where('movement_type', 'front_pos_return')->where('quantity_delta', 2)->count());
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return $request->method() === 'PUT'
+                && (string) $request->url() === 'https://woo.example.test/wp-json/wc/v3/products/123/variations/456'
+                && ($payload['stock_quantity'] ?? null) === 10;
         });
         Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/wp-json/wc/v3/orders'));
     }
@@ -166,6 +215,33 @@ class FrontSaleImportTest extends TestCase
         });
 
         Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), 'frontsystems'));
+    }
+
+    public function test_front_return_cannot_be_imported_as_woocommerce_order(): void
+    {
+        Http::fake();
+
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->productMapping($organization);
+        $event = Event::query()->create([
+            'organization_id' => $organization->id,
+            'source_system' => 'front',
+            'event_type' => 'return_created',
+            'source_event_id' => 'RETURN-1',
+            'idempotency_key' => 'front-return-created-return-1',
+            'payload_json' => $this->returnPayload(),
+            'metadata_json' => ['source' => 'test'],
+            'status' => 'received',
+            'received_at' => now(),
+        ]);
+        $import = app(FrontSaleImportRecorder::class)->recordFromEvent($event);
+
+        $result = app(FrontSaleImportRunner::class)->run($import, $user);
+
+        $this->assertSame('blocked', $result['status']);
+        $this->assertStringContainsString('Returns only adjust WooCommerce stock', implode(' ', $result['gate_errors']));
+        Http::assertNothingSent();
     }
 
     public function test_front_sale_import_does_not_write_when_gates_fail(): void
@@ -326,5 +402,15 @@ class FrontSaleImportTest extends TestCase
                 ],
             ],
         ];
+    }
+
+    private function returnPayload(int $quantity = 1, int $total = -499): array
+    {
+        $payload = $this->salePayload($quantity * -1, $total);
+        $payload['saleId'] = 'RETURN-1';
+        $payload['receiptId'] = 'RETURN-RECEIPT-1';
+        $payload['type'] = 'return';
+
+        return $payload;
     }
 }

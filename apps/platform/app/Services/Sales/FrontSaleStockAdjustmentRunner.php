@@ -26,6 +26,7 @@ class FrontSaleStockAdjustmentRunner
         $this->audit($import, $user, [
             'status' => $gateErrors === [] ? 'started' : 'blocked',
             'gate_errors' => $gateErrors,
+            'transaction_type' => $import->transaction_type,
             'writes_woocommerce_stock' => false,
             'creates_woocommerce_order' => false,
             'writes_front' => false,
@@ -61,12 +62,14 @@ class FrontSaleStockAdjustmentRunner
                 'stock_response_summary_json' => [
                     'adjusted_lines' => count($adjustments),
                     'adjustments' => $adjustments,
+                    'transaction_type' => $import->transaction_type,
                 ],
                 'stock_error_message' => null,
             ]);
 
             $this->audit($import->fresh(), $user, [
                 'status' => 'adjusted',
+                'transaction_type' => $import->transaction_type,
                 'adjusted_lines' => count($adjustments),
                 'writes_woocommerce_stock' => true,
                 'creates_woocommerce_order' => false,
@@ -124,7 +127,7 @@ class FrontSaleStockAdjustmentRunner
     {
         $productId = (int) ($line['woo_product_id'] ?? 0);
         $variationId = (int) ($line['woo_variation_id'] ?? 0);
-        $quantitySold = max(1, (int) round((float) ($line['quantity'] ?? 1)));
+        $quantity = max(1, (int) round(abs((float) ($line['quantity'] ?? 1))));
 
         $readResponse = $variationId > 0
             ? $this->client->getVariation($connection, $productId, $variationId)
@@ -140,7 +143,8 @@ class FrontSaleStockAdjustmentRunner
             throw new \RuntimeException('WooCommerce stock quantity is missing for ' . ($line['woo_item_key'] ?? 'unknown item') . '.');
         }
 
-        $newStock = max(0, (int) $currentStock - $quantitySold);
+        $delta = $this->stockDelta($import, $quantity);
+        $newStock = max(0, (int) $currentStock + $delta);
         $writeResponse = $variationId > 0
             ? $this->client->updateVariationStock($connection, $productId, $variationId, $newStock)
             : $this->client->updateProductStock($connection, $productId, $newStock);
@@ -149,17 +153,24 @@ class FrontSaleStockAdjustmentRunner
             throw new \RuntimeException('Could not update WooCommerce stock. HTTP ' . $writeResponse->status());
         }
 
-        $this->recordStockLedger($import, $line, $quantitySold, (int) $currentStock, $newStock);
+        $this->recordStockLedger($import, $line, $delta, (int) $currentStock, $newStock);
 
         return [
             'woo_item_key' => $line['woo_item_key'] ?? null,
-            'quantity_sold' => $quantitySold,
+            'transaction_type' => $import->transaction_type,
+            'quantity' => $quantity,
+            'quantity_delta' => $delta,
             'stock_before' => (int) $currentStock,
             'stock_after' => $newStock,
         ];
     }
 
-    private function recordStockLedger(FrontSaleImport $import, array $line, int $quantitySold, int $stockBefore, int $stockAfter): void
+    private function stockDelta(FrontSaleImport $import, int $quantity): int
+    {
+        return $import->transaction_type === 'return' ? $quantity : -1 * $quantity;
+    }
+
+    private function recordStockLedger(FrontSaleImport $import, array $line, int $quantityDelta, int $stockBefore, int $stockAfter): void
     {
         $productMappingId = (int) ($line['product_mapping_id'] ?? 0);
 
@@ -175,8 +186,8 @@ class FrontSaleStockAdjustmentRunner
             [
                 'product_mapping_id' => $productMappingId,
                 'source_system' => 'front',
-                'movement_type' => 'front_pos_sale',
-                'quantity_delta' => -1 * $quantitySold,
+                'movement_type' => $import->transaction_type === 'return' ? 'front_pos_return' : 'front_pos_sale',
+                'quantity_delta' => $quantityDelta,
                 'physical_quantity_after' => $stockAfter,
                 'available_quantity_after' => $stockAfter,
                 'source_reference' => $import->front_receipt_id ?: $import->front_sale_id,
@@ -188,6 +199,7 @@ class FrontSaleStockAdjustmentRunner
     {
         return [
             'operation' => 'front_sale_stock_adjustment',
+            'transaction_type' => $import->transaction_type,
             'line_count' => count($import->line_items_json ?? []),
             'writes_woocommerce_stock' => true,
             'creates_woocommerce_order' => false,
@@ -214,6 +226,7 @@ class FrontSaleStockAdjustmentRunner
                 'front_sale_import_id' => $import->id,
                 'front_sale_id' => $import->front_sale_id,
                 'front_receipt_id' => $import->front_receipt_id,
+                'transaction_type' => $import->transaction_type,
             ], $metadata),
         ]);
     }

@@ -80,14 +80,16 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 
 ### Front POS sales and WooCommerce stock
 
-The portal now has a `Front Sales` page for staged Front POS sales.
+The portal now has a `Front Sales` page for staged Front POS sales and returns.
 
-- Front sale-like webhook events are captured as sale import records.
-- Sale lines are matched to existing synced product mappings.
-- Matched sales adjust WooCommerce stock first.
+- Front sale-like and return-like webhook events are captured as stock transaction records.
+- Transaction lines are matched to existing synced product mappings.
+- Matched sales reduce WooCommerce stock first.
+- Matched returns add WooCommerce stock back.
 - WooCommerce orders are not created by default.
-- Admins can manually create a paid WooCommerce order with payment method `Paid in Front POS` when needed.
-- Stock adjustment and optional order import are idempotent, so the same Front receipt/sale should not double-deduct stock or create duplicate Woo orders.
+- Admins can manually create a paid WooCommerce order with payment method `Paid in Front POS` for sales when needed.
+- Returns do not create WooCommerce orders in this flow.
+- Stock adjustment and optional order import are idempotent, so the same Front receipt/sale/return should not double-change stock or create duplicate Woo orders.
 - This flow does not write to Front, does not handle refunds, gift cards, exchanges, or omnichannel orders yet.
 
 See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).

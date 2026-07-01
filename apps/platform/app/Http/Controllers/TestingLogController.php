@@ -126,15 +126,16 @@ class TestingLogController extends Controller
             ->get()
             ->map(fn (FrontSaleImport $import): array => [
                 'at' => $import->updated_at,
-                'type' => 'Front sale import',
+                'type' => $import->transaction_type === 'return' ? 'Front return stock' : 'Front sale stock',
                 'system' => 'Front to WooCommerce',
                 'status' => $this->plainStatus($import->stock_status),
-                'title' => $import->front_receipt_id ?: $import->front_sale_id ?: 'Front sale',
+                'title' => $import->front_receipt_id ?: $import->front_sale_id ?: ($import->transaction_type === 'return' ? 'Front return' : 'Front sale'),
                 'summary' => $import->stock_error_message
-                    ?: 'Stock: ' . $import->stock_status . ', optional order: ' . $import->order_import_status,
+                    ?: 'Type: ' . $import->transaction_type . ', stock: ' . $import->stock_status . ', optional order: ' . $import->order_import_status,
                 'details' => [
                     'Organization' => $import->organization?->name,
                     'Import ID' => $import->id,
+                    'Type' => $import->transaction_type,
                     'Line count' => count($import->line_items_json ?? []),
                     'Stock status' => $import->stock_status,
                     'Order status' => $import->order_import_status,

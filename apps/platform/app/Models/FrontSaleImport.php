@@ -16,6 +16,7 @@ class FrontSaleImport extends Model
         'order_mapping_id',
         'status',
         'handling_mode',
+        'transaction_type',
         'stock_status',
         'stock_error_message',
         'stock_attempt_count',
