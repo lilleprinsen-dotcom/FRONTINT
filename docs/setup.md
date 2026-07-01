@@ -404,6 +404,7 @@ Current behavior:
 
 For the current staging batch flow, see [staging-batch-product-sync.md](staging-batch-product-sync.md).
 For Front POS sale imports, see [staging-front-sale-import.md](staging-front-sale-import.md).
+For the current implementation review and Front API gaps, see [current-progress-review.md](current-progress-review.md).
 
 Sync profile settings are available at:
 

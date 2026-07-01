@@ -175,6 +175,66 @@ class ConnectionDiscoveryTest extends TestCase
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/api/products'));
     }
 
+    public function test_front_setup_discovery_uses_read_only_webhook_and_stock_endpoints(): void
+    {
+        config(['omnibridge.allow_connection_test_http' => true]);
+
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/WebhooksTypes' => Http::response([
+                ['WebhookType' => 'SaleCreated', 'Description' => 'POS sale created'],
+                ['WebhookType' => 'ReturnCreated', 'Description' => 'POS return created'],
+                ['WebhookType' => 'StockChanged', 'Description' => 'Stock changed'],
+            ]),
+            'https://front.example.test/restapi/V2/api/Stock/settings' => Http::response([
+                'AllowNegativeStock' => false,
+                'PrivateToken' => 'do-not-store-secret',
+            ]),
+            'https://front.example.test/restapi/V2/api/Stock/list' => Http::response([
+                ['StockId' => 2001, 'ExternalStockId' => 'EXT-2001', 'Name' => 'Main stock', 'StoreId' => 1001, 'ApiKey' => 'do-not-store'],
+            ]),
+        ]);
+
+        [$user, $connection] = $this->connectionWithCredentials('front_systems', [
+            'api_key' => 'front-secret-key',
+        ], 'https://front.example.test/restapi/V2');
+
+        $this->actingAs($user)
+            ->postJson("/connections/{$connection->id}/discover/front-setup")
+            ->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'discovery_type' => 'front_setup',
+            ]);
+
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && $request->url() === 'https://front.example.test/restapi/V2/api/WebhooksTypes');
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && $request->url() === 'https://front.example.test/restapi/V2/api/Stock/settings');
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && $request->url() === 'https://front.example.test/restapi/V2/api/Stock/list');
+        Http::assertNotSent(fn ($request): bool => in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true));
+
+        $snapshot = ConnectionDiscoverySnapshot::query()->where('discovery_type', 'front_setup')->firstOrFail();
+
+        $this->assertSame(3, $snapshot->summary_json['webhook_type_count']);
+        $this->assertSame(1, $snapshot->summary_json['stock_location_count']);
+        $this->assertSame('SaleCreated', $snapshot->sample_json['webhook_types'][0]['type']);
+        $this->assertSame('EXT-2001', $snapshot->sample_json['stock_locations'][0]['external_stock_id']);
+        $this->assertStringNotContainsString('front-secret-key', json_encode($snapshot->toArray()));
+        $this->assertStringNotContainsString('do-not-store', json_encode($snapshot->sample_json));
+
+        $this->actingAs($user)
+            ->get("/connections/{$connection->id}/discovery")
+            ->assertOk()
+            ->assertSee('Front Setup Check')
+            ->assertSee('SaleCreated')
+            ->assertSee('Main stock')
+            ->assertSee('EXT-2001');
+
+        $auditLog = AuditLog::query()->where('action', 'live_readonly_discovery_front_setup')->firstOrFail();
+        $this->assertSame('GET /api/WebhooksTypes + GET /api/Stock/settings + GET /api/Stock/list', $auditLog->metadata_json['endpoint_group']);
+    }
+
     public function test_woocommerce_products_discovery_uses_read_only_product_endpoint_and_detects_gtin(): void
     {
         config(['omnibridge.allow_connection_test_http' => true]);

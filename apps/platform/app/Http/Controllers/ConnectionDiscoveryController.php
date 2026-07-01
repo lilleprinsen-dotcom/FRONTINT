@@ -29,6 +29,7 @@ class ConnectionDiscoveryController extends Controller
             'snapshots' => $snapshots,
             'latestStores' => $this->latestSnapshot($connection, 'stores'),
             'latestProducts' => $this->latestSnapshot($connection, 'products'),
+            'latestFrontSetup' => $this->latestSnapshot($connection, 'front_setup'),
             'mappingPreview' => $this->mappingPreview($connection, $previewer),
             'connectionHttpTestsEnabled' => (bool) config('omnibridge.allow_connection_test_http'),
         ]);
@@ -57,6 +58,20 @@ class ConnectionDiscoveryController extends Controller
         $this->authorizeConnection($request, $connection);
 
         $snapshot = $discovery->discoverProducts($connection);
+        $this->auditIfLive($request, $connection, $snapshot, $auditor);
+
+        return $this->respond($request, $snapshot);
+    }
+
+    public function discoverFrontSetup(
+        Request $request,
+        Connection $connection,
+        ConnectionDiscoveryService $discovery,
+        ReadOnlyActionAuditor $auditor,
+    ): JsonResponse|RedirectResponse {
+        $this->authorizeConnection($request, $connection);
+
+        $snapshot = $discovery->discoverFrontSetup($connection);
         $this->auditIfLive($request, $connection, $snapshot, $auditor);
 
         return $this->respond($request, $snapshot);
@@ -112,6 +127,10 @@ class ConnectionDiscoveryController extends Controller
     {
         if ($type === 'stores') {
             return 'GET /api/Stores';
+        }
+
+        if ($type === 'front_setup') {
+            return 'GET /api/WebhooksTypes + GET /api/Stock/settings + GET /api/Stock/list';
         }
 
         return $connection->type === 'woocommerce'
