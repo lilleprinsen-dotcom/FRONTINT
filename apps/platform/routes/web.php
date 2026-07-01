@@ -11,6 +11,7 @@ use App\Http\Controllers\LabController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProductMappingPocController;
 use App\Http\Controllers\ProductSyncController;
+use App\Http\Controllers\TestingLogController;
 use App\Http\Controllers\WooReadinessController;
 use App\Http\Controllers\WooCommercePluginAdapterTestController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/lab', LabController::class)->name('lab.index');
     Route::get('/discovery', DiscoveryIndexController::class)->name('discovery.index');
     Route::get('/woo-readiness', WooReadinessController::class)->name('woo-readiness.index');
+    Route::get('/testing-log', TestingLogController::class)->name('testing-log.index');
     Route::get('/advanced', AdvancedController::class)->name('advanced.index');
 
     Route::resource('organizations', OrganizationController::class)

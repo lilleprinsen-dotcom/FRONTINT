@@ -7,13 +7,15 @@
     $connectionsNeedingAttention = $organizations->sum(fn ($organization) => $organization->connections->filter(fn ($connection) => $connection->last_error || in_array($connection->status, ['failed', 'error'], true))->count());
     $wooConnections = $allConnections->where('type', 'woocommerce')->count();
     $frontConnections = $allConnections->filter(fn ($connection) => in_array($connection->type, ['front', 'front_systems'], true))->count();
+    $setupStepsDone = ($wooConnections > 0 ? 1 : 0) + ($readyConnections > 0 ? 1 : 0) + ($frontConnections > 0 ? 1 : 0);
+    $setupPercent = (int) round(($setupStepsDone / 3) * 100);
 @endphp
 
 @section('content')
     <section class="panel page-header">
         <span class="kicker">Store owner overview</span>
-        <h1>Know what is ready, and what needs attention.</h1>
-        <p>OmniBridge keeps WooCommerce as the master. Start with WooCommerce, check the product data, then prepare a safe Front sync plan when the Front account is ready.</p>
+        <h1>Store setup overview</h1>
+        <p>Start with WooCommerce. Check the product data. Add Front when the account is ready. WooCommerce remains the master system.</p>
         <div class="notice">Production writes are {{ $productionWritesEnabled ? 'enabled' : 'disabled' }}. {{ $productionWritesEnabled ? 'Review the launch checklist before continuing.' : 'This is the expected safe mode.' }}</div>
         @if ($connectionHttpTestsEnabled)
             <div class="warning">Live read-only checks are enabled. Real external systems may be contacted from testing pages.</div>
@@ -24,36 +26,36 @@
         <div class="danger">Production writes are enabled. This should remain disabled until a production launch checklist has been completed.</div>
     @endif
 
-    <section class="metric-grid">
-        <div class="metric">
-            <span class="muted">WooCommerce</span>
-            <strong>{{ $wooConnections > 0 ? 'Added' : 'Missing' }}</strong>
-            <span class="badge {{ $wooConnections > 0 ? 'ready' : 'warning-badge' }}">{{ $wooConnections > 0 ? 'Ready to test' : 'Add first' }}</span>
-        </div>
-        <div class="metric">
-            <span class="muted">Front Systems</span>
-            <strong>{{ $frontConnections > 0 ? 'Added' : 'Later' }}</strong>
-            <span class="muted">{{ $frontConnections > 0 ? 'Ready for read-only checks' : 'Not needed for Woo readiness' }}</span>
-        </div>
-        <div class="metric">
-            <span class="muted">Needs attention</span>
-            <strong>{{ $connectionsNeedingAttention + $failedEventsCount }}</strong>
-            <span class="muted">Connection or setup issues</span>
-        </div>
-        <div class="metric">
-            <span class="muted">Product data</span>
-            <strong>Review</strong>
-            <span class="muted">SKU, EAN/GTIN, price and variations</span>
+    <section class="panel">
+        <h2>Setup progress</h2>
+        <div class="progress large"><span style="width: {{ $setupPercent }}%"></span></div>
+        <p class="muted">{{ $setupStepsDone }} of 3 basic setup steps are in place.</p>
+        <div class="status-board">
+            <div class="status-card {{ $wooConnections > 0 ? 'ready' : 'warning' }}">
+                <span class="muted">Step 1</span>
+                <strong>WooCommerce</strong>
+                <span>{{ $wooConnections > 0 ? 'Added' : 'Add this first' }}</span>
+            </div>
+            <div class="status-card {{ $readyConnections > 0 ? 'ready' : 'warning' }}">
+                <span class="muted">Step 2</span>
+                <strong>Test connection</strong>
+                <span>{{ $readyConnections > 0 ? 'At least one test worked' : 'Run a safe test' }}</span>
+            </div>
+            <div class="status-card {{ $frontConnections > 0 ? 'ready' : 'warning' }}">
+                <span class="muted">Step 3</span>
+                <strong>Front Systems</strong>
+                <span>{{ $frontConnections > 0 ? 'Added' : 'Can be added later' }}</span>
+            </div>
         </div>
     </section>
 
     <section class="panel">
         <div class="split-row">
             <div>
-                <h2>Recommended path</h2>
-                <p class="muted">Use these three pages for normal setup. Everything else is tucked away in Advanced.</p>
+                <h2>What to do next</h2>
+                <p class="muted">Use these pages in order. Testing Log is for sending results back when something needs review.</p>
             </div>
-            <a class="button secondary" href="{{ route('advanced.index') }}">Advanced tools</a>
+            <a class="button secondary" href="{{ route('testing-log.index') }}">Open Testing Log</a>
         </div>
         <div class="owner-flow">
             <div class="flow-step">
@@ -98,6 +100,10 @@
                 <div class="summary-item">
                     <span><span class="status-dot {{ $frontConnections > 0 ? 'ready' : 'warning' }}"></span>Front connection</span>
                     <a href="{{ route('connections.index') }}">{{ $frontConnections > 0 ? 'Review' : 'Add later' }}</a>
+                </div>
+                <div class="summary-item">
+                    <span><span class="status-dot {{ ($connectionsNeedingAttention + $failedEventsCount) > 0 ? 'blocked' : 'ready' }}"></span>Latest test results</span>
+                    <a href="{{ route('testing-log.index') }}">Open log</a>
                 </div>
             </div>
         </section>

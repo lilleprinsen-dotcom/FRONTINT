@@ -10,8 +10,13 @@
 
     <section class="grid">
         <div class="panel">
+            <h2>Testing Log</h2>
+            <p class="muted">Plain-language test results that can be copied into Codex for troubleshooting.</p>
+            <p><a class="button secondary" href="{{ route('testing-log.index') }}">Open Testing Log</a></p>
+        </div>
+        <div class="panel">
             <h2>Testing Lab</h2>
-            <p class="muted">Read-only discovery, mapping preview, and preview-run experiments live here instead of the normal owner workflow.</p>
+            <p class="muted">Older read-only discovery, mapping preview, and preview-run experiments.</p>
             <p><a class="button secondary" href="{{ route('lab.index') }}">Open Testing Lab</a></p>
         </div>
         <div class="panel">
