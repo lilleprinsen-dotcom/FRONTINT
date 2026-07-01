@@ -170,6 +170,7 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Staging batch runs may write selected ready/warning products or variations to Front only when profile mode is `staging_batch` or `limited_write_test`.
 - Staging batch product writes are capped at 100 items and must not write to WooCommerce, stock, orders, refunds, gift cards, or omnichannel endpoints.
 - Sale price sync may write Front PriceListV2 entries for already-synced items with Woo sale price candidates. It must be explicit, audited, retryable, and capped at 100 items.
+- Stock sync may write Front Stock adjust entries for already-synced items with Woo stock quantities. It must be explicit, audited, retryable, capped at 100 items, and always use `isCompleteStockCount=false`.
 - Product identity must be based on immutable WooCommerce product/variation IDs via `woo_item_key` and generated Front `extId`. SKU and GTIN/EAN are mutable fields and changing them in WooCommerce must update the existing Front product instead of creating a new mapping.
 - Woo regular price maps to Front product `price`. Woo sale price must remain separate and later use Front PriceListV2; do not overwrite regular price with sale price.
 - Sync run items store selected products or variations only, not the whole catalog.
@@ -217,7 +218,8 @@ Audit these actions:
 - Production mode remains disabled until a separate launch checklist exists.
 - Staging batch v1 may call Front product CRUD for selected items only: lookup with `GET /api/products/{productId}`, lookup with `GET /api/Product/gtin/{gtin}`, create with `POST /api/products`, and update with `PUT /api/products/{productId}`.
 - Sale price sync may call `POST /api/PricelistV2` for already-synced items only.
-- This phase must not call stock adjust or WooCommerce write endpoints.
+- Stock sync may call `POST /api/Stock/adjust` for already-synced items only as a partial stock count.
+- This phase must not call WooCommerce write endpoints.
 
 ## Health Checks
 

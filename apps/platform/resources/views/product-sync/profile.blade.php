@@ -114,6 +114,11 @@
                     <option value="preview_only" @selected($profile->stock_strategy === 'preview_only')>Preview only</option>
                     <option value="stock_sync_later" @selected($profile->stock_strategy === 'stock_sync_later')>Stock sync later</option>
                 </select>
+                <label for="front_stock_id">Front stock ID</label>
+                <input id="front_stock_id" name="front_stock_id" value="{{ old('front_stock_id', $profile->front_stock_id) }}">
+                <label for="front_stock_ext_id">Front external stock ID</label>
+                <input id="front_stock_ext_id" name="front_stock_ext_id" value="{{ old('front_stock_ext_id', $profile->front_stock_ext_id) }}">
+                <p class="muted">Stock sync uses Front <code>POST /api/Stock/adjust</code> as a partial stock count. Configure one stock identifier before testing.</p>
 
                 <label><input type="checkbox" name="incremental_sync_enabled" value="1" @checked(old('incremental_sync_enabled', $profile->incremental_sync_enabled))> Incremental sync enabled later</label>
                 <label><input type="checkbox" name="webhook_updates_enabled" value="1" @checked(old('webhook_updates_enabled', $profile->webhook_updates_enabled))> WooCommerce webhook updates later</label>

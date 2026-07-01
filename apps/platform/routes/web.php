@@ -81,4 +81,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('product-sync.runs.sale-prices');
     Route::post('/product-sync/runs/{run}/retry-sale-prices', [ProductSyncController::class, 'retrySalePrices'])
         ->name('product-sync.runs.retry-sale-prices');
+    Route::post('/product-sync/runs/{run}/stock', [ProductSyncController::class, 'runStockSync'])
+        ->name('product-sync.runs.stock');
+    Route::post('/product-sync/runs/{run}/retry-stock', [ProductSyncController::class, 'retryStock'])
+        ->name('product-sync.runs.retry-stock');
 });

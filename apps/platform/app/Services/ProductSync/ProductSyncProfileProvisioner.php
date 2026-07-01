@@ -50,6 +50,8 @@ class ProductSyncProfileProvisioner
                 'price_strategy' => 'regular_price_only',
                 'sale_price_list_name' => 'WooCommerce Sale Prices',
                 'stock_strategy' => 'do_not_sync_stock_yet',
+                'front_stock_id' => null,
+                'front_stock_ext_id' => null,
                 'incremental_sync_enabled' => false,
                 'webhook_updates_enabled' => false,
                 'reconciliation_enabled' => false,

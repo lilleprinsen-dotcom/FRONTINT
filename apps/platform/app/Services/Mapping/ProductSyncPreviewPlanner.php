@@ -243,6 +243,7 @@ class ProductSyncPreviewPlanner
                 'parent_name' => $wooProduct['parent_name'] ?? null,
                 'sku' => $sku,
                 'type' => $wooProduct['type'] ?? null,
+                'stock_quantity' => $wooProduct['stock_quantity'] ?? null,
                 'stock_status' => $wooProduct['stock_status'] ?? null,
                 'manage_stock' => $wooProduct['manage_stock'] ?? null,
                 'size_label' => $sizeLabel,

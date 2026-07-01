@@ -86,6 +86,31 @@
     </section>
 
     <section class="panel">
+        <h2>Stock sync</h2>
+        <p class="muted">
+            Sends WooCommerce stock quantities for already-synced products to Front <code>POST /api/Stock/adjust</code>
+            as a partial stock count. It does not write WooCommerce, products, prices, orders, refunds, or gift cards.
+        </p>
+        <p class="muted">
+            Front stock: <strong>{{ $run->profile?->front_stock_id ?: ($run->profile?->front_stock_ext_id ?: 'Not configured') }}</strong>.
+            Eligible stock items: {{ $eligibleStockItems->count() }}.
+        </p>
+        @if ($run->profile?->stock_strategy !== 'stock_sync_later')
+            <div class="warning">Set stock strategy to “Stock sync later” and configure a Front stock ID before syncing stock.</div>
+        @endif
+        <div class="action-row">
+            <form class="inline-form" method="post" action="{{ route('product-sync.runs.stock', $run) }}">
+                @csrf
+                <button type="submit" @disabled($eligibleStockItems->isEmpty())>Sync stock</button>
+            </form>
+            <form class="inline-form" method="post" action="{{ route('product-sync.runs.retry-stock', $run) }}">
+                @csrf
+                <button class="secondary" type="submit">Retry failed stock</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="panel">
         <h2>Next step: Front write dry-run</h2>
         <p class="muted">
             Select up to 10 ready or warning items to preview the exact Front product payload.
@@ -172,6 +197,7 @@
                 <th>Validation</th>
                 <th>Sync status</th>
                 <th>Sale price</th>
+                <th>Stock</th>
                 <th>Front result</th>
                 <th>Needs attention</th>
                 <th>Proposed Front fields</th>
@@ -193,6 +219,13 @@
                         <div class="muted">{{ $item->sale_price_sync_status }}</div>
                         @if ($item->sale_price_last_error)
                             <div class="danger">{{ $item->sale_price_last_error }}</div>
+                        @endif
+                    </td>
+                    <td>
+                        <div>{{ $item->woo_stock_quantity ?? 'n/a' }}</div>
+                        <div class="muted">{{ $item->stock_sync_status }}</div>
+                        @if ($item->stock_last_error)
+                            <div class="danger">{{ $item->stock_last_error }}</div>
                         @endif
                     </td>
                     <td>
@@ -224,7 +257,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="11">No run items match this view.</td>
+                    <td colspan="12">No run items match this view.</td>
                 </tr>
             @endforelse
             </tbody>
