@@ -35,10 +35,14 @@ class StagingBatchProductSyncRunBuilder
             ->unique()
             ->take(self::MAX_ITEMS)
             ->values();
-        $items = $this->planner->wooItemsFromSnapshot($wooSnapshot)
-            ->filter(fn (array $item): bool => $selectedKeys->contains($this->planner->wooItemKey($item)))
-            ->values();
-        $previewRows = $this->planner->previewRows($items->all(), []);
+        $allItems = $this->planner->wooItemsFromSnapshot($wooSnapshot);
+        $allPreviewRows = collect($this->planner->previewRows($allItems->all(), []));
+        $previewRows = $this->enrichVariableParents(
+            $allPreviewRows
+                ->filter(fn (array $row): bool => $selectedKeys->contains($row['woo_product']['item_key'] ?? $this->planner->wooItemKey($row['woo_product'] ?? [])))
+                ->values(),
+            $allPreviewRows,
+        );
         $duplicateGtins = $this->duplicateValues($previewRows, fn (array $row): ?string => $this->stringValue($row['proposed_front_payload']['productSizes'][0]['gtin'] ?? null));
         $duplicateSkus = $this->duplicateValues($previewRows, fn (array $row): ?string => $this->stringValue($row['woo_product']['sku'] ?? null));
 
@@ -138,6 +142,51 @@ class StagingBatchProductSyncRunBuilder
             'validation_warnings_json' => $validation['warnings'],
             'attempt_count' => 0,
         ];
+    }
+
+    private function enrichVariableParents($selectedRows, $allRows)
+    {
+        return $selectedRows
+            ->map(function (array $row) use ($allRows): array {
+                $wooProduct = $row['woo_product'] ?? [];
+
+                if (($wooProduct['type'] ?? null) !== 'variable') {
+                    return $row;
+                }
+
+                $parentId = $wooProduct['id'] ?? null;
+                $variationRows = $allRows
+                    ->filter(fn (array $candidate): bool => ($candidate['woo_product']['type'] ?? null) === 'variation'
+                        && (string) ($candidate['woo_product']['parent_product_id'] ?? '') === (string) $parentId)
+                    ->values();
+
+                if ($variationRows->isEmpty()) {
+                    return $row;
+                }
+
+                $sizes = $variationRows
+                    ->map(fn (array $candidate): array => $candidate['proposed_front_payload']['productSizes'][0] ?? [])
+                    ->filter(fn (array $size): bool => array_filter($size) !== [])
+                    ->values()
+                    ->all();
+
+                if ($sizes === []) {
+                    return $row;
+                }
+
+                $row['proposed_front_payload']['productSizes'] = $sizes;
+                $row['proposed_front_payload']['variant'] = $wooProduct['sku'] ?? null;
+                $row['proposed_front_payload']['variable_parent_with_variations'] = true;
+                $row['proposed_front_payload']['variation_count'] = count($sizes);
+                $row['warnings'][] = 'Variable parent will be written as one Front product with discovered Woo variations as product sizes.';
+                $row['blocks'] = array_values(array_filter(
+                    $row['blocks'] ?? [],
+                    fn (string $block): bool => $block !== 'Missing GTIN/EAN candidate.'
+                ));
+
+                return $row;
+            })
+            ->values();
     }
 
     private function duplicateValues($rows, callable $resolver): array

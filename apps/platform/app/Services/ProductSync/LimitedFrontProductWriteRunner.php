@@ -184,8 +184,8 @@ class LimitedFrontProductWriteRunner
     private function frontPayload(ProductSyncRunItem $item): array
     {
         $payload = $item->proposed_front_payload_json ?? [];
-        $size = $payload['productSizes'][0] ?? [];
         $images = $this->imageUrls($payload);
+        $sizes = $this->productSizes($payload, $item);
 
         return array_filter([
             'createProductSpecificSize' => true,
@@ -204,14 +204,36 @@ class LimitedFrontProductWriteRunner
             'price' => $this->numberOrNull($payload['price_candidate'] ?? null),
             'isStockProduct' => true,
             'isWebAvailable' => true,
-            'productSizes' => [[
-                'gtin' => $size['gtin'] ?? $item->detected_gtin,
-                'label' => $size['label'] ?? null,
-                'externalSKU' => $size['externalSKU'] ?? $item->woo_sku,
-            ]],
+            'productSizes' => $sizes,
             'images' => $images === [] ? null : $images,
             'isNoLabel' => false,
         ], fn (mixed $value): bool => $value !== null);
+    }
+
+    private function productSizes(array $payload, ProductSyncRunItem $item): array
+    {
+        $sizes = collect($payload['productSizes'] ?? [])
+            ->filter(fn (mixed $size): bool => is_array($size))
+            ->map(function (array $size) use ($item): array {
+                return array_filter([
+                    'gtin' => $size['gtin'] ?? null,
+                    'label' => $size['label'] ?? null,
+                    'externalSKU' => $size['externalSKU'] ?? $item->woo_sku,
+                ], fn (mixed $value): bool => $value !== null && $value !== '');
+            })
+            ->filter(fn (array $size): bool => array_filter($size) !== [])
+            ->values()
+            ->all();
+
+        if ($sizes !== []) {
+            return $sizes;
+        }
+
+        return array_filter([[
+            'gtin' => $item->detected_gtin,
+            'label' => null,
+            'externalSKU' => $item->woo_sku,
+        ]], fn (array $size): bool => array_filter($size) !== []);
     }
 
     private function imageUrls(array $payload): array
@@ -348,6 +370,7 @@ class LimitedFrontProductWriteRunner
             'variant' => $payload['variant'] ?? null,
             'gtin' => $payload['productSizes'][0]['gtin'] ?? null,
             'externalSKU' => $payload['productSizes'][0]['externalSKU'] ?? null,
+            'product_size_count' => count($payload['productSizes'] ?? []),
             'description_included' => isset($payload['description']),
             'internal_description_included' => isset($payload['internalDescription']),
             'tag_count' => isset($payload['tags']) ? count(array_filter(array_map('trim', explode(',', (string) $payload['tags'])))) : 0,
@@ -382,6 +405,8 @@ class LimitedFrontProductWriteRunner
             'number' => $payload['number'] ?? null,
             'variant' => $payload['variant'] ?? null,
             'product_sizes' => $sizes,
+            'error' => $payload['error'] ?? $payload['message'] ?? $payload['Message'] ?? $payload['title'] ?? null,
+            'response_keys' => array_slice(array_keys($payload), 0, 20),
         ];
     }
 
