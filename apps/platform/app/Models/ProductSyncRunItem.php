@@ -37,6 +37,8 @@ class ProductSyncRunItem extends Model
         'validation_errors_json',
         'validation_warnings_json',
         'last_error',
+        'last_request_summary_json',
+        'last_response_summary_json',
         'attempt_count',
         'last_attempted_at',
         'synced_at',
@@ -48,6 +50,8 @@ class ProductSyncRunItem extends Model
             'proposed_front_payload_json' => 'array',
             'validation_errors_json' => 'array',
             'validation_warnings_json' => 'array',
+            'last_request_summary_json' => 'array',
+            'last_response_summary_json' => 'array',
             'last_attempted_at' => 'datetime',
             'synced_at' => 'datetime',
         ];
