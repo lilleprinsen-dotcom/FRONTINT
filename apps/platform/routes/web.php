@@ -95,4 +95,6 @@ Route::middleware('auth')->group(function (): void {
         ->name('front-sales.show');
     Route::post('/front-sales/{frontSaleImport}/import', [FrontSaleImportController::class, 'import'])
         ->name('front-sales.import');
+    Route::post('/front-sales/{frontSaleImport}/adjust-stock', [FrontSaleImportController::class, 'adjustStock'])
+        ->name('front-sales.adjust-stock');
 });

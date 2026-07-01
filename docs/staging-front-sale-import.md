@@ -1,29 +1,37 @@
-# Staging Front Sale Import
+# Staging Front Sale Handling
 
-This feature imports paid Front POS sales into WooCommerce as paid orders.
+Front POS sales should not flood WooCommerce orders.
 
-It is a staging workflow. It is meant to prove that Front sales can become WooCommerce order history and reduce WooCommerce stock through normal Woo order behavior.
+The default production-minded behavior is:
+
+1. Front sale arrives.
+2. OmniBridge matches each sale line to a synced Woo product or variation.
+3. OmniBridge reduces WooCommerce stock immediately.
+4. The sale stays visible in the OmniBridge portal and Woo plugin POS Sales page foundation.
+5. A WooCommerce order is created only if an admin manually chooses it.
 
 ## What It Does
 
 - Captures Front sale-like webhook events.
 - Creates a local Front sale import record.
 - Matches sale lines to existing `product_mappings`.
-- Shows matched and unmatched sale lines in the portal.
-- Creates a WooCommerce order only when the user presses import.
-- Uses payment method `paid_in_front` and title `Paid in Front POS`.
-- Stores an `order_mapping` after success.
-- Prevents duplicate order creation with an idempotency key.
+- Automatically queues WooCommerce stock adjustment for matched sales.
+- Reduces Woo stock by the quantity sold in Front.
+- Records stock movements in `stock_ledger`.
+- Shows Front sales in the portal without creating Woo orders by default.
+- Allows a manual `Create Woo order` action for selected sales.
+- Imports customer billing data into the optional Woo order when Front payload provides it.
+- Marks optional Woo orders with stock already adjusted metadata to avoid double stock reduction.
 - Shows results in Testing Log.
 
 ## What It Does Not Do Yet
 
 - Does not write anything to Front.
+- Does not auto-create Woo orders for every POS sale.
 - Does not handle refunds.
 - Does not handle exchanges.
 - Does not handle gift cards.
 - Does not handle omnichannel pickup/reservation orders.
-- Does not automatically import every sale without review.
 - Does not merge customers yet.
 
 ## Matching Rules
@@ -36,31 +44,45 @@ Sale lines are matched against synced product mappings using:
 4. Front identity
 5. Front product ID
 
-If any line cannot be matched, the sale import is blocked until product mappings are fixed.
+If any line cannot be matched, stock adjustment is blocked until product mappings are fixed.
 
-## WooCommerce Order Behavior
+## WooCommerce Stock Behavior
 
-The Woo order payload is created with:
+For each matched sale line:
+
+1. Read current Woo product or variation stock.
+2. Subtract the Front sold quantity.
+3. Write the new stock quantity back to WooCommerce.
+4. Record the movement in `stock_ledger`.
+
+The same Front sale cannot adjust stock twice.
+
+## Optional Woo Order Behavior
+
+If an admin manually creates a Woo order for a Front sale:
 
 - `status=completed`
 - `set_paid=true`
 - `payment_method=paid_in_front`
 - line item `product_id` and `variation_id` from product mappings
+- billing/customer data if present in the Front sale payload
 - metadata linking the order to Front sale and receipt IDs
+- `_omnibridge_front_stock_already_adjusted=yes`
+- `_order_stock_reduced=yes`
 
-WooCommerce remains the master for orders and stock history. The imported order is expected to reduce WooCommerce stock through normal Woo order stock behavior.
+The Woo plugin also marks OmniBridge Front POS orders as stock already handled when it sees the OmniBridge metadata.
 
 ## How To Test
 
 1. Sync at least one Woo product or variation to Front so `product_mappings` exists.
 2. Send or simulate a Front sale webhook payload containing matching GTIN/SKU/identity.
 3. Open `Front Sales`.
-4. Open the captured sale.
-5. Confirm all sale lines are matched.
-6. Press `Import to WooCommerce`.
+4. Confirm the sale appears.
+5. Confirm stock status becomes `adjusted`.
+6. Confirm no Woo order exists unless you press `Create Woo order manually`.
 7. Open `Testing Log`.
-8. Confirm the import says `Worked`.
-9. Check WooCommerce for a paid order marked `Paid in Front POS`.
+8. Confirm the stock adjustment says `Worked`.
+9. If needed, manually create the Woo order and confirm it is marked `Paid in Front POS`.
 
 ## Front Confirmation Still Needed
 

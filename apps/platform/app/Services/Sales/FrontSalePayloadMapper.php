@@ -53,7 +53,7 @@ class FrontSalePayloadMapper
                 'writes_woocommerce' => false,
             ],
             'line_items_json' => $mappedLines->values()->all(),
-            'woo_order_payload_json' => $this->wooOrderPayload($frontSaleId, $frontReceiptId, $mappedLines),
+            'woo_order_payload_json' => $this->wooOrderPayload($frontSaleId, $frontReceiptId, $mappedLines, $this->customerData($payload)),
         ];
     }
 
@@ -113,14 +113,15 @@ class FrontSalePayloadMapper
         return null;
     }
 
-    private function wooOrderPayload(?string $frontSaleId, ?string $frontReceiptId, Collection $mappedLines): array
+    private function wooOrderPayload(?string $frontSaleId, ?string $frontReceiptId, Collection $mappedLines, array $customer): array
     {
-        return [
+        return array_filter([
             'status' => 'completed',
             'set_paid' => true,
             'payment_method' => 'paid_in_front',
             'payment_method_title' => 'Paid in Front POS',
             'customer_note' => 'Imported from Front POS by OmniBridge.',
+            'billing' => $customer,
             'line_items' => $mappedLines
                 ->filter(fn (array $line): bool => $line['mapping_status'] === 'matched')
                 ->map(function (array $line): array {
@@ -138,9 +139,31 @@ class FrontSalePayloadMapper
                 ['key' => '_omnibridge_source', 'value' => 'front_pos'],
                 ['key' => '_omnibridge_front_sale_id', 'value' => $frontSaleId],
                 ['key' => '_omnibridge_front_receipt_id', 'value' => $frontReceiptId],
-                ['key' => '_omnibridge_stock_note', 'value' => 'WooCommerce stock reduction is expected to happen through this imported paid order.'],
+                ['key' => '_omnibridge_front_stock_already_adjusted', 'value' => 'yes'],
+                ['key' => '_order_stock_reduced', 'value' => 'yes'],
+                ['key' => '_omnibridge_stock_note', 'value' => 'Front POS sale stock was adjusted before this optional Woo order import. Do not reduce stock again.'],
             ],
-        ];
+        ], fn (mixed $value): bool => $value !== [] && $value !== null);
+    }
+
+    private function customerData(array $payload): array
+    {
+        $customer = data_get($payload, 'customer') ?? data_get($payload, 'person') ?? [];
+
+        if (! is_array($customer)) {
+            $customer = [];
+        }
+
+        return array_filter([
+            'first_name' => $this->stringValue(data_get($customer, 'firstName') ?? data_get($customer, 'first_name')),
+            'last_name' => $this->stringValue(data_get($customer, 'lastName') ?? data_get($customer, 'last_name')),
+            'email' => $this->stringValue(data_get($customer, 'email') ?? data_get($payload, 'customerEmail')),
+            'phone' => $this->stringValue(data_get($customer, 'phone') ?? data_get($customer, 'mobile') ?? data_get($payload, 'customerPhone')),
+            'address_1' => $this->stringValue(data_get($customer, 'address1') ?? data_get($customer, 'address_1')),
+            'postcode' => $this->stringValue(data_get($customer, 'postcode') ?? data_get($customer, 'zip')),
+            'city' => $this->stringValue(data_get($customer, 'city')),
+            'country' => $this->stringValue(data_get($customer, 'country')),
+        ], fn (?string $value): bool => $value !== null);
     }
 
     private function extractLines(array $payload): Collection

@@ -10,7 +10,7 @@ class WooCommercePluginFoundationTest extends TestCase
     {
         $plugin = $this->pluginContents();
 
-        $this->assertStringContainsString('Version: 0.2.0', $plugin);
+        $this->assertStringContainsString('Version: 0.3.0', $plugin);
         $this->assertStringContainsString("register_rest_route(self::REST_NAMESPACE, '/health'", $plugin);
         $this->assertStringContainsString("register_rest_route(self::REST_NAMESPACE, '/connection-test'", $plugin);
         $this->assertStringContainsString('hash_hmac', $plugin);
@@ -23,6 +23,9 @@ class WooCommercePluginFoundationTest extends TestCase
         $this->assertStringContainsString('current_user_can', $plugin);
         $this->assertStringContainsString('wp_verify_nonce', $plugin);
         $this->assertStringContainsString('woocommerce_save_data', $plugin);
+        $this->assertStringContainsString('omnibridge-pos-sales', $plugin);
+        $this->assertStringContainsString('_omnibridge_front_stock_already_adjusted', $plugin);
+        $this->assertStringContainsString('_order_stock_reduced', $plugin);
     }
 
     public function test_plugin_remains_thin_and_avoids_heavy_sync_logic(): void

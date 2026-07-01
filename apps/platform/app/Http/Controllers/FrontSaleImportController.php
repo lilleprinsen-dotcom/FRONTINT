@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\RunFrontSaleImport;
+use App\Jobs\RunFrontSaleStockAdjustment;
 use App\Models\FrontSaleImport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,5 +46,16 @@ class FrontSaleImportController extends Controller
         return redirect()
             ->route('front-sales.show', $frontSaleImport)
             ->with('status', 'Front sale import queued. Refresh this page or open Testing Log to see the result.');
+    }
+
+    public function adjustStock(Request $request, FrontSaleImport $frontSaleImport): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($frontSaleImport->organization_id)->exists(), 403);
+
+        RunFrontSaleStockAdjustment::dispatch($frontSaleImport->id, $request->user()->id);
+
+        return redirect()
+            ->route('front-sales.show', $frontSaleImport)
+            ->with('status', 'WooCommerce stock adjustment queued for this Front sale.');
     }
 }
