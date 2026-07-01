@@ -185,7 +185,7 @@ class LimitedFrontProductWriteRunner
     {
         $payload = $item->proposed_front_payload_json ?? [];
         $size = $payload['productSizes'][0] ?? [];
-        $image = $payload['image_candidate']['src'] ?? null;
+        $images = $this->imageUrls($payload);
 
         return array_filter([
             'createProductSpecificSize' => true,
@@ -198,6 +198,9 @@ class LimitedFrontProductWriteRunner
             'color' => null,
             'season' => null,
             'brand' => $payload['brand'] ?? null,
+            'description' => $payload['description'] ?? null,
+            'internalDescription' => $payload['internalDescription'] ?? null,
+            'tags' => $payload['tags'] ?? null,
             'price' => $this->numberOrNull($payload['price_candidate'] ?? null),
             'isStockProduct' => true,
             'isWebAvailable' => true,
@@ -206,9 +209,30 @@ class LimitedFrontProductWriteRunner
                 'label' => $size['label'] ?? null,
                 'externalSKU' => $size['externalSKU'] ?? $item->woo_sku,
             ]],
-            'images' => $image ? [$image] : null,
+            'images' => $images === [] ? null : $images,
             'isNoLabel' => false,
         ], fn (mixed $value): bool => $value !== null);
+    }
+
+    private function imageUrls(array $payload): array
+    {
+        $candidates = $payload['image_candidates'] ?? [];
+
+        if (($payload['image_candidate']['src'] ?? null) && is_array($payload['image_candidate'])) {
+            $candidates = array_merge([$payload['image_candidate']], is_array($candidates) ? $candidates : []);
+        }
+
+        if (! is_array($candidates)) {
+            return [];
+        }
+
+        return collect($candidates)
+            ->filter(fn (mixed $image): bool => is_array($image) && is_string($image['src'] ?? null) && trim($image['src']) !== '')
+            ->map(fn (array $image): string => trim((string) $image['src']))
+            ->unique()
+            ->take(10)
+            ->values()
+            ->all();
     }
 
     private function markSucceeded(ProductSyncRunItem $item, Response $response): void
@@ -324,6 +348,10 @@ class LimitedFrontProductWriteRunner
             'variant' => $payload['variant'] ?? null,
             'gtin' => $payload['productSizes'][0]['gtin'] ?? null,
             'externalSKU' => $payload['productSizes'][0]['externalSKU'] ?? null,
+            'description_included' => isset($payload['description']),
+            'internal_description_included' => isset($payload['internalDescription']),
+            'tag_count' => isset($payload['tags']) ? count(array_filter(array_map('trim', explode(',', (string) $payload['tags'])))) : 0,
+            'image_count' => count($this->imageUrls($sourcePayload)),
             'includes_sale_price' => false,
             'regular_price' => $payload['price'] ?? null,
             'sale_price_candidate' => $sourcePayload['sale_price_candidate'] ?? null,

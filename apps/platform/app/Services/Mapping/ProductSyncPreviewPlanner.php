@@ -259,7 +259,11 @@ class ProductSyncPreviewPlanner
                 'subgroupName' => $subcategory,
                 'price_candidate' => $price,
                 'sale_price_candidate' => $this->stringValue($wooProduct['sale_price'] ?? null),
+                'description' => $this->staffDescription($wooProduct),
+                'internalDescription' => $this->internalStaffDescription($wooProduct),
+                'tags' => $this->tagString($wooProduct['tags'] ?? []),
                 'image_candidate' => $wooProduct['image'] ?? null,
+                'image_candidates' => $this->images($wooProduct),
                 'productSizes' => [
                     [
                         'gtin' => $gtin,
@@ -311,7 +315,11 @@ class ProductSyncPreviewPlanner
             'manage_stock' => $variation['manage_stock'] ?? null,
             'categories' => $variation['categories'] ?? $parentProduct['categories'] ?? [],
             'brands' => $variation['brands'] ?? $parentProduct['brands'] ?? [],
+            'tags' => $variation['tags'] ?? $parentProduct['tags'] ?? [],
+            'description' => $variation['description'] ?? $parentProduct['description'] ?? null,
+            'short_description' => $variation['short_description'] ?? $parentProduct['short_description'] ?? null,
             'image' => $this->firstImage($variation) ?? $this->firstImage($parentProduct ?? []),
+            'images' => $this->images($variation) ?: $this->images($parentProduct ?? []),
             'attributes' => $attributes,
             'size_label' => $sizeLabel,
             'gtin_candidate' => $variation['gtin_candidate'] ?? ['key' => null, 'value' => null, 'confidence' => 'none', 'candidates' => []],
@@ -524,6 +532,73 @@ class ProductSyncPreviewPlanner
             'src' => $src,
             'alt' => $this->stringValue($first['alt'] ?? null),
         ];
+    }
+
+    private function images(array $item): array
+    {
+        $images = $item['images'] ?? [];
+
+        if (is_array($item['image'] ?? null)) {
+            $images = array_merge([$item['image']], is_array($images) ? $images : []);
+        }
+
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return collect($images)
+            ->filter(fn (mixed $candidate): bool => is_array($candidate))
+            ->take(10)
+            ->map(function (array $candidate): ?array {
+                $src = $this->stringValue($candidate['src'] ?? null);
+
+                if ($src === null) {
+                    return null;
+                }
+
+                return [
+                    'src' => $src,
+                    'alt' => $this->stringValue($candidate['alt'] ?? null),
+                ];
+            })
+            ->filter()
+            ->unique('src')
+            ->values()
+            ->all();
+    }
+
+    private function staffDescription(array $product): ?string
+    {
+        return $this->stringValue($product['description'] ?? null)
+            ?? $this->stringValue($product['short_description'] ?? null);
+    }
+
+    private function internalStaffDescription(array $product): ?string
+    {
+        $parts = array_filter([
+            $this->stringValue($product['short_description'] ?? null),
+            $this->stringValue($product['parent_name'] ?? null) ? 'Parent product: ' . $this->stringValue($product['parent_name'] ?? null) : null,
+            $this->stringValue($product['size_label'] ?? null) ? 'Size: ' . $this->stringValue($product['size_label'] ?? null) : null,
+        ]);
+
+        return $parts === [] ? null : implode("\n", $parts);
+    }
+
+    private function tagString(mixed $tags): ?string
+    {
+        if (! is_array($tags)) {
+            return null;
+        }
+
+        $values = collect($tags)
+            ->map(fn (mixed $tag): ?string => $this->stringValue($tag))
+            ->filter()
+            ->unique()
+            ->take(30)
+            ->values()
+            ->all();
+
+        return $values === [] ? null : implode(', ', $values);
     }
 
     private function stringValue(mixed $value): ?string
