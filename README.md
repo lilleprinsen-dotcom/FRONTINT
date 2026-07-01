@@ -78,6 +78,16 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 - The staging batch flow does not write to WooCommerce, orders, refunds, gift cards, or omnichannel records.
 - Full catalog sync is still not implemented.
 
+### Front POS sales to WooCommerce staging
+
+The portal now has a `Front Sales` page for staged Front POS sale imports.
+
+- Front sale-like webhook events are captured as sale import records.
+- Sale lines are matched to existing synced product mappings.
+- Matched sales can create paid WooCommerce orders with payment method `Paid in Front POS`.
+- Imports are idempotent, so the same Front receipt/sale should not create duplicate Woo orders.
+- This flow does not write to Front, does not handle refunds, gift cards, exchanges, or omnichannel orders yet.
+
 See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).
 See [docs/staging-batch-product-sync.md](docs/staging-batch-product-sync.md) for the current staging batch test flow.
 
