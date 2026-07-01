@@ -50,6 +50,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('connections.discover.stores');
     Route::post('/connections/{connection}/discover/products', [ConnectionDiscoveryController::class, 'discoverProducts'])
         ->name('connections.discover.products');
+    Route::post('/connections/{connection}/discover/front-setup', [ConnectionDiscoveryController::class, 'discoverFrontSetup'])
+        ->name('connections.discover.front-setup');
 
     Route::get('/mapping/product-poc', [ProductMappingPocController::class, 'show'])
         ->name('mapping.product-poc');

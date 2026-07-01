@@ -98,6 +98,78 @@ class ConnectionDiscoveryService
             : $this->discoverFrontProducts($connection);
     }
 
+    public function discoverFrontSetup(Connection $connection): ConnectionDiscoverySnapshot
+    {
+        $connection->loadMissing('credentials', 'organization');
+
+        if (! in_array($connection->type, ['front', 'front_systems'], true)) {
+            return $this->storeSnapshot($connection, 'front_setup', 'failed', [
+                'message' => 'Front setup discovery is only available for Front Systems connections.',
+            ], [], 'Unsupported connection type.');
+        }
+
+        if (! $this->safety->connectionHttpTestsAllowed()) {
+            return $this->skippedSnapshot($connection, 'front_setup');
+        }
+
+        if ($missing = $this->missingRequirements($connection)) {
+            $message = $this->missingRequirementMessage($connection, $missing);
+
+            return $this->storeSnapshot($connection, 'front_setup', 'failed', [
+                'missing' => $this->friendlyMissingRequirements($connection, $missing),
+            ], [], $message);
+        }
+
+        try {
+            $webhookTypesResponse = $this->frontSystems->webhookTypes($connection);
+            $stockSettingsResponse = $this->frontSystems->stockSettings($connection);
+            $stockListResponse = $this->frontSystems->stockList($connection);
+
+            $statuses = [
+                'GET /api/WebhooksTypes' => $webhookTypesResponse->status(),
+                'GET /api/Stock/settings' => $stockSettingsResponse->status(),
+                'GET /api/Stock/list' => $stockListResponse->status(),
+            ];
+
+            $allSuccessful = $webhookTypesResponse->successful()
+                && $stockSettingsResponse->successful()
+                && $stockListResponse->successful();
+
+            $webhookTypes = $webhookTypesResponse->successful()
+                ? $this->frontSystems->safeWebhookTypes($webhookTypesResponse->json())
+                : [];
+            $stockSettings = $stockSettingsResponse->successful()
+                ? $this->frontSystems->safeStockSettings($stockSettingsResponse->json())
+                : [];
+            $stockLocations = $stockListResponse->successful()
+                ? $this->frontSystems->safeStockList($stockListResponse->json())
+                : [];
+
+            return $this->storeSnapshot($connection, 'front_setup', $allSuccessful ? 'success' : 'failed', [
+                'webhook_type_count' => count($webhookTypes),
+                'stock_location_count' => count($stockLocations),
+                'endpoint_statuses' => $statuses,
+                'read_only' => true,
+                'note' => 'Uses Front OpenAPI-documented read-only setup endpoints.',
+            ], [
+                'webhook_types' => $webhookTypes,
+                'stock_settings' => $stockSettings,
+                'stock_locations' => $stockLocations,
+                'endpoint_statuses' => $statuses,
+                'review_notes' => $this->frontSetupReviewNotes($webhookTypes, $stockLocations),
+            ], $allSuccessful ? null : 'One or more Front setup read endpoints failed.');
+        } catch (Throwable $exception) {
+            return $this->storeSnapshot($connection, 'front_setup', 'failed', [
+                'endpoints' => [
+                    'GET /api/WebhooksTypes',
+                    'GET /api/Stock/settings',
+                    'GET /api/Stock/list',
+                ],
+                'read_only' => true,
+            ], [], $exception::class);
+        }
+    }
+
     private function discoverWooProducts(Connection $connection): ConnectionDiscoverySnapshot
     {
         try {
@@ -199,6 +271,29 @@ class ConnectionDiscoveryService
             })
             ->values()
             ->all();
+    }
+
+    private function frontSetupReviewNotes(array $webhookTypes, array $stockLocations): array
+    {
+        $typeText = strtolower(json_encode($webhookTypes) ?: '');
+        $notes = [];
+
+        foreach ([
+            'sale' => 'Confirm which webhook type represents POS sales.',
+            'return' => 'Confirm which webhook type represents POS returns.',
+            'stock' => 'Confirm whether Front stock changes/counts can be sent by webhook.',
+            'reservation' => 'Confirm whether reservation events are available.',
+        ] as $needle => $message) {
+            if (! str_contains($typeText, $needle)) {
+                $notes[] = 'NEEDS_FRONT_CONFIRMATION: ' . $message;
+            }
+        }
+
+        if ($stockLocations === []) {
+            $notes[] = 'NEEDS_FRONT_CONFIRMATION: No stock locations were returned by GET /api/Stock/list. Confirm stock ID/external stock ID for Lilleprinsen.';
+        }
+
+        return $notes;
     }
 
     private function discoverWooVariations(Connection $connection, array $products): array

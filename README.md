@@ -94,6 +94,7 @@ The portal now has a `Front Sales` page for staged Front POS sales and returns.
 
 See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).
 See [docs/staging-batch-product-sync.md](docs/staging-batch-product-sync.md) for the current staging batch test flow.
+See [docs/current-progress-review.md](docs/current-progress-review.md) for the latest implementation review and Front API gaps.
 
 WooCommerce plugin foundation:
 

@@ -4,6 +4,11 @@
     $storeRows = $latestStores?->sample_json['stores'] ?? [];
     $productRows = $latestProducts?->sample_json['products'] ?? [];
     $variationRows = $latestProducts?->sample_json['variations'] ?? [];
+    $frontSetup = $latestFrontSetup?->sample_json ?? [];
+    $frontWebhookTypes = $frontSetup['webhook_types'] ?? [];
+    $frontStockLocations = $frontSetup['stock_locations'] ?? [];
+    $frontStockSettings = $frontSetup['stock_settings'] ?? [];
+    $frontReviewNotes = $frontSetup['review_notes'] ?? [];
     $readiness = $latestProducts?->sample_json['readiness'] ?? [];
     $readinessRows = $readiness['rows'] ?? [];
     $readinessSummary = $readiness['summary'] ?? [];
@@ -37,6 +42,10 @@
                 <form class="inline-form" method="post" action="{{ route('connections.discover.stores', $connection) }}">
                     @csrf
                     <button class="secondary" type="submit">Discover stores</button>
+                </form>
+                <form class="inline-form" method="post" action="{{ route('connections.discover.front-setup', $connection) }}">
+                    @csrf
+                    <button class="secondary" type="submit">Check Front setup</button>
                 </form>
             @endif
             @if (in_array($connection->type, ['woocommerce', 'front', 'front_systems'], true))
@@ -83,6 +92,96 @@
     </section>
 
     @if (in_array($connection->type, ['front', 'front_systems'], true))
+        <section class="panel">
+            <h2>Front Setup Check</h2>
+            <p class="muted">
+                Read-only check for Front webhook types and stock setup. Uses <code>GET /api/WebhooksTypes</code>,
+                <code>GET /api/Stock/settings</code>, and <code>GET /api/Stock/list</code>.
+            </p>
+            <div class="summary-list">
+                <div class="summary-item">
+                    <span>Webhook types</span>
+                    <strong>{{ count($frontWebhookTypes) }}</strong>
+                </div>
+                <div class="summary-item">
+                    <span>Stock locations</span>
+                    <strong>{{ count($frontStockLocations) }}</strong>
+                </div>
+                <div class="summary-item">
+                    <span>Last setup check</span>
+                    <strong>{{ $latestFrontSetup?->checked_at ?: 'Not checked' }}</strong>
+                </div>
+            </div>
+
+            @if ($frontReviewNotes !== [])
+                <div class="warning">
+                    @foreach ($frontReviewNotes as $note)
+                        <div>{{ $note }}</div>
+                    @endforeach
+                </div>
+            @endif
+
+            <div class="two-column">
+                <div>
+                    <h3>Webhook Types</h3>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @forelse ($frontWebhookTypes as $type)
+                            <tr>
+                                <td>{{ $type['type'] ?? 'n/a' }}</td>
+                                <td>{{ $type['description'] ?? 'n/a' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="2">No webhook type sample yet. Click “Check Front setup”.</td>
+                            </tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3>Stock Locations</h3>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Stock ID</th>
+                            <th>External stock ID</th>
+                            <th>Name</th>
+                            <th>Store ID</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @forelse ($frontStockLocations as $stock)
+                            <tr>
+                                <td>{{ $stock['stock_id'] ?? 'n/a' }}</td>
+                                <td>{{ $stock['external_stock_id'] ?? 'n/a' }}</td>
+                                <td>{{ $stock['name'] ?? 'n/a' }}</td>
+                                <td>{{ $stock['store_id'] ?? 'n/a' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4">No stock location sample yet. Click “Check Front setup”.</td>
+                            </tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if ($frontStockSettings !== [])
+                <details class="technical-details">
+                    <summary>Stock settings sample</summary>
+                    <pre>{{ json_encode($frontStockSettings, JSON_PRETTY_PRINT) }}</pre>
+                </details>
+            @endif
+        </section>
+
         <section class="panel">
             <h2>Front Stores</h2>
             <table>

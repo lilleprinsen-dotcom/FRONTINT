@@ -56,6 +56,7 @@
         .status-dot.blocked { background: #d14b4b; }
         .action-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
         .split-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+        .two-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
         .table-wrap { overflow-x: auto; border-radius: 8px; }
         .summary-list { display: grid; gap: 10px; }
         .summary-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid #e7ebf0; }
@@ -83,6 +84,7 @@
         .secret-hint { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
         @media (max-width: 720px) {
             header { align-items: flex-start; flex-direction: column; }
+            .two-column { grid-template-columns: 1fr; }
             main { padding: 16px; }
             .page-header { padding: 18px; }
         }

@@ -74,6 +74,24 @@ class FrontSystemsReadOnlyClient
             ->get($this->url($connection, '/api/Stores'));
     }
 
+    public function webhookTypes(Connection $connection): Response
+    {
+        return $this->request($connection)
+            ->get($this->url($connection, '/api/WebhooksTypes'));
+    }
+
+    public function stockSettings(Connection $connection): Response
+    {
+        return $this->request($connection)
+            ->get($this->url($connection, '/api/Stock/settings'));
+    }
+
+    public function stockList(Connection $connection): Response
+    {
+        return $this->request($connection)
+            ->get($this->url($connection, '/api/Stock/list'));
+    }
+
     public function products(Connection $connection, int $limit = 10): Response
     {
         // Front's OpenAPI spec uses POST /api/Product for read-only product listing/search.
@@ -135,6 +153,92 @@ class FrontSystemsReadOnlyClient
             ->filter(fn (array $store): bool => array_filter($store) !== [])
             ->values()
             ->all();
+    }
+
+    public function safeWebhookTypes(mixed $payload): array
+    {
+        return collect($this->listPayload($payload, ['webhookTypes', 'WebhookTypes', 'types', 'Types', 'items', 'Items']))
+            ->filter(fn ($type): bool => is_scalar($type) || is_array($type))
+            ->take(50)
+            ->map(function (mixed $type): array {
+                if (is_scalar($type)) {
+                    return [
+                        'type' => trim((string) $type),
+                        'description' => null,
+                    ];
+                }
+
+                return [
+                    'type' => $type['webhookType'] ?? $type['WebhookType'] ?? $type['type'] ?? $type['Type'] ?? $type['name'] ?? $type['Name'] ?? null,
+                    'description' => $type['description'] ?? $type['Description'] ?? null,
+                ];
+            })
+            ->filter(fn (array $type): bool => is_string($type['type'] ?? null) && trim($type['type']) !== '')
+            ->values()
+            ->all();
+    }
+
+    public function safeStockSettings(mixed $payload): array
+    {
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        $settings = $payload['settings'] ?? $payload['Settings'] ?? $payload;
+
+        if (! is_array($settings)) {
+            return [];
+        }
+
+        return collect($settings)
+            ->filter(fn (mixed $value, string|int $key): bool => ! $this->looksSensitiveKey((string) $key) && (is_scalar($value) || $value === null))
+            ->mapWithKeys(fn (mixed $value, string|int $key): array => [(string) $key => is_string($value) ? trim($value) : $value])
+            ->take(30)
+            ->all();
+    }
+
+    private function looksSensitiveKey(string $key): bool
+    {
+        $key = strtolower($key);
+
+        foreach (['secret', 'token', 'password', 'apikey', 'api_key', 'api-key', 'authorization', 'cookie'] as $needle) {
+            if (str_contains($key, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function safeStockList(mixed $payload): array
+    {
+        return collect($this->listPayload($payload, ['stocks', 'Stocks', 'items', 'Items', 'stockList', 'StockList']))
+            ->filter(fn ($stock): bool => is_array($stock))
+            ->take(30)
+            ->map(fn (array $stock): array => [
+                'stock_id' => $stock['StockId'] ?? $stock['stockId'] ?? $stock['id'] ?? $stock['Id'] ?? null,
+                'external_stock_id' => $stock['ExternalStockId'] ?? $stock['externalStockId'] ?? $stock['stockExtId'] ?? $stock['StockExtId'] ?? null,
+                'name' => $stock['Name'] ?? $stock['name'] ?? $stock['StockName'] ?? $stock['stockName'] ?? null,
+                'store_id' => $stock['StoreId'] ?? $stock['storeId'] ?? null,
+            ])
+            ->filter(fn (array $stock): bool => array_filter($stock) !== [])
+            ->values()
+            ->all();
+    }
+
+    private function listPayload(mixed $payload, array $keys): array
+    {
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        foreach ($keys as $key) {
+            if (isset($payload[$key]) && is_array($payload[$key])) {
+                return $payload[$key];
+            }
+        }
+
+        return $payload;
     }
 
     private function responseTimeMs(float $startedAt): int
