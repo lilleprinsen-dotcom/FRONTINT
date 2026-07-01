@@ -11,6 +11,7 @@ use App\Models\ProductSyncEvent;
 use App\Models\ProductSyncRun;
 use App\Jobs\RunLimitedFrontProductWriteTest;
 use App\Jobs\RunFrontSalePriceSync;
+use App\Jobs\RunFrontStockSync;
 use App\Services\ProductSync\ProductSyncPreviewRunBuilder;
 use App\Services\ProductSync\ProductSyncProfileProvisioner;
 use App\Services\ProductSync\DryRun\FrontProductWriteDryRunBuilder;
@@ -101,6 +102,8 @@ class ProductSyncController extends Controller
             'price_strategy' => ['required', Rule::in(['regular_price_only', 'regular_price_now_sale_price_later', 'pricelist_v2_later'])],
             'sale_price_list_name' => ['nullable', 'string', 'max:120'],
             'stock_strategy' => ['required', Rule::in(['do_not_sync_stock_yet', 'preview_only', 'stock_sync_later'])],
+            'front_stock_id' => ['nullable', 'integer', 'min:1'],
+            'front_stock_ext_id' => ['nullable', 'string', 'max:120'],
             'incremental_sync_enabled' => ['nullable', 'boolean'],
             'webhook_updates_enabled' => ['nullable', 'boolean'],
             'reconciliation_enabled' => ['nullable', 'boolean'],
@@ -240,6 +243,13 @@ class ProductSyncController extends Controller
                 ->filter(fn ($item): bool => is_numeric($item->proposed_front_payload_json['sale_price_candidate'] ?? null))
                 ->take(100)
                 ->values(),
+            'eligibleStockItems' => $run->items()
+                ->where('sync_status', 'synced')
+                ->whereIn('stock_sync_status', ['not_applicable', 'failed', 'needs_retry'])
+                ->whereNotNull('woo_stock_quantity')
+                ->orderBy('id')
+                ->limit(100)
+                ->get(),
         ]);
     }
 
@@ -407,6 +417,36 @@ class ProductSyncController extends Controller
             ->with('status', 'Sale price retry queued for ' . count($itemIds) . ' item(s).');
     }
 
+    public function runStockSync(Request $request, ProductSyncRun $run): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $itemIds = $this->stockItemIds($run, ['not_applicable', 'failed', 'needs_retry']);
+
+        foreach ($itemIds as $itemId) {
+            RunFrontStockSync::dispatch($run->id, $request->user()->id, [(int) $itemId]);
+        }
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Stock sync queued for ' . count($itemIds) . ' item(s).');
+    }
+
+    public function retryStock(Request $request, ProductSyncRun $run): RedirectResponse
+    {
+        abort_unless($request->user()->organizations()->whereKey($run->organization_id)->exists(), 403);
+
+        $itemIds = $this->stockItemIds($run, ['failed']);
+
+        foreach ($itemIds as $itemId) {
+            RunFrontStockSync::dispatch($run->id, $request->user()->id, [(int) $itemId]);
+        }
+
+        return redirect()
+            ->route('product-sync.runs.show', $run)
+            ->with('status', 'Stock retry queued for ' . count($itemIds) . ' item(s).');
+    }
+
     public function runs(Request $request): View
     {
         $organizationIds = $request->user()->organizations()->pluck('organizations.id');
@@ -487,6 +527,18 @@ class ProductSyncController extends Controller
             ->get()
             ->filter(fn ($item): bool => is_numeric($item->proposed_front_payload_json['sale_price_candidate'] ?? null))
             ->take(100)
+            ->pluck('id')
+            ->all();
+    }
+
+    private function stockItemIds(ProductSyncRun $run, array $statuses): array
+    {
+        return $run->items()
+            ->where('sync_status', 'synced')
+            ->whereIn('stock_sync_status', $statuses)
+            ->whereNotNull('woo_stock_quantity')
+            ->orderBy('id')
+            ->limit(100)
             ->pluck('id')
             ->all();
     }

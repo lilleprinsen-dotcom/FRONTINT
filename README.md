@@ -74,7 +74,8 @@ Phase 5 adds the WooCommerce to Front product sync foundation for a 70,000-produ
 - WooCommerce product/variation ID is used as the stable identity. SKU and EAN/GTIN are synced as mutable fields, so changing them in WooCommerce should update the existing Front product instead of breaking the mapping.
 - Regular price is sent as the Front product price.
 - Sale price sync now has an explicit Front PriceListV2 staging flow for already-synced products with sale price candidates.
-- The staging batch flow does not write to WooCommerce, stock, orders, refunds, gift cards, or omnichannel records.
+- Stock sync now has an explicit Front Stock adjust staging flow for already-synced products with Woo stock quantities.
+- The staging batch flow does not write to WooCommerce, orders, refunds, gift cards, or omnichannel records.
 - Full catalog sync is still not implemented.
 
 See [docs/woo-to-front-product-sync-strategy.md](docs/woo-to-front-product-sync-strategy.md).

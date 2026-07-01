@@ -880,6 +880,129 @@ class ProductSyncFoundationTest extends TestCase
         $this->assertSame(88, $item->sale_price_last_response_summary_json['pricelistId']);
     }
 
+    public function test_stock_sync_posts_partial_stock_adjust_without_woo_product_or_price_writes(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/Stock/adjust' => Http::response('Ok'),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update([
+                'mode' => 'staging_batch',
+                'stock_strategy' => 'stock_sync_later',
+                'front_stock_id' => 2001,
+            ]);
+        $run = $this->runWithItems($organization, [
+            [
+                'sku' => 'READY-1',
+                'gtin' => '7040000002001',
+                'validation_status' => 'ready',
+                'sync_status' => 'synced',
+                'stock_quantity' => 7,
+                'front_external_sku' => 'READY-1',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/stock')
+            ->assertRedirect();
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return $request->method() === 'POST'
+                && (string) $request->url() === 'https://front.example.test/restapi/V2/api/Stock/adjust'
+                && ($payload['stockId'] ?? null) === 2001
+                && ($payload['isCompleteStockCount'] ?? null) === false
+                && ($payload['saveAsStockCount'] ?? null) === true
+                && ($payload['items'][0]['quantity'] ?? null) === 7
+                && ($payload['items'][0]['gtin'] ?? null) === '7040000002001'
+                && ($payload['items'][0]['externalSKU'] ?? null) === 'READY-1';
+        });
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/wp-json/'));
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/api/products'));
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/api/PricelistV2'));
+
+        $item = $run->fresh()->items()->firstOrFail();
+        $this->assertSame('synced', $item->stock_sync_status);
+        $this->assertSame('POST /api/Stock/adjust', $item->stock_last_request_summary_json['endpoint']);
+        $this->assertFalse($item->stock_last_request_summary_json['isCompleteStockCount']);
+        $this->assertArrayNotHasKey('x-api-key', $item->stock_last_request_summary_json);
+        $auditJson = AuditLog::query()->where('action', 'front_stock_sync')->get()->toJson();
+        $this->assertStringNotContainsString('front-secret-key', $auditJson);
+    }
+
+    public function test_stock_sync_does_not_call_http_when_gates_fail(): void
+    {
+        Http::fake();
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        $run = $this->runWithItems($organization, [
+            [
+                'sku' => 'READY-1',
+                'gtin' => '7040000002001',
+                'validation_status' => 'ready',
+                'sync_status' => 'synced',
+                'stock_quantity' => 7,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/stock')
+            ->assertRedirect();
+
+        Http::assertNothingSent();
+        $this->assertSame('not_applicable', $run->fresh()->items()->firstOrFail()->stock_sync_status);
+    }
+
+    public function test_stock_sync_marks_failed_front_response_and_retry_can_succeed(): void
+    {
+        Http::fake([
+            'https://front.example.test/restapi/V2/api/Stock/adjust' => Http::sequence()
+                ->push(['message' => 'Bad stock'], 422)
+                ->push('Ok', 200),
+        ]);
+        [$user, $organization] = $this->userWithOrganization();
+        $this->wooConnection($organization);
+        $this->frontConnection($organization);
+        app(ProductSyncProfileProvisioner::class)->ensureDefault($organization)
+            ->update([
+                'mode' => 'staging_batch',
+                'stock_strategy' => 'stock_sync_later',
+                'front_stock_ext_id' => 'EXT-2001',
+            ]);
+        $run = $this->runWithItems($organization, [
+            [
+                'sku' => 'READY-1',
+                'gtin' => '7040000002001',
+                'validation_status' => 'ready',
+                'sync_status' => 'synced',
+                'stock_quantity' => 7,
+                'front_external_sku' => 'READY-1',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/stock')
+            ->assertRedirect();
+
+        $item = $run->fresh()->items()->firstOrFail();
+        $this->assertSame('failed', $item->stock_sync_status);
+        $this->assertSame('HTTP 422', $item->stock_last_error);
+
+        $this->actingAs($user)
+            ->post('/product-sync/runs/' . $run->id . '/retry-stock')
+            ->assertRedirect();
+
+        $item = $run->fresh()->items()->firstOrFail();
+        $this->assertSame('synced', $item->stock_sync_status);
+        $this->assertSame(2, $item->stock_attempt_count);
+        $this->assertSame('EXT-2001', $item->stock_last_request_summary_json['stockExtId']);
+    }
+
     public function test_staging_batch_sync_updates_when_existing_product_mapping_exists(): void
     {
         Http::fake([
@@ -1319,6 +1442,8 @@ class ProductSyncFoundationTest extends TestCase
             'price_strategy' => 'regular_price_only',
             'sale_price_list_name' => 'WooCommerce Sale Prices',
             'stock_strategy' => 'do_not_sync_stock_yet',
+            'front_stock_id' => null,
+            'front_stock_ext_id' => null,
         ];
     }
 
@@ -1347,10 +1472,12 @@ class ProductSyncFoundationTest extends TestCase
                 'woo_name' => 'Product ' . ($index + 1),
                 'woo_type' => 'simple',
                 'woo_sku' => $item['sku'],
+                'woo_stock_quantity' => $item['stock_quantity'] ?? null,
                 'detected_gtin' => $item['gtin'],
                 'front_match_status' => 'no_match',
                 'front_product_ext_id' => $item['front_product_ext_id'] ?? null,
                 'front_product_id' => $item['front_product_id'] ?? null,
+                'front_external_sku' => $item['front_external_sku'] ?? null,
                 'proposed_front_payload_json' => [
                     'name' => 'Product ' . ($index + 1),
                     'number' => $item['sku'],
@@ -1375,6 +1502,7 @@ class ProductSyncFoundationTest extends TestCase
                 'validation_status' => $item['validation_status'] ?? 'warning',
                 'sync_status' => $item['sync_status'] ?? 'not_started',
                 'sale_price_sync_status' => $item['sale_price_sync_status'] ?? 'not_applicable',
+                'stock_sync_status' => $item['stock_sync_status'] ?? 'not_applicable',
                 'validation_errors_json' => [],
                 'validation_warnings_json' => [],
             ]);

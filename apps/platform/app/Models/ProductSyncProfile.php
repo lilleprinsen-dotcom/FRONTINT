@@ -49,6 +49,8 @@ class ProductSyncProfile extends Model
         'price_strategy',
         'sale_price_list_name',
         'stock_strategy',
+        'front_stock_id',
+        'front_stock_ext_id',
         'incremental_sync_enabled',
         'webhook_updates_enabled',
         'reconciliation_enabled',
@@ -74,6 +76,7 @@ class ProductSyncProfile extends Model
             'incremental_sync_enabled' => 'boolean',
             'webhook_updates_enabled' => 'boolean',
             'reconciliation_enabled' => 'boolean',
+            'front_stock_id' => 'integer',
         ];
     }
 

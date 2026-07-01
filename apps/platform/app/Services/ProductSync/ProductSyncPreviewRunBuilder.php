@@ -105,6 +105,7 @@ class ProductSyncPreviewRunBuilder
             'woo_name' => $wooProduct['name'] ?? null,
             'woo_type' => $wooProduct['type'] ?? null,
             'woo_sku' => $wooProduct['sku'] ?? null,
+            'woo_stock_quantity' => is_numeric($wooProduct['stock_quantity'] ?? null) ? (int) $wooProduct['stock_quantity'] : null,
             'detected_gtin' => $size['gtin'] ?? null,
             'detected_gtin_key' => $row['gtin_candidate']['key'] ?? null,
             'front_match_status' => $row['front_match']['status'] ?? null,

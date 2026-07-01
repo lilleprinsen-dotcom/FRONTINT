@@ -10,7 +10,7 @@ It is intentionally limited:
 - Validates each item before writing.
 - Writes only product create/update payloads to Front.
 - Does not write to WooCommerce.
-- Does not write stock.
+- Writes stock only through the separate explicit Stock adjust action after products are synced.
 - Writes sale prices only through the separate explicit PriceListV2 action after products are synced.
 - Does not create orders, refunds, gift cards, or omnichannel records.
 - Does not sync the full catalog.
@@ -62,6 +62,20 @@ Sale price sync:
 - stores separate sale-price status on the run item
 - is retryable without rerunning product sync
 
+## Stock Behavior
+
+Stock sync uses Front `POST /api/Stock/adjust` after products have synced.
+
+It is sent as a partial stock count:
+
+- `isCompleteStockCount=false`
+- one selected item per queued job
+- target stock location from the product sync profile
+- quantity from the WooCommerce discovery snapshot
+- GTIN and/or external SKU as the item identifier
+
+This must not be used as a full stock count. It must not write WooCommerce stock.
+
 ## How To Test
 
 1. Start the local portal.
@@ -100,7 +114,6 @@ Raw API keys and full response bodies are not stored.
 - Full catalog sync for 70,000 products.
 - Background cursor-based catalog scan.
 - Product deletion handling.
-- Stock writes.
 - WooCommerce writes.
 - Order/refund/gift-card/omnichannel sync.
 - Automatic retry backoff workers.
