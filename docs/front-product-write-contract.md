@@ -118,6 +118,7 @@ For the first limited test:
 
 - `name` must be present.
 - `brand`, `groupName`, `subgroupName`, `color`, and `season` are sent as available from the preview payload.
+- WooCommerce brand candidates are read from `brands`, `Product_brand`, and `product_brands`; all are normalized into one `brands` list before mapping to Front `brand`.
 - Missing `color` and `season` are sent as `null`.
 
 NEEDS_FRONT_CONFIRMATION:
