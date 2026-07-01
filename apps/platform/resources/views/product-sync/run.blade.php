@@ -14,7 +14,11 @@
             <span class="badge">{{ $run->status }}</span>
             <span class="badge">{{ $run->mode }}</span>
         </p>
-        <div class="warning">Preview only. No product writes have been performed.</div>
+        @if ($run->run_type === 'staging_batch')
+            <div class="notice">Staging batch. Selected ready/warning items may write product create/update payloads to Front only.</div>
+        @else
+            <div class="warning">Preview only. No product writes have been performed.</div>
+        @endif
         <div class="progress"><span style="width: {{ $readyWidth }}%"></span></div>
         <p class="muted">
             {{ $run->total_candidates }} candidates,
@@ -39,6 +43,10 @@
         <p class="muted">
             This processes up to 100 ready or warning items in this run. It writes only products to Front.
             It does not write WooCommerce, price lists, stock, orders, refunds, or gift cards.
+        </p>
+        <p class="muted">
+            Stable matching uses the WooCommerce product or variation ID. SKU and EAN/GTIN are updated in Front as fields,
+            not used as the permanent link. Regular price is sent now; sale price remains a future PriceListV2 candidate.
         </p>
         <div class="action-row">
             <form class="inline-form" method="post" action="{{ route('product-sync.runs.staging-batch-sync', $run) }}">
@@ -177,7 +185,8 @@
                         <div>Number: {{ $payload['number'] ?? 'n/a' }}</div>
                         <div>External SKU: {{ $size['externalSKU'] ?? 'n/a' }}</div>
                         <div>Group: {{ $payload['groupName'] ?? 'n/a' }}</div>
-                        <div>Price: {{ $payload['price_candidate'] ?? 'n/a' }}</div>
+                        <div>Regular price: {{ $payload['price_candidate'] ?? 'n/a' }}</div>
+                        <div>Sale price: {{ $payload['sale_price_candidate'] ?? 'n/a' }} <span class="muted">(future PriceListV2)</span></div>
                     </td>
                 </tr>
             @empty

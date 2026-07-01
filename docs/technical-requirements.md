@@ -169,6 +169,8 @@ Payload hashes must sort nested arrays recursively before JSON encoding so logic
 - Preview runs are local planning records only and must not call external APIs.
 - Staging batch runs may write selected ready/warning products or variations to Front only when profile mode is `staging_batch` or `limited_write_test`.
 - Staging batch v1 is capped at 100 items and must not write to WooCommerce, stock, PriceListV2, orders, refunds, gift cards, or omnichannel endpoints.
+- Product identity must be based on immutable WooCommerce product/variation IDs via `woo_item_key` and generated Front `extId`. SKU and GTIN/EAN are mutable fields and changing them in WooCommerce must update the existing Front product instead of creating a new mapping.
+- Woo regular price maps to Front product `price`. Woo sale price must remain separate and later use Front PriceListV2; do not overwrite regular price with sale price.
 - Sync run items store selected products or variations only, not the whole catalog.
 - Future large-catalog scanning must be background-job based, paginated, and incremental.
 - Owner pages should use plain-language status. Testing workflows belong in the Testing Lab. Technical details belong in Advanced.
